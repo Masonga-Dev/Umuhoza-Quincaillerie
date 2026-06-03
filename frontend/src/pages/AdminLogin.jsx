@@ -1,23 +1,32 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import API from '../api';
 
 function AdminLogin() {
   const [email, setEmail] = useState('admin@umuhoza.com');
   const [password, setPassword] = useState('password');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setSuccess('');
+    setIsLoading(true);
 
     try {
       const response = await API.post('/auth/login', { email, password });
       localStorage.setItem('umuhoza_token', response.data.token);
+      setSuccess('Login successful! Redirecting to admin dashboard...');
       navigate('/admin/dashboard');
     } catch (err) {
-      setError('Login failed. Check your credentials and try again.');
+      setError(
+        err?.response?.data?.message || 'Login failed. Check your credentials and try again.'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,10 +54,21 @@ function AdminLogin() {
           />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-white shadow hover:bg-blue-700">
-          Sign In
+        {success && <p className="text-sm text-green-600">{success}</p>}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-white shadow hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          {isLoading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
+      <div className="mt-4 text-sm text-slate-600">
+        Forgot your password?{' '}
+        <Link className="font-semibold text-blue-600 hover:text-blue-700" to="/admin/forgot-password">
+          Reset it here.
+        </Link>
+      </div>
     </div>
   );
 }
