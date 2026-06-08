@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import API from '../api';
 
 function AdminLogin() {
-  const [email, setEmail] = useState('admin@umuhoza.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('umuhozacompanyltd@gmail.com');
+  const [password, setPassword] = useState('Umuhoza@02');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState('');
