@@ -14,6 +14,10 @@ import AdminSales from './pages/AdminSales';
 import AdminReports from './pages/AdminReports';
 import AdminContent from './pages/AdminContent';
 import AdminSettings from './pages/AdminSettings';
+import AdminAddProduct from './pages/AdminAddProduct';
+import AdminEditProduct from './pages/AdminEditProduct';
+import AdminProductDetails from './pages/AdminProductDetails';
+import AdminCategories from './pages/AdminCategories';
 import ForgotPassword from './pages/ForgotPassword';
 
 const navClass = ({ isActive }) =>
@@ -105,6 +109,10 @@ function AppContent() {
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/forgot-password" element={<ForgotPassword />} />
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} />} />
+          <Route path="/admin/products/add" element={<ProtectedRoute element={<AdminAddProduct />} />} />
+          <Route path="/admin/products/categories" element={<ProtectedRoute element={<AdminCategories />} />} />
+          <Route path="/admin/products/:id/edit" element={<ProtectedRoute element={<AdminEditProduct />} />} />
+          <Route path="/admin/products/:id/view" element={<ProtectedRoute element={<AdminProductDetails />} />} />
           <Route path="/admin/products" element={<ProtectedRoute element={<AdminProducts />} />} />
           <Route path="/admin/stock" element={<ProtectedRoute element={<AdminStock />} />} />
           <Route path="/admin/sales" element={<ProtectedRoute element={<AdminSales />} />} />

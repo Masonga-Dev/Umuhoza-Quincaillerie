@@ -10,7 +10,15 @@ function AdminLayout({ children, currentPage }) {
 
   const menuItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: '📊' },
-    { label: 'Products', path: '/admin/products', icon: '📦' },
+    {
+      label: 'Products',
+      icon: '📦',
+      subItems: [
+        { label: 'All Products', path: '/admin/products' },
+        { label: 'Add Product', path: '/admin/products/add' },
+        { label: 'Categories', path: '/admin/products/categories' },
+      ],
+    },
     { label: 'Stock', path: '/admin/stock', icon: '📈' },
     { label: 'Sales', path: '/admin/sales', icon: '💳' },
     { label: 'Reports', path: '/admin/reports', icon: '📋' },
@@ -28,19 +36,46 @@ function AdminLayout({ children, currentPage }) {
         </div>
 
         <nav className="flex flex-col gap-2 p-4">
-          {menuItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full text-left px-4 py-3 rounded-lg transition ${
-                currentPage === item.path
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              <span className="text-lg">{item.icon}</span> {item.label}
-            </button>
-          ))}
+          {menuItems.map((item) => {
+            if (item.subItems) {
+              return (
+                <div key={item.label} className="space-y-1">
+                  <div className="px-4 py-3 text-slate-300">
+                    <span className="text-lg">{item.icon}</span> {item.label}
+                  </div>
+                  <div className="space-y-1 px-2">
+                    {item.subItems.map((sub) => (
+                      <button
+                        key={sub.path}
+                        onClick={() => navigate(sub.path)}
+                        className={`w-full text-left rounded-lg px-4 py-3 transition ${
+                          currentPage === sub.path
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-300 hover:bg-slate-800'
+                        }`}
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`w-full text-left px-4 py-3 rounded-lg transition ${
+                  currentPage === item.path
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <span className="text-lg">{item.icon}</span> {item.label}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="absolute bottom-0 left-0 w-64 border-t border-slate-700 p-4">

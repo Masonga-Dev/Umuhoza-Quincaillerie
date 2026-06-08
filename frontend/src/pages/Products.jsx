@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import API from '../api';
 
+const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
 function Products() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -51,7 +53,17 @@ function Products() {
           {products.length ? (
             products.map((product) => (
               <div key={product.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="mb-4 h-48 overflow-hidden rounded-2xl bg-slate-100" />
+                <div className="mb-4 h-48 overflow-hidden rounded-2xl bg-slate-100">
+                  {product.image_path ? (
+                    <img
+                      src={`${BACKEND_BASE}/${product.image_path}`}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-slate-500">No image</div>
+                  )}
+                </div>
                 <h3 className="text-xl font-semibold text-slate-900">{product.name}</h3>
                 <p className="mt-2 text-sm text-slate-600">{product.description}</p>
                 <div className="mt-4 flex items-center justify-between text-sm text-slate-700">
