@@ -9,7 +9,12 @@ router.get('/homepage', async (req, res) => {
       'SELECT * FROM homepage_content WHERE is_active = 1 ORDER BY display_order ASC'
     );
     const [featured] = await pool.query(
-      `SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.status <> 'Out of Stock' ORDER BY p.created_at DESC LIMIT 8`
+      `SELECT p.*, c.name AS category_name,
+        (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY created_at ASC LIMIT 1) AS image_path
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.status <> 'Out of Stock'
+      ORDER BY p.created_at DESC LIMIT 8`
     );
     const [announcements] = await pool.query(
       'SELECT * FROM announcements WHERE status = ? ORDER BY created_at DESC',
@@ -59,13 +64,18 @@ router.get('/products', async (req, res) => {
   const filters = [];
   const params = [];
 
-  let sql = `SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1`;
+  let sql = `
+    SELECT p.*, c.name AS category_name,
+      (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY created_at ASC LIMIT 1) AS image_path
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE 1=1`;
   if (q) {
-    filters.push('(p.name LIKE ? OR p.description LIKE ?)');
-    params.push(`%${q}%`, `%${q}%`);
+    filters.push('(p.name LIKE ? OR p.description LIKE ? OR p.sku LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
   if (category) {
-    filters.push('c.id = ?');
+    filters.push('p.category_id = ?');
     params.push(category);
   }
   if (filters.length) {
