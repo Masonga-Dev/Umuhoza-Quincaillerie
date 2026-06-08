@@ -1,6 +1,6 @@
 import express from 'express';
 import pool from '../config/db.js';
-import authMiddleware from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -19,13 +19,27 @@ router.get('/homepage-content', async (req, res) => {
   }
 });
 
+router.post('/homepage-content', async (req, res) => {
+  const { section_name, title, description, image_path, display_order, is_active } = req.body;
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO homepage_content (section_name, title, description, image_path, display_order, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+      [section_name, title, description, image_path, display_order ?? 0, is_active ?? 1]
+    );
+    res.status(201).json({ id: result.insertId, message: 'Homepage section created' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error creating homepage section' });
+  }
+});
+
 router.put('/homepage-content/:id', async (req, res) => {
   const { id } = req.params;
-  const { title, description, image_path, is_active } = req.body;
+  const { section_name, title, description, image_path, display_order, is_active } = req.body;
   try {
     await pool.query(
-      'UPDATE homepage_content SET title = ?, description = ?, image_path = ?, is_active = ? WHERE id = ?',
-      [title, description, image_path, is_active, id]
+      'UPDATE homepage_content SET section_name = ?, title = ?, description = ?, image_path = ?, display_order = ?, is_active = ? WHERE id = ?',
+      [section_name, title, description, image_path, display_order ?? 0, is_active ?? 1, id]
     );
     res.json({ message: 'Homepage content updated' });
   } catch (error) {
@@ -122,6 +136,17 @@ router.delete('/gallery/:id', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error deleting gallery image' });
+  }
+});
+
+router.delete('/homepage-content/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM homepage_content WHERE id = ?', [id]);
+    res.json({ message: 'Homepage section deleted' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error deleting homepage section' });
   }
 });
 

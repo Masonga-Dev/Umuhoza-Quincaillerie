@@ -4,8 +4,8 @@ const mysql = require('mysql2/promise');
 
 dotenv.config();
 
-const ADMIN_EMAIL = 'admin@umuhoza.com';
-const ADMIN_PASSWORD = 'Umuhoza2026!';
+const ADMIN_EMAIL = 'umuhozacompanyltd@gmail.com';
+const ADMIN_PASSWORD = 'Umuhoza@02';
 const ADMIN_NAME = 'Umuhoza Admin';
 const ADMIN_ROLE = 'admin';
 
