@@ -1,71 +1,89 @@
 import { useEffect, useState } from 'react';
 import API from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 function Gallery() {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [lightbox, setLightbox] = useState(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
-    const fetchGallery = async () => {
-      try {
-        setLoading(true);
-        const response = await API.get('/public/gallery');
-        setImages(response.data);
-      } catch (err) {
-        setError('Failed to load gallery images');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGallery();
+    API.get('/public/gallery')
+      .then((r) => setImages(r.data || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
-      <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
-        <p className="text-slate-600">Loading gallery...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
-        <p className="text-red-600">{error}</p>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Gallery</h1>
-        <p className="mt-2 text-slate-600">Explore our products and showroom</p>
-      </div>
+      {/* Header */}
+      <section className="rounded-3xl bg-slate-950 p-8 text-white shadow-xl">
+        <h1 className="text-3xl font-extrabold">{t('gallery.title')}</h1>
+        <p className="mt-2 text-slate-300">{t('gallery.subtitle')}</p>
+      </section>
 
-      {images.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {images.map((image) => (
-            <div key={image.id} className="overflow-hidden rounded-3xl bg-white shadow-sm">
-              <img
-                src={`/uploads/gallery/${image.filename}`}
-                alt={image.title || 'Gallery image'}
-                className="h-64 w-full object-cover"
-              />
-              {image.title && (
-                <div className="p-4">
-                  <h3 className="font-semibold text-slate-900">{image.title}</h3>
-                </div>
-              )}
-            </div>
-          ))}
+      {images.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-16 text-center text-slate-400 shadow-sm">
+          <p className="text-base">{t('gallery.empty')}</p>
         </div>
       ) : (
-        <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
-          <p className="text-slate-600">No gallery images available at the moment</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {images.map((img) => (
+            <button
+              key={img.id}
+              onClick={() => setLightbox(img)}
+              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm text-left"
+            >
+              <div className="overflow-hidden">
+                <img
+                  src={`${BACKEND}/${img.image_path}`}
+                  alt={img.title || ''}
+                  className="h-52 w-full object-cover transition duration-300 group-hover:scale-105"
+                />
+              </div>
+              {img.title && (
+                <div className="p-3">
+                  <p className="text-sm font-medium text-slate-800">{img.title}</p>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={`${BACKEND}/${lightbox.image_path}`}
+              alt={lightbox.title || ''}
+              className="w-full rounded-2xl object-contain max-h-[80vh] shadow-2xl"
+            />
+            {lightbox.title && (
+              <p className="mt-3 text-center text-white font-medium">{lightbox.title}</p>
+            )}
+            <button
+              onClick={() => setLightbox(null)}
+              className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-900 shadow-lg text-sm font-bold hover:bg-slate-100"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </div>
