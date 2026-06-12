@@ -11,7 +11,9 @@ router.get('/daily', async (req, res) => {
       `SELECT COUNT(*) AS total_transactions, SUM(total_amount) AS total_sales FROM sales WHERE DATE(sale_date) = CURDATE()`
     );
     const [bestSelling] = await pool.query(
-      `SELECT p.name, SUM(si.quantity) AS quantity_sold FROM sale_items si JOIN products p ON si.product_id = p.id GROUP BY si.product_id ORDER BY quantity_sold DESC LIMIT 5`
+      `SELECT p.name, SUM(si.quantity) AS quantity_sold, SUM(si.subtotal) AS total_revenue
+       FROM sale_items si JOIN products p ON si.product_id = p.id
+       GROUP BY si.product_id ORDER BY quantity_sold DESC LIMIT 10`
     );
     res.json({ summary: summary[0], best_selling: bestSelling });
   } catch (error) {
@@ -46,7 +48,13 @@ router.get('/monthly', async (req, res) => {
 
 router.get('/inventory', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, name, stock_quantity, status FROM products ORDER BY stock_quantity ASC');
+    const [rows] = await pool.query(
+      `SELECT p.id, p.name, p.sku, p.stock_quantity, p.minimum_stock, p.status,
+        c.name AS category_name,
+        (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY created_at ASC LIMIT 1) AS image_path
+       FROM products p LEFT JOIN categories c ON p.category_id = c.id
+       ORDER BY p.stock_quantity ASC`
+    );
     res.json(rows);
   } catch (error) {
     console.error(error);

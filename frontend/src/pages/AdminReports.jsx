@@ -2,83 +2,199 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
+function fmtPrice(v) {
+  return Number(v || 0).toLocaleString('en-RW');
+}
+
+function Card({ label, value, sub, color = 'text-blue-600' }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className={`mt-2 text-3xl font-bold ${color}`}>{value}</p>
+      {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
+    </div>
+  );
+}
+
 function AdminReports() {
-  const [report, setReport] = useState(null);
+  const [daily, setDaily] = useState(null);
+  const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('umuhoza_token');
+  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
-    const token = localStorage.getItem('umuhoza_token');
-    setLoading(true);
-    API.get('/reports/daily', { headers: { Authorization: `Bearer ${token}` } })
-      .then((response) => setReport(response.data))
-      .catch((error) => console.error(error))
+    Promise.all([
+      API.get('/reports/daily', { headers }),
+      API.get('/reports/inventory', { headers }),
+    ])
+      .then(([dRes, iRes]) => {
+        setDaily(dRes.data);
+        setInventory(Array.isArray(iRes.data) ? iRes.data : []);
+      })
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
+  const totalProducts = inventory.length;
+  const lowCount = inventory.filter((i) => i.status === 'Low Stock').length;
+  const outCount = inventory.filter((i) => i.status === 'Out of Stock').length;
+  const inStockCount = inventory.filter((i) => i.status === 'In Stock').length;
+
+  const bestSelling = daily?.best_selling || [];
+  const maxQty = bestSelling[0]?.quantity_sold || 1;
+
   return (
     <AdminLayout currentPage="/admin/reports">
-      <div className="space-y-6">
+      <div className="space-y-8">
+        {/* Header */}
         <div>
-          <h2 className="text-3xl font-bold text-slate-900">Reports</h2>
-          <p className="mt-2 text-slate-600">View daily and comprehensive reports</p>
+          <h2 className="text-2xl font-bold text-slate-900">Reports & Analytics</h2>
+          <p className="mt-1 text-sm text-slate-500">Overview of today's sales and current inventory health.</p>
         </div>
 
         {loading ? (
-          <div className="rounded-2xl bg-white p-6">
-            <p className="text-slate-600">Loading reports...</p>
+          <div className="flex h-40 items-center justify-center rounded-2xl bg-white shadow-sm">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
           </div>
         ) : (
           <>
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-600 uppercase">Daily Revenue</h3>
-                <p className="mt-4 text-4xl font-bold text-blue-600">
-                  {report?.summary?.total_sales || '0'} RWF
-                </p>
+            {/* Today's Sales */}
+            <section>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-amber-500">Today's Performance</h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Card
+                  label="Today's Revenue"
+                  value={`${fmtPrice(daily?.summary?.total_sales)} RWF`}
+                  color="text-blue-600"
+                />
+                <Card
+                  label="Transactions Today"
+                  value={daily?.summary?.total_transactions ?? 0}
+                  color="text-emerald-600"
+                />
+                <Card
+                  label="Top Product Today"
+                  value={bestSelling[0]?.name || 'No sales yet'}
+                  sub={bestSelling[0] ? `${bestSelling[0].quantity_sold} units sold` : ''}
+                  color="text-purple-600"
+                />
+                <Card
+                  label="Avg. Sale Value"
+                  value={
+                    daily?.summary?.total_transactions
+                      ? `${fmtPrice(daily.summary.total_sales / daily.summary.total_transactions)} RWF`
+                      : '—'
+                  }
+                  color="text-slate-700"
+                />
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-600 uppercase">Transactions</h3>
-                <p className="mt-4 text-4xl font-bold text-green-600">
-                  {report?.summary?.total_transactions || '0'}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-600 uppercase">Best Seller</h3>
-                <p className="mt-4 text-2xl font-bold text-purple-600">
-                  {report?.best_selling?.[0]?.name || 'N/A'}
-                </p>
-              </div>
-            </div>
+            </section>
 
-            {report?.best_selling?.length > 0 && (
-              <div className="rounded-2xl bg-white p-6 shadow-sm">
-                <h3 className="text-xl font-semibold text-slate-900">Top Selling Products</h3>
-                <div className="mt-4 space-y-2">
-                  {report.best_selling.map((item, idx) => (
-                    <div key={item.name} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                      <div>
-                        <div className="font-semibold text-slate-900">
-                          #{idx + 1} {item.name}
+            {/* Best Selling */}
+            {bestSelling.length > 0 && (
+              <section>
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-amber-500">Top Selling Products — Today</h3>
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="space-y-4">
+                    {bestSelling.slice(0, 8).map((item, idx) => (
+                      <div key={item.name} className="flex items-center gap-4">
+                        <span className="w-6 text-right text-sm font-bold text-slate-400">#{idx + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-slate-900 truncate">{item.name}</span>
+                            <span className="ml-3 flex-shrink-0 text-sm text-slate-500">{item.quantity_sold} units</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                              style={{ width: `${Math.round((item.quantity_sold / maxQty) * 100)}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="text-sm text-slate-600">{item.quantity_sold} units sold</div>
+                        <span className="w-32 text-right text-sm font-semibold text-slate-700 flex-shrink-0">
+                          {fmtPrice(item.total_revenue)} RWF
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-600"
-                            style={{
-                              width: `${Math.min(
-                                (item.quantity_sold / (report.best_selling[0]?.quantity_sold || 1)) * 100,
-                                100
-                              )}%`,
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+              </section>
+            )}
+
+            {/* Inventory Health */}
+            <section>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-amber-500">Inventory Health</h3>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <Card label="Total Products" value={totalProducts} color="text-slate-900" />
+                <Card label="In Stock" value={inStockCount} color="text-emerald-600" />
+                <Card label="Low Stock" value={lowCount} color="text-amber-600" sub="Need restocking soon" />
+                <Card label="Out of Stock" value={outCount} color="text-red-600" sub="Restock immediately" />
               </div>
+
+              {/* Stock level breakdown */}
+              {inventory.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-4 flex items-center gap-4 text-sm font-medium text-slate-600">
+                    <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-emerald-500 inline-block" />In Stock</span>
+                    <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-amber-400 inline-block" />Low Stock</span>
+                    <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-red-500 inline-block" />Out of Stock</span>
+                  </div>
+                  <div className="h-6 rounded-full overflow-hidden flex gap-0.5">
+                    {inStockCount > 0 && (
+                      <div className="bg-emerald-500 h-full transition-all" style={{ width: `${(inStockCount / totalProducts) * 100}%` }} title={`In Stock: ${inStockCount}`} />
+                    )}
+                    {lowCount > 0 && (
+                      <div className="bg-amber-400 h-full transition-all" style={{ width: `${(lowCount / totalProducts) * 100}%` }} title={`Low Stock: ${lowCount}`} />
+                    )}
+                    {outCount > 0 && (
+                      <div className="bg-red-500 h-full transition-all" style={{ width: `${(outCount / totalProducts) * 100}%` }} title={`Out: ${outCount}`} />
+                    )}
+                  </div>
+                  <div className="mt-3 flex justify-between text-xs text-slate-400">
+                    <span>0</span>
+                    <span>{totalProducts} products total</span>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Critical stock list */}
+            {(lowCount > 0 || outCount > 0) && (
+              <section>
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-red-500">Products Needing Attention</h3>
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-slate-200 bg-slate-50">
+                      <tr>
+                        <th className="py-3 px-4 text-left font-semibold text-slate-600">Product</th>
+                        <th className="py-3 px-4 text-right font-semibold text-slate-600">Stock</th>
+                        <th className="py-3 px-4 text-right font-semibold text-slate-600">Min.</th>
+                        <th className="py-3 px-4 text-left font-semibold text-slate-600">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inventory
+                        .filter((i) => i.status !== 'In Stock')
+                        .sort((a, b) => a.stock_quantity - b.stock_quantity)
+                        .map((item) => (
+                          <tr key={item.id} className="border-b border-slate-100">
+                            <td className="py-3 px-4 font-medium text-slate-900">{item.name}</td>
+                            <td className={`py-3 px-4 text-right font-bold ${item.status === 'Out of Stock' ? 'text-red-600' : 'text-amber-600'}`}>
+                              {item.stock_quantity}
+                            </td>
+                            <td className="py-3 px-4 text-right text-slate-500">{item.minimum_stock || 5}</td>
+                            <td className="py-3 px-4">
+                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'Out of Stock' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {item.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             )}
           </>
         )}
