@@ -102,4 +102,26 @@ router.get('/categories', async (req, res) => {
   }
 });
 
+router.get('/gallery', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM gallery ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Could not fetch gallery' });
+  }
+});
+
+router.get('/announcements', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM announcements WHERE status = 'Published' ORDER BY created_at DESC"
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Could not fetch announcements' });
+  }
+});
+
 export default router;
