@@ -33,7 +33,7 @@ function determineStatus(stockQuantity, minimumStock = 5) {
   return 'In Stock';
 }
 
-function buildFilterQuery({ q, category }) {
+function buildFilterQuery({ q, category, status }) {
   const filters = [];
   const params = [];
   if (q) {
@@ -43,6 +43,10 @@ function buildFilterQuery({ q, category }) {
   if (category) {
     filters.push('p.category_id = ?');
     params.push(category);
+  }
+  if (status) {
+    filters.push('p.status = ?');
+    params.push(status);
   }
   return { filters, params };
 }
@@ -69,9 +73,9 @@ router.post('/upload', authMiddleware, upload.single('image'), async (req, res) 
 });
 
 router.get('/', async (req, res) => {
-  const { q, category, page = 1, pageSize = 12 } = req.query;
+  const { q, category, status, page = 1, pageSize = 12 } = req.query;
   const offset = (Number(page) - 1) * Number(pageSize);
-  const { filters, params } = buildFilterQuery({ q, category });
+  const { filters, params } = buildFilterQuery({ q, category, status });
   const filterSql = filters.length ? `AND ${filters.join(' AND ')}` : '';
 
   const listQuery = `
