@@ -5,12 +5,17 @@ import API from '../api';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
+function fmtPrice(value) {
+  return Number(value).toLocaleString('en-RW');
+}
+
 function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -29,6 +34,7 @@ function AdminProducts() {
             params: {
               q: searchTerm || undefined,
               category: categoryFilter || undefined,
+              status: statusFilter || undefined,
               page,
               pageSize,
             },
@@ -48,7 +54,7 @@ function AdminProducts() {
     };
 
     fetchData();
-  }, [searchTerm, categoryFilter, page, pageSize, token]);
+  }, [searchTerm, categoryFilter, statusFilter, page, pageSize, token]);
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -74,6 +80,9 @@ function AdminProducts() {
     setPage(1);
   };
 
+  const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, total);
+
   return (
     <AdminLayout currentPage="/admin/products">
       <div className="space-y-6">
@@ -91,10 +100,10 @@ function AdminProducts() {
         </div>
 
         <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr_0.9fr]">
+          <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr_1fr]">
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search by name, SKU or description..."
               value={searchTerm}
               onChange={handleFilterChange(setSearchTerm)}
               className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
@@ -111,6 +120,22 @@ function AdminProducts() {
                 </option>
               ))}
             </select>
+            <select
+              value={statusFilter}
+              onChange={handleFilterChange(setStatusFilter)}
+              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">All Statuses</option>
+              <option value="In Stock">In Stock</option>
+              <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
+            </select>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">
+              {total === 0 ? 'No products found' : `Showing ${pageStart}–${pageEnd} of ${total} product${total !== 1 ? 's' : ''}`}
+            </p>
             <div className="flex items-center gap-3">
               <span className="text-sm text-slate-500">Page {page} of {pageCount}</span>
               <button

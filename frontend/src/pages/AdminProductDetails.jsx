@@ -5,12 +5,31 @@ import API from '../api';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
+function fmtPrice(value) {
+  return Number(value).toLocaleString('en-RW');
+}
+
 function AdminProductDetails() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+  const token = localStorage.getItem('umuhoza_token');
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await API.delete(`/products/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      navigate('/admin/products');
+    } catch (err) {
+      console.error(err);
+      setError('Unable to delete product.');
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     API.get(`/products/${id}`)
@@ -36,12 +55,31 @@ function AdminProductDetails() {
             <h2 className="text-3xl font-bold text-slate-900">Product Details</h2>
             <p className="mt-2 text-slate-600">Review the product information before editing or deleting.</p>
           </div>
-          <button
-            onClick={() => navigate('/admin/products')}
-            className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Back to Products
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => navigate('/admin/products')}
+              className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              Back
+            </button>
+            {product && (
+              <>
+                <button
+                  onClick={() => navigate(`/admin/products/${id}/edit`)}
+                  className="rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  Edit Product
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -87,15 +125,15 @@ function AdminProductDetails() {
                 </div>
                 <div>
                   <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Selling Price</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">{product.selling_price} RWF</p>
+                  <p className="mt-2 text-base font-semibold text-slate-900">{fmtPrice(product.selling_price)} RWF</p>
                 </div>
                 <div>
                   <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Stock Quantity</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">{product.stock_quantity}</p>
+                  <p className="mt-2 text-base font-semibold text-slate-900">{product.stock_quantity} units</p>
                 </div>
                 <div>
                   <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Cost Price</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">{product.cost_price} RWF</p>
+                  <p className="mt-2 text-base font-semibold text-slate-900">{fmtPrice(product.cost_price)} RWF</p>
                 </div>
                 <div>
                   <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Minimum Stock</p>
