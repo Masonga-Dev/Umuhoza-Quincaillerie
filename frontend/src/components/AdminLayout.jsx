@@ -96,7 +96,7 @@ function AdminLayout({ children, currentPage }) {
       <aside className="flex w-64 flex-shrink-0 flex-col bg-slate-950 text-white shadow-2xl">
         {/* Brand */}
         <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-4">
-          <img src="/logo.png" alt="UQ" className="h-10 w-10 rounded-xl object-cover flex-shrink-0" />
+          <img src="/logo.png" alt="UQ" className="h-14 w-14 rounded-2xl object-cover flex-shrink-0 shadow-sm" />
           <div>
             <p className="text-sm font-bold text-white leading-tight">Umuhoza</p>
             <p className="text-xs text-slate-400">Admin Panel</p>

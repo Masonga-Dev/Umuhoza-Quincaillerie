@@ -1,0 +1,219 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import API from '../api';
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
+function fmtPrice(v) {
+  return Number(v || 0).toLocaleString('en-RW');
+}
+
+function StatusBadge({ status }) {
+  const cls = status === 'In Stock' ? 'bg-emerald-100 text-emerald-700' : status === 'Low Stock' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  return <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${cls}`}>{status}</span>;
+}
+
+export default function ProductDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeImg, setActiveImg] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  useEffect(() => {
+    API.get(`/public/products/${id}`)
+      .then(r => {
+        setProduct(r.data);
+        if (r.data.variants?.length) setSelectedVariant(r.data.variants[0]);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-3xl bg-white border border-slate-200">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"/>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="rounded-3xl bg-white border border-slate-200 p-12 text-center">
+        <p className="text-slate-500">Product not found.</p>
+        <button onClick={() => navigate('/products')} className="mt-4 text-blue-600 hover:underline text-sm">← Back to products</button>
+      </div>
+    );
+  }
+
+  const images = product.images?.length ? product.images : (product.image_path ? [{ id: 0, image_path: product.image_path, is_primary: 1 }] : []);
+  const variants = product.variants || [];
+  const hasVariants = variants.length > 0;
+  const currentPrice = selectedVariant ? selectedVariant.selling_price : product.selling_price;
+  const currentStock = selectedVariant ? { label: selectedVariant.status, qty: selectedVariant.stock_quantity } : { label: product.status, qty: product.stock_quantity };
+
+  const variantColors = [...new Set(variants.filter(v => v.color).map(v => v.color))];
+  const variantSizes = [...new Set(variants.filter(v => v.size).map(v => v.size))];
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-slate-500">
+        <button onClick={() => navigate('/products')} className="hover:text-blue-600 transition">Products</button>
+        {product.category_name && (<><span>›</span><button onClick={() => navigate(`/products?category=${product.category_id}`)} className="hover:text-blue-600 transition">{product.category_name}</button></>)}
+        <span>›</span>
+        <span className="text-slate-800 font-medium truncate max-w-xs">{product.name}</span>
+      </nav>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+        {/* Image gallery */}
+        <div className="space-y-3">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 aspect-square">
+            {images.length > 0 ? (
+              <img
+                src={`${BACKEND}/${images[activeImg]?.image_path}`}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-slate-300 text-7xl">📦</div>
+            )}
+          </div>
+          {images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {images.map((img, i) => (
+                <button
+                  key={img.id || i}
+                  onClick={() => setActiveImg(i)}
+                  className={`flex-shrink-0 h-16 w-16 overflow-hidden rounded-xl border-2 transition ${activeImg === i ? 'border-blue-500' : 'border-transparent hover:border-slate-300'}`}
+                >
+                  <img src={`${BACKEND}/${img.image_path}`} alt="" className="h-full w-full object-cover"/>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Product info */}
+        <div className="space-y-5">
+          {product.category_name && (
+            <span className="text-xs font-semibold uppercase tracking-widest text-amber-500">{product.category_name}</span>
+          )}
+          <h1 className="text-3xl font-bold text-slate-900 leading-snug">{product.name}</h1>
+
+          {/* Price */}
+          {currentPrice > 0 && (
+            <div className="text-2xl font-extrabold text-blue-600">{fmtPrice(currentPrice)} RWF</div>
+          )}
+
+          {/* Stock status */}
+          <div className="flex items-center gap-3">
+            <StatusBadge status={currentStock.label}/>
+            {currentStock.qty > 0 && (
+              <span className="text-sm text-slate-500">{currentStock.qty} units available</span>
+            )}
+          </div>
+
+          {product.description && (
+            <p className="text-slate-600 leading-relaxed">{product.description}</p>
+          )}
+
+          {/* Variant selector */}
+          {hasVariants && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
+              <p className="text-sm font-bold text-slate-700 uppercase tracking-wider">Available Options</p>
+
+              {variantColors.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Color</p>
+                  <div className="flex flex-wrap gap-2">
+                    {variantColors.map(color => {
+                      const v = variants.find(x => x.color === color && (!selectedVariant?.size || x.size === selectedVariant.size));
+                      const active = selectedVariant?.color === color;
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => { if (v) setSelectedVariant(v); }}
+                          className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'} ${!v || v.stock_quantity === 0 ? 'opacity-40 line-through cursor-not-allowed' : ''}`}
+                        >
+                          {color}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {variantSizes.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Size</p>
+                  <div className="flex flex-wrap gap-2">
+                    {variantSizes.map(size => {
+                      const v = variants.find(x => x.size === size && (!selectedVariant?.color || x.color === selectedVariant.color));
+                      const active = selectedVariant?.size === size;
+                      return (
+                        <button
+                          key={size}
+                          onClick={() => { if (v) setSelectedVariant(v); }}
+                          className={`rounded-xl border px-4 py-1.5 text-sm font-semibold transition ${active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'} ${!v || v.stock_quantity === 0 ? 'opacity-40 line-through cursor-not-allowed' : ''}`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* All variants table */}
+              {!variantColors.length && !variantSizes.length && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-slate-200">
+                      <th className="py-2 pr-4 text-left text-xs font-semibold text-slate-500">Variant</th>
+                      <th className="py-2 pr-4 text-right text-xs font-semibold text-slate-500">Price</th>
+                      <th className="py-2 text-left text-xs font-semibold text-slate-500">Stock</th>
+                    </tr></thead>
+                    <tbody>
+                      {variants.map(v => (
+                        <tr key={v.id} onClick={() => setSelectedVariant(v)}
+                          className={`cursor-pointer border-b border-slate-100 transition hover:bg-white ${selectedVariant?.id === v.id ? 'bg-blue-50' : ''}`}>
+                          <td className="py-2 pr-4 font-medium text-slate-800">{v.sku || `Variant ${v.id}`}</td>
+                          <td className="py-2 pr-4 text-right text-blue-600 font-semibold">{fmtPrice(v.selling_price)} RWF</td>
+                          <td className="py-2"><StatusBadge status={v.status}/></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CTA */}
+          <div className="flex flex-wrap gap-3 pt-2">
+            <a
+              href={`tel:${'+250788123456'}`}
+              className="flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
+            >
+              📞 Call to Order
+            </a>
+            <button
+              onClick={() => navigate('/contact')}
+              className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:border-blue-400 hover:text-blue-600"
+            >
+              Get a Quote
+            </button>
+          </div>
+
+          {/* SKU */}
+          {(selectedVariant?.sku || product.sku) && (
+            <p className="text-xs text-slate-400">SKU: {selectedVariant?.sku || product.sku}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,89 +1,87 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
-import ProductForm from '../components/ProductForm';
 
-const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+function fieldCls() { return 'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100'; }
+function labelCls() { return 'block text-sm font-medium text-slate-700'; }
 
-function AdminAddProduct() {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+function genSKU() {
+  return 'UMU-' + Math.random().toString(36).toUpperCase().slice(2, 8);
+}
+
+export default function AdminAddProduct() {
   const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [form, setForm] = useState({ category_id: '', name: '', sku: genSKU(), description: '', selling_price: '', cost_price: '', stock_quantity: 0, minimum_stock: 5 });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const token = localStorage.getItem('umuhoza_token');
+  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
   useEffect(() => {
-    API.get('/categories')
-      .then((r) => setCategories(r.data))
-      .catch(() => setError('Unable to load categories.'))
-      .finally(() => setLoading(false));
+    API.get('/categories').then(r => setCategories(r.data || [])).catch(console.error);
   }, []);
 
-  const uploadImage = async (file) => {
-    const formData = new FormData();
-    formData.append('image', file);
-    // Use raw axios — the API instance defaults Content-Type: application/json
-    // which breaks multer's multipart parser. Raw axios auto-sets the correct
-    // multipart/form-data boundary.
-    const response = await axios.post(`${BACKEND_BASE}/api/products/upload`, formData, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data.image_path;
-  };
-
-  const handleSave = async (productData, imageFile) => {
-    const payload = { ...productData };
-
-    if (imageFile) {
-      payload.image_path = await uploadImage(imageFile);
-    }
-
-    await API.post('/products', payload, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    navigate('/admin/products');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(''); setSaving(true);
+    try {
+      const res = await API.post('/products', form, { headers: { Authorization: `Bearer ${token}` } });
+      navigate(`/admin/products/${res.data.id}/edit?tab=Images`);
+    } catch (e) { setError(e?.response?.data?.message || 'Could not create product'); }
+    finally { setSaving(false); }
   };
 
   return (
     <AdminLayout currentPage="/admin/products/add">
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/admin/products')}
-            className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900"
-          >
-            ← Back to Products
-          </button>
-        </div>
-
+        <button onClick={() => navigate('/admin/products')} className="text-sm font-medium text-slate-500 hover:text-slate-900">← Back to Products</button>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Add Product</h2>
-          <p className="mt-1 text-sm text-slate-500">Create a new product in the catalog.</p>
+          <h2 className="text-2xl font-bold text-slate-900">Add New Product</h2>
+          <p className="mt-1 text-sm text-slate-500">After creating, you'll be taken to upload images and add variants.</p>
         </div>
 
-        {error && (
-          <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {error && <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-        {loading ? (
-          <div className="flex h-40 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className={labelCls()}>Product Name *</label>
+              <input required value={form.name} onChange={set('name')} className={fieldCls()} placeholder="e.g. Portland Cement 50kg" />
+            </div>
+            <div>
+              <label className={labelCls()}>Category *</label>
+              <select required value={form.category_id} onChange={set('category_id')} className={fieldCls()}>
+                <option value="">Select category</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls()}>SKU *</label>
+              <div className="flex gap-2">
+                <input required value={form.sku} onChange={set('sku')} className={fieldCls()} />
+                <button type="button" onClick={() => setForm(p => ({ ...p, sku: genSKU() }))}
+                  className="mt-2 flex-shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                  Generate
+                </button>
+              </div>
+            </div>
+            <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
+            <div><label className={labelCls()}>Cost Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
+            <div><label className={labelCls()}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
+            <div><label className={labelCls()}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
+            <div className="sm:col-span-2">
+              <label className={labelCls()}>Description</label>
+              <textarea rows={3} value={form.description} onChange={set('description')} className={fieldCls()} placeholder="Describe the product…" />
+            </div>
           </div>
-        ) : (
-          <ProductForm
-            categories={categories}
-            onSave={handleSave}
-            submitLabel="Create Product"
-          />
-        )}
+          <button type="submit" disabled={saving}
+            className="rounded-xl bg-blue-600 px-8 py-3 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:opacity-60">
+            {saving ? 'Creating…' : 'Create Product & Continue →'}
+          </button>
+        </form>
       </div>
     </AdminLayout>
   );
 }
-
-export default AdminAddProduct;

@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
+
+const CATEGORY_META = {
+  construction: { emoji: '🏗️', color: 'bg-orange-50 border-orange-200', accent: 'text-orange-600' },
+  tool: { emoji: '🔧', color: 'bg-blue-50 border-blue-200', accent: 'text-blue-600' },
+  paint: { emoji: '🎨', color: 'bg-purple-50 border-purple-200', accent: 'text-purple-600' },
+  electric: { emoji: '⚡', color: 'bg-yellow-50 border-yellow-200', accent: 'text-yellow-600' },
+  plumb: { emoji: '🔩', color: 'bg-teal-50 border-teal-200', accent: 'text-teal-600' },
+  roof: { emoji: '🏠', color: 'bg-emerald-50 border-emerald-200', accent: 'text-emerald-600' },
+};
+function getCatMeta(name = '') {
+  const l = name.toLowerCase();
+  for (const [k, m] of Object.entries(CATEGORY_META)) { if (l.includes(k)) return m; }
+  return { emoji: '📦', color: 'bg-indigo-50 border-indigo-200', accent: 'text-indigo-600' };
+}
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
@@ -14,6 +28,7 @@ const STATUS_CLASS = {
 function Home() {
   const [data, setData] = useState(null);
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   useEffect(() => {
     API.get('/public/homepage')
@@ -31,7 +46,7 @@ function Home() {
 
   const s = data.settings || {};
   const stats = data.stats || {};
-  const featured = data.featured || [];
+  const categories = data.categories || [];
   const announcements = data.announcements || [];
   const whyItems = (data.sections || []).filter((sec) => sec.section_name === 'why_choose_us');
 
@@ -120,61 +135,46 @@ function Home() {
         </div>
       </section>
 
-      {/* ── Featured Products + Why Choose Us ─────────────────────────────── */}
+      {/* ── Shop by Category ───────────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
-          {/* Featured products */}
+          {/* Category grid */}
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-500">
-              {t('home.featured.label')}
-            </p>
-            <h2 className="mt-4 text-3xl font-extrabold text-slate-900">{t('home.featured.title')}</h2>
-            <p className="mt-3 text-slate-600">{t('home.featured.desc')}</p>
-            <div className="mt-8 grid gap-6 sm:grid-cols-2">
-              {featured.length > 0 ? (
-                featured.slice(0, 4).map((product) => (
-                  <div key={product.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 h-40 overflow-hidden rounded-2xl bg-slate-100">
-                      {product.image_path ? (
-                        <img
-                          src={`${BACKEND}/${product.image_path}`}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                          {t('home.noImage')}
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="text-base font-semibold text-slate-900 line-clamp-1">{product.name}</h3>
-                    <p className="mt-1 text-sm text-slate-600 line-clamp-2">
-                      {product.description || t('home.featured.desc')}
-                    </p>
-                    <div className="mt-3 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">{product.category_name || t('home.general')}</span>
-                      <span className={`rounded-full px-2.5 py-1 font-semibold ${STATUS_CLASS[product.status] || 'bg-slate-100 text-slate-600'}`}>
-                        {product.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
+            <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-500">Our Products</p>
+            <h2 className="mt-4 text-3xl font-extrabold text-slate-900">Shop by Category</h2>
+            <p className="mt-3 text-slate-600">Browse our wide selection of quality hardware and construction materials organized by category.</p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {categories.length > 0 ? (
+                categories.slice(0, 6).map(cat => {
+                  const meta = getCatMeta(cat.name);
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => navigate(`/products?category=${cat.id}`)}
+                      className={`group flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition hover:shadow-md hover:-translate-y-0.5 ${meta.color}`}
+                    >
+                      <span className="text-3xl">{meta.emoji}</span>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 truncate">{cat.name}</p>
+                        <p className={`text-xs font-medium ${meta.accent}`}>{cat.product_count || 0} product{cat.product_count !== 1 ? 's' : ''}</p>
+                      </div>
+                      <svg className="ml-auto h-4 w-4 text-slate-300 group-hover:text-slate-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                      </svg>
+                    </button>
+                  );
+                })
               ) : (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-400 sm:col-span-2">
-                  <p className="text-sm">{t('home.featured.empty')}</p>
+                  <p className="text-sm">No categories yet. Add them from the admin panel.</p>
                 </div>
               )}
             </div>
-            {featured.length > 0 && (
-              <div className="mt-6">
-                <Link
-                  to="/products"
-                  className="inline-flex items-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                  {t('home.featured.viewAll')}
-                </Link>
-              </div>
-            )}
+            <div className="mt-6">
+              <Link to="/products" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                Browse All Products →
+              </Link>
+            </div>
           </div>
 
           {/* Why Choose Us */}
@@ -185,12 +185,10 @@ function Home() {
                 ? whyItems.map((item) => (
                     <div key={item.id} className="rounded-3xl bg-slate-900/80 p-5">
                       <h4 className="text-base font-semibold text-white">{item.title}</h4>
-                      {item.description && (
-                        <p className="mt-2 text-sm text-slate-300">{item.description}</p>
-                      )}
+                      {item.description && <p className="mt-2 text-sm text-slate-300">{item.description}</p>}
                     </div>
                   ))
-                : defaultWhyItems.map((item) => (
+                : (t('home.why.defaultItems') || []).map((item) => (
                     <div key={item.title} className="rounded-3xl bg-slate-900/80 p-5">
                       <h4 className="text-base font-semibold text-white">{item.title}</h4>
                       <p className="mt-2 text-sm text-slate-300">{item.desc}</p>
