@@ -137,63 +137,131 @@ function Home() {
 
       {/* ── Shop by Category ───────────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
-          {/* Category grid */}
+        {/* Section header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-500">Our Products</p>
-            <h2 className="mt-4 text-3xl font-extrabold text-slate-900">Shop by Category</h2>
-            <p className="mt-3 text-slate-600">Browse our wide selection of quality hardware and construction materials organized by category.</p>
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {categories.length > 0 ? (
-                categories.slice(0, 6).map(cat => {
-                  const meta = getCatMeta(cat.name);
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => navigate(`/products?category=${cat.id}`)}
-                      className={`group flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition hover:shadow-md hover:-translate-y-0.5 ${meta.color}`}
-                    >
-                      <span className="text-3xl">{meta.emoji}</span>
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 truncate">{cat.name}</p>
-                        <p className={`text-xs font-medium ${meta.accent}`}>{cat.product_count || 0} product{cat.product_count !== 1 ? 's' : ''}</p>
-                      </div>
-                      <svg className="ml-auto h-4 w-4 text-slate-300 group-hover:text-slate-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                      </svg>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-400 sm:col-span-2">
-                  <p className="text-sm">No categories yet. Add them from the admin panel.</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-6">
-              <Link to="/products" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                Browse All Products →
-              </Link>
-            </div>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 sm:text-4xl">Shop by Category</h2>
+            <p className="mt-3 max-w-lg text-slate-500">Browse our wide selection of quality hardware and construction materials.</p>
           </div>
+          <Link
+            to="/products"
+            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:shadow sm:self-auto"
+          >
+            View all categories →
+          </Link>
+        </div>
 
-          {/* Why Choose Us */}
-          <div className="rounded-[2rem] bg-slate-950 p-8 text-white shadow-2xl">
-            <h3 className="text-2xl font-semibold">{t('home.why.title')}</h3>
-            <div className="mt-8 space-y-4">
-              {whyItems.length > 0
-                ? whyItems.map((item) => (
-                    <div key={item.id} className="rounded-3xl bg-slate-900/80 p-5">
-                      <h4 className="text-base font-semibold text-white">{item.title}</h4>
-                      {item.description && <p className="mt-2 text-sm text-slate-300">{item.description}</p>}
+        {/* Category tiles grid */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.length > 0 ? (
+            categories.slice(0, 6).map(cat => {
+              const meta = getCatMeta(cat.name);
+              const hasImg = !!cat.representative_image;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => navigate(`/products?category=${cat.id}`)}
+                  className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:shadow-xl hover:-translate-y-1 text-left"
+                  style={{ aspectRatio: '4/3' }}
+                >
+                  {/* Background image or color */}
+                  {hasImg ? (
+                    <div className="absolute inset-0">
+                      <img
+                        src={`${BACKEND}/${cat.representative_image}`}
+                        alt=""
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                     </div>
-                  ))
-                : (t('home.why.defaultItems') || []).map((item) => (
-                    <div key={item.title} className="rounded-3xl bg-slate-900/80 p-5">
-                      <h4 className="text-base font-semibold text-white">{item.title}</h4>
-                      <p className="mt-2 text-sm text-slate-300">{item.desc}</p>
+                  ) : (
+                    <div className={`absolute inset-0 ${meta.color}`}>
+                      <div className="flex h-full items-center justify-center text-[80px] opacity-10 select-none">{meta.emoji}</div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Emoji badge (top-left, image tiles only) */}
+                  {hasImg && (
+                    <div className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 text-xl backdrop-blur-sm">
+                      {meta.emoji}
+                    </div>
+                  )}
+
+                  {/* Arrow (top-right) */}
+                  <div className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+
+                  {/* Text at bottom */}
+                  <div className="absolute inset-x-0 bottom-0 p-5">
+                    {!hasImg && <div className="mb-2 text-3xl">{meta.emoji}</div>}
+                    <p className={`text-lg font-bold leading-tight ${hasImg ? 'text-white' : 'text-slate-900'}`}>
+                      {cat.name}
+                    </p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${hasImg ? 'bg-white/15 text-slate-100' : 'bg-slate-900/10 text-slate-600'}`}>
+                        {cat.product_count > 0 ? `${cat.product_count} product${cat.product_count !== 1 ? 's' : ''}` : 'No products yet'}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-400 sm:col-span-3">
+              <p className="text-sm">No categories yet. Add them from the admin panel.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Why Choose Us ──────────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="overflow-hidden rounded-[2.5rem] bg-slate-950 shadow-2xl">
+          <div className="grid gap-0 lg:grid-cols-2">
+            {/* Left: why items */}
+            <div className="p-10 lg:p-14">
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-400">Why Us</p>
+              <h3 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">{t('home.why.title')}</h3>
+              <div className="mt-8 space-y-4">
+                {whyItems.length > 0
+                  ? whyItems.map((item) => (
+                      <div key={item.id} className="flex gap-4 rounded-2xl bg-white/5 p-5">
+                        <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-amber-400" />
+                        <div>
+                          <h4 className="font-semibold text-white">{item.title}</h4>
+                          {item.description && <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{item.description}</p>}
+                        </div>
+                      </div>
+                    ))
+                  : (t('home.why.defaultItems') || []).map((item) => (
+                      <div key={item.title} className="flex gap-4 rounded-2xl bg-white/5 p-5">
+                        <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-amber-400" />
+                        <div>
+                          <h4 className="font-semibold text-white">{item.title}</h4>
+                          <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+              </div>
+            </div>
+            {/* Right: stat highlights */}
+            <div className="flex flex-col justify-center gap-6 border-t border-white/10 p-10 lg:border-l lg:border-t-0 lg:p-14">
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-400">By the numbers</p>
+              {[
+                { value: `${stats.products ?? 0}+`, label: 'Products in stock' },
+                { value: `${stats.categories ?? 0}+`, label: 'Product categories' },
+                { value: `${yearsExp}+`, label: 'Years of experience' },
+                { value: `${stats.customers ?? 0}+`, label: 'Happy customers' },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-5">
+                  <p className="text-4xl font-extrabold text-white tabular-nums">{item.value}</p>
+                  <p className="text-sm text-slate-400 leading-tight">{item.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

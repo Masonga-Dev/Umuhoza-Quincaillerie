@@ -137,34 +137,61 @@ export default function Products() {
             <p className="mt-1 text-slate-500 text-sm">Select a category to browse products</p>
           </div>
           {categories.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-16 text-center text-slate-400">
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-16 text-center text-slate-400 sm:col-span-2 lg:col-span-3">
               No categories yet. Add categories from the admin panel.
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {categories.map(cat => {
                 const meta = getCategoryMeta(cat.name);
+                const hasImg = !!cat.representative_image;
                 return (
                   <button
                     key={cat.id}
                     onClick={() => handleCategoryClick(cat)}
-                    className={`group flex items-center gap-4 rounded-2xl border-2 p-5 text-left transition hover:shadow-md hover:-translate-y-0.5 ${meta.color}`}
+                    className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:shadow-xl hover:-translate-y-1 text-left"
+                    style={{ aspectRatio: '4/3' }}
                   >
-                    <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl ${meta.accent} bg-opacity-15 text-3xl`}>
-                      {meta.emoji}
+                    {/* Background */}
+                    {hasImg ? (
+                      <div className="absolute inset-0">
+                        <img
+                          src={`${BACKEND}/${cat.representative_image}`}
+                          alt=""
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+                      </div>
+                    ) : (
+                      <div className={`absolute inset-0 ${meta.color}`}>
+                        <div className="flex h-full items-center justify-center text-[80px] opacity-10 select-none">{meta.emoji}</div>
+                      </div>
+                    )}
+
+                    {/* Emoji badge (image tiles) */}
+                    {hasImg && (
+                      <div className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 text-xl backdrop-blur-sm">
+                        {meta.emoji}
+                      </div>
+                    )}
+
+                    {/* Arrow */}
+                    <div className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                      </svg>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 truncate">{cat.name}</p>
-                      <p className="text-sm opacity-70 mt-0.5">
-                        {cat.product_count > 0 ? `${cat.product_count} product${cat.product_count !== 1 ? 's' : ''}` : 'No products yet'}
-                      </p>
-                      {cat.description && (
-                        <p className="text-xs mt-1 opacity-60 line-clamp-1">{cat.description}</p>
-                      )}
+
+                    {/* Text at bottom */}
+                    <div className="absolute inset-x-0 bottom-0 p-5">
+                      {!hasImg && <div className="mb-2 text-3xl">{meta.emoji}</div>}
+                      <p className={`text-lg font-bold leading-tight ${hasImg ? 'text-white' : 'text-slate-900'}`}>{cat.name}</p>
+                      <div className="mt-1.5">
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${hasImg ? 'bg-white/15 text-slate-100' : 'bg-slate-900/10 text-slate-600'}`}>
+                          {cat.product_count > 0 ? `${cat.product_count} product${cat.product_count !== 1 ? 's' : ''}` : 'No products yet'}
+                        </span>
+                      </div>
                     </div>
-                    <svg className="ml-auto h-5 w-5 flex-shrink-0 opacity-40 group-hover:opacity-70 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                    </svg>
                   </button>
                 );
               })}

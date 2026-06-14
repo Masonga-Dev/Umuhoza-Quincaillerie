@@ -20,6 +20,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [zoomed, setZoomed] = useState(false);
 
   useEffect(() => {
     API.get(`/public/products/${id}`)
@@ -30,6 +31,18 @@ export default function ProductDetail() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!zoomed || !product) return;
+    const imgs = product.images?.length ? product.images : (product.image_path ? [{ id: 0, image_path: product.image_path }] : []);
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setZoomed(false);
+      if (e.key === 'ArrowLeft') setActiveImg(i => (i - 1 + imgs.length) % Math.max(imgs.length, 1));
+      if (e.key === 'ArrowRight') setActiveImg(i => (i + 1) % Math.max(imgs.length, 1));
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [zoomed, product]);
 
   if (loading) {
     return (
@@ -57,6 +70,9 @@ export default function ProductDetail() {
   const variantColors = [...new Set(variants.filter(v => v.color).map(v => v.color))];
   const variantSizes = [...new Set(variants.filter(v => v.size).map(v => v.size))];
 
+  const prevImg = () => setActiveImg(i => (i - 1 + images.length) % Math.max(images.length, 1));
+  const nextImg = () => setActiveImg(i => (i + 1) % Math.max(images.length, 1));
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -70,27 +86,76 @@ export default function ProductDetail() {
       <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
         {/* Image gallery */}
         <div className="space-y-3">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 aspect-square">
+          {/* Main image with arrows */}
+          <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 aspect-square">
             {images.length > 0 ? (
-              <img
-                src={`${BACKEND}/${images[activeImg]?.image_path}`}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
+              <>
+                <img
+                  src={`${BACKEND}/${images[activeImg]?.image_path}`}
+                  alt={product.name}
+                  className="h-full w-full object-cover cursor-zoom-in transition duration-300"
+                  onClick={() => setZoomed(true)}
+                />
+                {/* Prev / Next arrows */}
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImg}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm text-slate-700 hover:bg-white transition text-xl font-bold"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={nextImg}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm text-slate-700 hover:bg-white transition text-xl font-bold"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+                {/* Zoom hint */}
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-xs text-white backdrop-blur-sm pointer-events-none">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                  </svg>
+                  Click to zoom
+                </div>
+                {/* Slide counter */}
+                {images.length > 1 && (
+                  <div className="absolute top-3 left-3 rounded-full bg-black/40 px-2.5 py-1 text-xs text-white backdrop-blur-sm pointer-events-none">
+                    {activeImg + 1} / {images.length}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="flex h-full items-center justify-center text-slate-300 text-7xl">📦</div>
             )}
           </div>
+
+          {/* Thumbnail strip */}
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {images.map((img, i) => (
                 <button
                   key={img.id || i}
                   onClick={() => setActiveImg(i)}
-                  className={`flex-shrink-0 h-16 w-16 overflow-hidden rounded-xl border-2 transition ${activeImg === i ? 'border-blue-500' : 'border-transparent hover:border-slate-300'}`}
+                  className={`flex-shrink-0 h-16 w-16 overflow-hidden rounded-xl border-2 transition ${activeImg === i ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:border-slate-300'}`}
                 >
                   <img src={`${BACKEND}/${img.image_path}`} alt="" className="h-full w-full object-cover"/>
                 </button>
+              ))}
+            </div>
+          )}
+
+          {/* Dot indicators */}
+          {images.length > 1 && (
+            <div className="flex justify-center gap-1.5 pt-1">
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImg(i)}
+                  className={`rounded-full transition-all ${activeImg === i ? 'w-5 h-2 bg-blue-600' : 'w-2 h-2 bg-slate-300 hover:bg-slate-400'}`}
+                />
               ))}
             </div>
           )}
@@ -195,7 +260,7 @@ export default function ProductDetail() {
           {/* CTA */}
           <div className="flex flex-wrap gap-3 pt-2">
             <a
-              href={`tel:${'+250788123456'}`}
+              href="tel:+250788123456"
               className="flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
             >
               📞 Call to Order
@@ -214,6 +279,70 @@ export default function ProductDetail() {
           )}
         </div>
       </div>
+
+      {/* Zoom lightbox */}
+      {zoomed && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
+          onClick={() => setZoomed(false)}
+        >
+          {/* Close */}
+          <button
+            className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white text-xl hover:bg-white/20 transition z-10"
+            onClick={() => setZoomed(false)}
+          >
+            ✕
+          </button>
+
+          {/* Prev / Next in lightbox */}
+          {images.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white text-3xl hover:bg-white/25 transition z-10 font-bold"
+                onClick={e => { e.stopPropagation(); prevImg(); }}
+              >
+                ‹
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white text-3xl hover:bg-white/25 transition z-10 font-bold"
+                onClick={e => { e.stopPropagation(); nextImg(); }}
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          {/* Full image */}
+          <img
+            src={`${BACKEND}/${images[activeImg]?.image_path}`}
+            alt={product.name}
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+
+          {/* Thumbnail strip in lightbox */}
+          {images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 rounded-2xl bg-black/40 p-2 backdrop-blur-sm">
+              {images.map((img, i) => (
+                <button
+                  key={img.id || i}
+                  onClick={e => { e.stopPropagation(); setActiveImg(i); }}
+                  className={`h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${activeImg === i ? 'border-white' : 'border-white/20 hover:border-white/50'}`}
+                >
+                  <img src={`${BACKEND}/${img.image_path}`} alt="" className="h-full w-full object-cover"/>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Image counter */}
+          {images.length > 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white backdrop-blur-sm">
+              {activeImg + 1} / {images.length}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
