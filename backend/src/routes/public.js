@@ -7,8 +7,8 @@ router.get('/homepage', async (req, res) => {
   try {
     const [sections] = await pool.query('SELECT * FROM homepage_content WHERE is_active=1 ORDER BY display_order ASC');
     const [featured] = await pool.query(
-      `SELECT p.*, c.name AS category_name,
-        (SELECT image_path FROM product_images WHERE product_id=p.id AND is_primary=1 LIMIT 1) AS image_path
+      `SELECT p.id, p.name, p.sku, p.description, p.selling_price, p.stock_quantity, p.status, p.category_id, c.name AS category_name,
+        (SELECT image_path FROM product_images WHERE product_id=p.id ORDER BY is_primary DESC, created_at ASC LIMIT 1) AS image_path
        FROM products p LEFT JOIN categories c ON p.category_id=c.id
        WHERE p.status<>'Out of Stock' ORDER BY p.created_at DESC LIMIT 8`
     );
@@ -19,7 +19,11 @@ router.get('/homepage', async (req, res) => {
     const [categoryCount] = await pool.query('SELECT COUNT(*) AS total FROM categories');
     const [customerCount] = await pool.query('SELECT COUNT(DISTINCT sold_by) AS total FROM sales WHERE sold_by IS NOT NULL');
     const [categories] = await pool.query(
-      `SELECT c.*, COUNT(p.id) AS product_count
+      `SELECT c.id, c.name, c.description, COUNT(p.id) AS product_count,
+        (SELECT pi.image_path FROM product_images pi
+         JOIN products pp ON pp.id = pi.product_id
+         WHERE pp.category_id = c.id
+         ORDER BY pi.is_primary DESC, pi.created_at ASC LIMIT 1) AS representative_image
        FROM categories c LEFT JOIN products p ON p.category_id=c.id
        GROUP BY c.id ORDER BY c.name ASC`
     );
@@ -52,7 +56,11 @@ router.get('/settings', async (req, res) => {
 router.get('/categories', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT c.*, COUNT(p.id) AS product_count
+      `SELECT c.id, c.name, c.description, COUNT(p.id) AS product_count,
+        (SELECT pi.image_path FROM product_images pi
+         JOIN products pp ON pp.id = pi.product_id
+         WHERE pp.category_id = c.id
+         ORDER BY pi.is_primary DESC, pi.created_at ASC LIMIT 1) AS representative_image
        FROM categories c LEFT JOIN products p ON p.category_id=c.id
        GROUP BY c.id ORDER BY c.name ASC`
     );
@@ -63,8 +71,8 @@ router.get('/categories', async (req, res) => {
 router.get('/products', async (req, res) => {
   const { q, category } = req.query;
   const filters = [], params = [];
-  let sql = `SELECT p.*, c.name AS category_name,
-    (SELECT image_path FROM product_images WHERE product_id=p.id AND is_primary=1 LIMIT 1) AS image_path
+  let sql = `SELECT p.id, p.name, p.sku, p.description, p.selling_price, p.stock_quantity, p.minimum_stock, p.status, p.category_id, p.created_at, c.name AS category_name,
+    (SELECT image_path FROM product_images WHERE product_id=p.id ORDER BY is_primary DESC, created_at ASC LIMIT 1) AS image_path
     FROM products p LEFT JOIN categories c ON p.category_id=c.id WHERE 1=1`;
   if (q) { filters.push('(p.name LIKE ? OR p.description LIKE ? OR p.sku LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (category) { filters.push('p.category_id=?'); params.push(category); }
@@ -74,7 +82,10 @@ router.get('/products', async (req, res) => {
     const [products] = await pool.query(sql, params);
     if (products.length) {
       const ids = products.map(p => p.id);
-      const [variants] = await pool.query(`SELECT * FROM product_variants WHERE product_id IN (${ids.map(() => '?').join(',')})`, ids);
+      const [variants] = await pool.query(
+        `SELECT id, product_id, color, size, sku, selling_price, stock_quantity, minimum_stock, status FROM product_variants WHERE product_id IN (${ids.map(() => '?').join(',')})`,
+        ids
+      );
       products.forEach(p => { p.variants = variants.filter(v => v.product_id === p.id); });
     }
     res.json(products);
@@ -84,17 +95,19 @@ router.get('/products', async (req, res) => {
 router.get('/products/:id', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON p.category_id=c.id WHERE p.id=?',
+      `SELECT p.id, p.name, p.sku, p.description, p.selling_price, p.stock_quantity, p.minimum_stock, p.status, p.category_id, p.created_at,
+              c.name AS category_name
+       FROM products p LEFT JOIN categories c ON p.category_id=c.id WHERE p.id=?`,
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ message: 'Product not found' });
     const product = rows[0];
     const [images] = await pool.query(
-      'SELECT * FROM product_images WHERE product_id=? ORDER BY is_primary DESC, created_at ASC',
+      'SELECT id, product_id, image_path, is_primary, created_at FROM product_images WHERE product_id=? ORDER BY is_primary DESC, created_at ASC',
       [req.params.id]
     );
     const [variants] = await pool.query(
-      'SELECT * FROM product_variants WHERE product_id=? ORDER BY created_at ASC',
+      'SELECT id, product_id, color, size, sku, selling_price, stock_quantity, minimum_stock, status FROM product_variants WHERE product_id=? ORDER BY created_at ASC',
       [req.params.id]
     );
     product.images = images;

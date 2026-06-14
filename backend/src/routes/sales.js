@@ -12,17 +12,38 @@ function determineStatus(qty, min = 5) {
 }
 
 router.get('/', authMiddleware, async (req, res) => {
-  const { q, invoice } = req.query;
+  const { q } = req.query;
   let query = 'SELECT s.*, u.name AS sold_by_name FROM sales s LEFT JOIN users u ON s.sold_by=u.id';
   const params = [], filters = [];
-  if (invoice) { filters.push('s.invoice_number=?'); params.push(invoice); }
-  if (q) { filters.push('(s.invoice_number LIKE ? OR s.total_amount LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  if (q) { filters.push('(s.invoice_number LIKE ? OR u.name LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
   if (filters.length) query += ' WHERE ' + filters.join(' AND ');
   query += ' ORDER BY s.sale_date DESC';
   try {
     const [rows] = await pool.query(query, params);
     res.json(rows);
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sales' }); }
+});
+
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const [saleRows] = await pool.query(
+      'SELECT s.*, u.name AS sold_by_name FROM sales s LEFT JOIN users u ON s.sold_by=u.id WHERE s.id=?',
+      [req.params.id]
+    );
+    if (!saleRows.length) return res.status(404).json({ message: 'Sale not found' });
+    const sale = saleRows[0];
+    const [items] = await pool.query(
+      `SELECT si.*, p.name AS product_name, p.sku AS product_sku,
+              pv.color AS variant_color, pv.size AS variant_size, pv.sku AS variant_sku
+       FROM sale_items si
+       JOIN products p ON p.id = si.product_id
+       LEFT JOIN product_variants pv ON pv.id = si.variant_id
+       WHERE si.sale_id = ?`,
+      [req.params.id]
+    );
+    sale.items = items;
+    res.json(sale);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sale' }); }
 });
 
 router.post('/', authMiddleware, async (req, res) => {
