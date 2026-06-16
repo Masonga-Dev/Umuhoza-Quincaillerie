@@ -22,7 +22,11 @@ function DetailsTab({ product, categories, token, onSaved }) {
     category_id: product.category_id || '',
     sku: product.sku || '',
     name: product.name || '',
+    name_rw: product.name_rw || '',
+    name_fr: product.name_fr || '',
     description: product.description || '',
+    description_rw: product.description_rw || '',
+    description_fr: product.description_fr || '',
     cost_price: product.cost_price || 0,
     selling_price: product.selling_price || 0,
     stock_quantity: product.stock_quantity || 0,
@@ -44,12 +48,9 @@ function DetailsTab({ product, categories, token, onSaved }) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+      {/* Category + SKU */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <label className={labelCls()}>Product Name *</label>
-          <input value={form.name} onChange={set('name')} className={fieldCls()} />
-        </div>
         <div>
           <label className={labelCls()}>Category *</label>
           <select value={form.category_id} onChange={set('category_id')} className={fieldCls()}>
@@ -61,15 +62,45 @@ function DetailsTab({ product, categories, token, onSaved }) {
           <label className={labelCls()}>SKU *</label>
           <input value={form.sku} onChange={set('sku')} className={fieldCls()} />
         </div>
-        <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
-        <div><label className={labelCls()}>Cost Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
-        <div><label className={labelCls()}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
-        <div><label className={labelCls()}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
-        <div className="sm:col-span-2">
-          <label className={labelCls()}>Description</label>
-          <textarea rows={4} value={form.description} onChange={set('description')} className={fieldCls()} />
+      </div>
+
+      {/* Product Name multilingual */}
+      <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Product Name</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div><label className={labelCls()}>English *</label><input value={form.name} onChange={set('name')} className={fieldCls()} /></div>
+          <div><label className={labelCls()}>Kinyarwanda</label><input value={form.name_rw} onChange={set('name_rw')} placeholder="Izina mu Kinyarwanda" className={fieldCls()} /></div>
+          <div><label className={labelCls()}>French</label><input value={form.name_fr} onChange={set('name_fr')} placeholder="Nom en français" className={fieldCls()} /></div>
         </div>
       </div>
+
+      {/* Pricing + Stock */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
+        <div><label className={labelCls()}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
+        <div><label className={labelCls()}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
+        <div><label className={labelCls()}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
+      </div>
+
+      {/* Description multilingual */}
+      <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Description</p>
+        <div>
+          <label className={labelCls()}>English</label>
+          <textarea rows={3} value={form.description} onChange={set('description')} className={fieldCls()} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={labelCls()}>Kinyarwanda</label>
+            <textarea rows={3} value={form.description_rw} onChange={set('description_rw')} placeholder="Ibisobanuro…" className={fieldCls()} />
+          </div>
+          <div>
+            <label className={labelCls()}>French</label>
+            <textarea rows={3} value={form.description_fr} onChange={set('description_fr')} placeholder="Description…" className={fieldCls()} />
+          </div>
+        </div>
+      </div>
+
       {error && <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
       <div className="flex items-center gap-4">
         <button onClick={handleSave} disabled={saving} className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
@@ -219,7 +250,7 @@ function VariantsTab({ product, token }) {
           <div><label className={labelCls()}>Size</label><input value={form.size} onChange={set('size')} className={fieldCls()} placeholder="5L" /></div>
           <div><label className={labelCls()}>SKU</label><input value={form.sku} onChange={set('sku')} className={fieldCls()} /></div>
           <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
-          <div><label className={labelCls()}>Cost Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
+          <div><label className={labelCls()}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
           <div><label className={labelCls()}>Stock Qty</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
           <div><label className={labelCls()}>Min Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
         </div>
