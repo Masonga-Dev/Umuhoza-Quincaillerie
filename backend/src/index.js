@@ -10,6 +10,8 @@ import salesRoutes from './routes/sales.js';
 import reportRoutes from './routes/reports.js';
 import publicRoutes from './routes/public.js';
 import adminRoutes from './routes/admin.js';
+import supplierRoutes from './routes/suppliers.js';
+import purchaseRoutes from './routes/purchases.js';
 import { initDb } from './config/db.js';
 
 dotenv.config();
@@ -31,6 +33,8 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchases', purchaseRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Umuhoza Quincaillerie API is running.' });
