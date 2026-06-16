@@ -1,0 +1,392 @@
+import { useEffect, useState, useCallback } from 'react';
+import AdminLayout from '../components/AdminLayout';
+import API from '../api';
+
+const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
+const fmt = v => Number(v || 0).toLocaleString('en-RW');
+const fmtDate = d => new Date(d).toLocaleDateString('en-RW', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmtDateTime = d => new Date(d).toLocaleString('en-RW', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+function PurchaseDetailModal({ purchaseId, onClose }) {
+  const [purchase, setPurchase] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    API.get(`/purchases/${purchaseId}`, { headers: HEADERS() })
+      .then(r => setPurchase(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [purchaseId]);
+
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        {loading ? (
+          <div className="flex h-48 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"/></div>
+        ) : !purchase ? (
+          <div className="flex h-40 items-center justify-center text-slate-400">Failed to load purchase.</div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <p className="text-lg font-bold text-slate-900">Purchase #{purchase.id}</p>
+                <p className="text-sm text-slate-500 mt-0.5">{fmtDateTime(purchase.purchase_date)}</p>
+                {purchase.supplier_name && <p className="text-sm text-slate-500">Supplier: <span className="font-semibold text-slate-700">{purchase.supplier_name}</span></p>}
+                {purchase.reference_number && <p className="text-sm text-slate-500">Ref: <span className="font-mono text-slate-700">{purchase.reference_number}</span></p>}
+              </div>
+              <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 text-lg">✕</button>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Product</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Qty</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Unit Cost</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {(purchase.items || []).map((item, i) => {
+                    const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+                    return (
+                      <tr key={i}>
+                        <td className="px-6 py-3.5">
+                          <p className="font-medium text-slate-800">{item.product_name}</p>
+                          {variant && <p className="text-xs text-slate-400">{variant}</p>}
+                        </td>
+                        <td className="px-4 py-3.5 text-center font-bold text-slate-800">{item.quantity}</td>
+                        <td className="px-4 py-3.5 text-right text-slate-600">{fmt(item.unit_cost)} RWF</td>
+                        <td className="px-6 py-3.5 text-right font-bold text-slate-900">{fmt(item.subtotal)} RWF</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <span className="text-sm text-slate-500">{purchase.items?.length || 0} item{purchase.items?.length !== 1 ? 's' : ''}</span>
+              <div className="text-right">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Cost</p>
+                <p className="text-2xl font-extrabold text-slate-900">{fmt(purchase.total_cost)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NewPurchaseForm({ products, suppliers, onSuccess, onClose }) {
+  const [items, setItems] = useState([{ product_id: '', product_variant_id: '', quantity: 1, unit_cost: 0 }]);
+  const [supplierId, setSupplierId] = useState('');
+  const [reference, setReference] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const getProduct = id => products.find(p => String(p.id) === String(id));
+  const getVariants = id => getProduct(id)?.variants || [];
+
+  const updateItem = (i, field, value) => {
+    setItems(prev => {
+      const next = [...prev];
+      next[i] = { ...next[i], [field]: value };
+      if (field === 'product_id') { next[i].product_variant_id = ''; next[i].unit_cost = Number(getProduct(value)?.cost_price || 0); }
+      if (field === 'product_variant_id' && value) {
+        const v = getProduct(next[i].product_id)?.variants?.find(x => String(x.id) === String(value));
+        if (v) next[i].unit_cost = Number(v.cost_price || 0);
+      }
+      return next;
+    });
+  };
+
+  const addItem = () => setItems(p => [...p, { product_id: '', product_variant_id: '', quantity: 1, unit_cost: 0 }]);
+  const removeItem = i => setItems(p => p.filter((_, idx) => idx !== i));
+
+  const total = items.reduce((s, it) => s + Number(it.unit_cost || 0) * Number(it.quantity || 0), 0);
+  const validItems = items.filter(it => it.product_id && Number(it.quantity) > 0);
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setError('');
+    if (!validItems.length) return setError('Add at least one product with quantity > 0.');
+    setSubmitting(true);
+    try {
+      await API.post('/purchases', {
+        supplier_id: supplierId ? Number(supplierId) : null,
+        reference_number: reference.trim() || null,
+        purchase_date: purchaseDate,
+        notes: notes.trim() || null,
+        items: validItems.map(it => ({
+          product_id: Number(it.product_id),
+          product_variant_id: it.product_variant_id ? Number(it.product_variant_id) : null,
+          quantity: Number(it.quantity),
+          unit_cost: Number(it.unit_cost),
+        })),
+      }, { headers: HEADERS() });
+      onSuccess();
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Failed to record purchase.');
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4" onClick={onClose}>
+      <div className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 flex-shrink-0">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Record New Purchase</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Record incoming stock from a supplier</p>
+          </div>
+          <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 text-lg">✕</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Purchase info */}
+          <div className="grid gap-3 sm:grid-cols-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Supplier</label>
+              <select value={supplierId} onChange={e => setSupplierId(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                <option value="">No supplier / walk-in</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Reference Number</label>
+              <input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. INV-2024-001"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Purchase Date</label>
+              <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Notes</label>
+              <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional notes…"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+            </div>
+          </div>
+
+          {/* Items */}
+          {items.map((item, i) => {
+            const variants = getVariants(item.product_id);
+            const subtotal = Number(item.unit_cost || 0) * Number(item.quantity || 0);
+            return (
+              <div key={i} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Item {i + 1}</span>
+                  {items.length > 1 && <button type="button" onClick={() => removeItem(i)} className="text-xs font-semibold text-red-500 hover:text-red-700">× Remove</button>}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Product *</label>
+                    <select value={item.product_id} onChange={e => updateItem(i, 'product_id', e.target.value)} required
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                      <option value="">Choose a product…</option>
+                      {products.map(p => <option key={p.id} value={p.id}>{p.name} (SKU: {p.sku})</option>)}
+                    </select>
+                  </div>
+                  {variants.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <label className="mb-1 block text-xs font-semibold text-slate-600">Variant</label>
+                      <select value={item.product_variant_id} onChange={e => updateItem(i, 'product_variant_id', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                        <option value="">No specific variant</option>
+                        {variants.map(v => <option key={v.id} value={v.id}>{[v.color, v.size].filter(Boolean).join(' / ') || v.sku || `Variant ${v.id}`}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Quantity *</label>
+                    <input type="number" min="1" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} required
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Unit Cost (RWF)</label>
+                    <input type="number" min="0" step="any" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+                  </div>
+                </div>
+                {subtotal > 0 && <p className="mt-3 text-right text-sm font-bold text-slate-700">Subtotal: <span className="text-blue-600">{fmt(subtotal)} RWF</span></p>}
+              </div>
+            );
+          })}
+
+          <button type="button" onClick={addItem} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-base font-bold">+</span>
+            Add another item
+          </button>
+        </div>
+
+        <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 flex-shrink-0 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-500">{validItems.length} item{validItems.length !== 1 ? 's' : ''}</span>
+            <div className="text-right">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Cost</p>
+              <p className="text-2xl font-extrabold text-slate-900">{fmt(total)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
+            </div>
+          </div>
+          {error && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div>}
+          <div className="flex gap-3">
+            <button onClick={handleSubmit} disabled={submitting || !validItems.length}
+              className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {submitting ? 'Recording…' : `Confirm Purchase — ${fmt(total)} RWF`}
+            </button>
+            <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminPurchases() {
+  const [purchases, setPurchases] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [viewId, setViewId] = useState(null);
+  const [success, setSuccess] = useState('');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    API.get('/purchases', { headers: HEADERS() })
+      .then(r => setPurchases(r.data || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    API.get('/suppliers', { headers: HEADERS() }).then(r => setSuppliers(r.data || [])).catch(console.error);
+    API.get('/products', { headers: HEADERS(), params: { pageSize: 500 } }).then(r => {
+      const prods = r.data.data || [];
+      Promise.all(prods.map(p =>
+        API.get(`/products/${p.id}/variants`, { headers: HEADERS() })
+          .then(vr => ({ ...p, variants: vr.data || [] }))
+          .catch(() => ({ ...p, variants: [] }))
+      )).then(setProducts);
+    }).catch(console.error);
+  }, []);
+
+  const handleSuccess = () => {
+    setShowForm(false);
+    setSuccess('Purchase recorded and stock updated successfully.');
+    load();
+    setTimeout(() => setSuccess(''), 8000);
+  };
+
+  const totalCost = purchases.reduce((s, p) => s + Number(p.total_cost || 0), 0);
+
+  return (
+    <AdminLayout currentPage="/admin/purchases">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Purchases</h2>
+            <p className="mt-1 text-sm text-slate-500">Record incoming stock from suppliers. Stock is updated automatically.</p>
+          </div>
+          <button onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
+            <span className="text-lg leading-none">+</span> Record Purchase
+          </button>
+        </div>
+
+        {success && (
+          <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 shadow-sm">
+            <span className="text-sm font-semibold text-emerald-700">{success}</span>
+            <button onClick={() => setSuccess('')} className="text-emerald-400 hover:text-emerald-700 text-lg">✕</button>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">Total Purchases</p>
+            <p className="mt-1.5 text-2xl font-extrabold text-blue-600">{purchases.length}</p>
+            <p className="mt-1 text-xs text-slate-400">All time</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">Total Cost</p>
+            <p className="mt-1.5 text-2xl font-extrabold text-emerald-600">{fmt(totalCost)} <span className="text-sm font-semibold text-slate-400">RWF</span></p>
+            <p className="mt-1 text-xs text-slate-400">All time</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">Suppliers</p>
+            <p className="mt-1.5 text-2xl font-extrabold text-violet-600">{suppliers.length}</p>
+            <p className="mt-1 text-xs text-slate-400">Registered</p>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-4">
+            <h3 className="font-semibold text-slate-900">Purchase History</h3>
+          </div>
+          {loading ? (
+            <div className="flex h-48 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"/></div>
+          ) : purchases.length === 0 ? (
+            <div className="flex h-48 flex-col items-center justify-center text-slate-400">
+              <p className="text-sm font-semibold">No purchases recorded yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">#</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Supplier</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Reference</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Total Cost</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {purchases.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50 transition">
+                      <td className="px-6 py-4 font-mono text-sm font-bold text-slate-600">#{p.id}</td>
+                      <td className="px-5 py-4 text-sm text-slate-600">{fmtDate(p.purchase_date)}</td>
+                      <td className="px-5 py-4 text-sm text-slate-700 font-medium">{p.supplier_name || <span className="text-slate-300">—</span>}</td>
+                      <td className="px-5 py-4 text-sm font-mono text-slate-500">{p.reference_number || <span className="text-slate-300">—</span>}</td>
+                      <td className="px-5 py-4 text-right font-bold text-slate-900">{fmt(p.total_cost)} <span className="text-xs font-normal text-slate-400">RWF</span></td>
+                      <td className="px-5 py-4 text-right">
+                        <button onClick={() => setViewId(p.id)} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-blue-600 hover:text-white">
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showForm && <NewPurchaseForm products={products} suppliers={suppliers} onSuccess={handleSuccess} onClose={() => setShowForm(false)} />}
+      {viewId && <PurchaseDetailModal purchaseId={viewId} onClose={() => setViewId(null)} />}
+    </AdminLayout>
+  );
+}
