@@ -32,13 +32,13 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
-  const { name, name_rw, name_fr, description } = req.body;
+  const { name, name_rw, name_fr, description, description_rw, description_fr } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: 'Category name is required' });
   const image_path = req.file ? `uploads/categories/${req.file.filename}` : null;
   try {
     const [result] = await pool.query(
-      'INSERT INTO categories (name, name_rw, name_fr, description, image_path, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
-      [name, name_rw || null, name_fr || null, description || null, image_path]
+      'INSERT INTO categories (name, name_rw, name_fr, description, description_rw, description_fr, image_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+      [name, name_rw || null, name_fr || null, description || null, description_rw || null, description_fr || null, image_path]
     );
     res.status(201).json({ id: result.insertId, message: 'Category created' });
   } catch (error) {
@@ -48,13 +48,13 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
 });
 
 router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
-  const { name, name_rw, name_fr, description, existing_image_path } = req.body;
+  const { name, name_rw, name_fr, description, description_rw, description_fr, existing_image_path } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: 'Category name is required' });
   const image_path = req.file ? `uploads/categories/${req.file.filename}` : (existing_image_path || null);
   try {
     await pool.query(
-      'UPDATE categories SET name=?, name_rw=?, name_fr=?, description=?, image_path=? WHERE id=?',
-      [name, name_rw || null, name_fr || null, description || null, image_path, req.params.id]
+      'UPDATE categories SET name=?, name_rw=?, name_fr=?, description=?, description_rw=?, description_fr=?, image_path=? WHERE id=?',
+      [name, name_rw || null, name_fr || null, description || null, description_rw || null, description_fr || null, image_path, req.params.id]
     );
     res.json({ message: 'Category updated' });
   } catch (error) {

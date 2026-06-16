@@ -19,7 +19,7 @@ router.get('/homepage', async (req, res) => {
     const [categoryCount] = await pool.query('SELECT COUNT(*) AS total FROM categories');
     const [customerCount] = await pool.query('SELECT COUNT(DISTINCT sold_by) AS total FROM sales WHERE sold_by IS NOT NULL');
     const [categories] = await pool.query(
-      `SELECT c.id, c.name, c.description, COUNT(p.id) AS product_count,
+      `SELECT c.id, c.name, c.name_rw, c.name_fr, c.description, c.description_rw, c.description_fr, c.image_path, COUNT(p.id) AS product_count,
         (SELECT pi.image_path FROM product_images pi
          JOIN products pp ON pp.id = pi.product_id
          WHERE pp.category_id = c.id
@@ -56,7 +56,7 @@ router.get('/settings', async (req, res) => {
 router.get('/categories', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT c.id, c.name, c.description, COUNT(p.id) AS product_count,
+      `SELECT c.id, c.name, c.name_rw, c.name_fr, c.description, c.description_rw, c.description_fr, c.image_path, COUNT(p.id) AS product_count,
         (SELECT pi.image_path FROM product_images pi
          JOIN products pp ON pp.id = pi.product_id
          WHERE pp.category_id = c.id

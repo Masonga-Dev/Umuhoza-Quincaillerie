@@ -15,7 +15,14 @@ const pool = mysql.createPool({
 
 export async function initDb() {
   const connection = await pool.getConnection();
-  connection.release();
+  try {
+    await connection.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS description_rw TEXT DEFAULT NULL AFTER description`);
+    await connection.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS description_fr TEXT DEFAULT NULL AFTER description_rw`);
+  } catch (_) {
+    // columns may already exist on older MySQL — safe to ignore
+  } finally {
+    connection.release();
+  }
 }
 
 export default pool;

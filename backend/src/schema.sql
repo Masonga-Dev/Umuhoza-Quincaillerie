@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS categories (
     name_rw VARCHAR(120) DEFAULT NULL,   -- Kinyarwanda
     name_fr VARCHAR(120) DEFAULT NULL,   -- French
     description TEXT,
+    description_rw TEXT DEFAULT NULL,
+    description_fr TEXT DEFAULT NULL,
     image_path VARCHAR(255) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
