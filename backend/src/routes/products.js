@@ -90,15 +90,15 @@ router.get('/:id', async (req, res) => {
 
 // ── Create product ────────────────────────────────────────────────────────────
 router.post('/', authMiddleware, async (req, res) => {
-  const { category_id, sku, name, description, cost_price, selling_price, stock_quantity, minimum_stock, image_path } = req.body;
+  const { category_id, sku, name, name_rw, name_fr, description, description_rw, description_fr, cost_price, selling_price, stock_quantity, minimum_stock, image_path } = req.body;
   if (!name || !sku || !category_id) return res.status(400).json({ message: 'Name, SKU and category are required' });
   const status = determineStatus(stock_quantity, minimum_stock);
   try {
     const [ex] = await pool.query('SELECT id FROM products WHERE sku=?', [sku]);
     if (ex.length) return res.status(400).json({ message: 'SKU already exists' });
     const [result] = await pool.query(
-      'INSERT INTO products (category_id,sku,name,description,cost_price,selling_price,stock_quantity,minimum_stock,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,NOW())',
-      [category_id, sku, name, description || '', Number(cost_price ?? 0), Number(selling_price ?? 0), Number(stock_quantity ?? 0), Number(minimum_stock ?? 5), status]
+      'INSERT INTO products (category_id,sku,name,name_rw,name_fr,description,description_rw,description_fr,cost_price,selling_price,stock_quantity,minimum_stock,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())',
+      [category_id, sku, name, name_rw || null, name_fr || null, description || '', description_rw || null, description_fr || null, Number(cost_price ?? 0), Number(selling_price ?? 0), Number(stock_quantity ?? 0), Number(minimum_stock ?? 5), status]
     );
     if (image_path) {
       await pool.query('INSERT INTO product_images (product_id,image_path,is_primary,created_at) VALUES (?,?,1,NOW())', [result.insertId, image_path]);
@@ -109,15 +109,15 @@ router.post('/', authMiddleware, async (req, res) => {
 
 // ── Update product ────────────────────────────────────────────────────────────
 router.put('/:id', authMiddleware, async (req, res) => {
-  const { category_id, sku, name, description, cost_price, selling_price, stock_quantity, minimum_stock } = req.body;
+  const { category_id, sku, name, name_rw, name_fr, description, description_rw, description_fr, cost_price, selling_price, stock_quantity, minimum_stock } = req.body;
   if (!name || !sku || !category_id) return res.status(400).json({ message: 'Name, SKU and category are required' });
   const status = determineStatus(stock_quantity, minimum_stock);
   try {
     const [ex] = await pool.query('SELECT id FROM products WHERE sku=? AND id<>?', [sku, req.params.id]);
     if (ex.length) return res.status(400).json({ message: 'SKU already exists' });
     await pool.query(
-      'UPDATE products SET category_id=?,sku=?,name=?,description=?,cost_price=?,selling_price=?,stock_quantity=?,minimum_stock=?,status=? WHERE id=?',
-      [category_id, sku, name, description || '', Number(cost_price ?? 0), Number(selling_price ?? 0), Number(stock_quantity ?? 0), Number(minimum_stock ?? 5), status, req.params.id]
+      'UPDATE products SET category_id=?,sku=?,name=?,name_rw=?,name_fr=?,description=?,description_rw=?,description_fr=?,cost_price=?,selling_price=?,stock_quantity=?,minimum_stock=?,status=? WHERE id=?',
+      [category_id, sku, name, name_rw || null, name_fr || null, description || '', description_rw || null, description_fr || null, Number(cost_price ?? 0), Number(selling_price ?? 0), Number(stock_quantity ?? 0), Number(minimum_stock ?? 5), status, req.params.id]
     );
     res.json({ message: 'Product updated' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not update product' }); }
