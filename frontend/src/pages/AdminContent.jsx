@@ -34,7 +34,7 @@ function HomepageTab({ token }) {
   const [heroFile, setHeroFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [whyForm, setWhyForm] = useState({ title: '', description: '' });
+  const [whyForm, setWhyForm] = useState({ title: '', title_rw: '', title_fr: '', description: '', description_rw: '', description_fr: '' });
   const [editingWhy, setEditingWhy] = useState(null);
   const [whySaving, setWhySaving] = useState(false);
   const headers = { Authorization: `Bearer ${token}` };
@@ -96,7 +96,7 @@ function HomepageTab({ token }) {
         }, { headers });
         setWhyItems((prev) => [...prev, { id: res.data.id, section_name: 'why_choose_us', ...whyForm, display_order: whyItems.length, is_active: 1 }]);
       }
-      setWhyForm({ title: '', description: '' }); setEditingWhy(null);
+      setWhyForm({ title: '', title_rw: '', title_fr: '', description: '', description_rw: '', description_fr: '' }); setEditingWhy(null);
     } catch (e) { console.error(e); } finally { setWhySaving(false); }
   };
 
@@ -163,7 +163,7 @@ function HomepageTab({ token }) {
                   <p className="mt-1 text-xs text-slate-500">{item.description}</p>
                 </div>
                 <div className="ml-3 flex gap-2 flex-shrink-0">
-                  <button onClick={() => { setEditingWhy(item); setWhyForm({ title: item.title, description: item.description || '' }); }}
+                  <button onClick={() => { setEditingWhy(item); setWhyForm({ title: item.title, title_rw: item.title_rw || '', title_fr: item.title_fr || '', description: item.description || '', description_rw: item.description_rw || '', description_fr: item.description_fr || '' }); }}
                     className="text-xs font-medium text-blue-600 hover:underline">Edit</button>
                   <button onClick={() => deleteWhyItem(item.id)}
                     className="text-xs font-medium text-red-500 hover:underline">Delete</button>
@@ -174,17 +174,25 @@ function HomepageTab({ token }) {
           {/* Form */}
           <div className="space-y-3">
             <p className="text-sm font-medium text-slate-700">{editingWhy ? 'Edit Item' : 'Add Item'}</p>
-            <input type="text" value={whyForm.title} onChange={(e) => setWhyForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="e.g. Quality Products" className={fieldClass()} />
-            <textarea rows={3} value={whyForm.description} onChange={(e) => setWhyForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Short description…" className={fieldClass()} />
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</p>
+              <input type="text" value={whyForm.title} onChange={(e) => setWhyForm((p) => ({ ...p, title: e.target.value }))} placeholder="English *" className={fieldClass()} />
+              <input type="text" value={whyForm.title_rw} onChange={(e) => setWhyForm((p) => ({ ...p, title_rw: e.target.value }))} placeholder="Kinyarwanda" className={fieldClass()} />
+              <input type="text" value={whyForm.title_fr} onChange={(e) => setWhyForm((p) => ({ ...p, title_fr: e.target.value }))} placeholder="Français" className={fieldClass()} />
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Description</p>
+              <textarea rows={2} value={whyForm.description} onChange={(e) => setWhyForm((p) => ({ ...p, description: e.target.value }))} placeholder="English…" className={fieldClass()} />
+              <textarea rows={2} value={whyForm.description_rw} onChange={(e) => setWhyForm((p) => ({ ...p, description_rw: e.target.value }))} placeholder="Kinyarwanda…" className={fieldClass()} />
+              <textarea rows={2} value={whyForm.description_fr} onChange={(e) => setWhyForm((p) => ({ ...p, description_fr: e.target.value }))} placeholder="Français…" className={fieldClass()} />
+            </div>
             <div className="flex gap-3">
               <button onClick={saveWhyItem} disabled={whySaving}
                 className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
                 {whySaving ? 'Saving…' : editingWhy ? 'Update' : 'Add Item'}
               </button>
               {editingWhy && (
-                <button onClick={() => { setEditingWhy(null); setWhyForm({ title: '', description: '' }); }}
+                <button onClick={() => { setEditingWhy(null); setWhyForm({ title: '', title_rw: '', title_fr: '', description: '', description_rw: '', description_fr: '' }); }}
                   className="rounded-xl border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Cancel
                 </button>
@@ -216,7 +224,7 @@ function HomepageTab({ token }) {
 function AnnouncementsTab({ token }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ title: '', content: '', status: 'Draft' });
+  const [form, setForm] = useState({ title: '', title_rw: '', title_fr: '', content: '', content_rw: '', content_fr: '', status: 'Draft' });
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -229,10 +237,10 @@ function AnnouncementsTab({ token }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const resetForm = () => { setForm({ title: '', content: '', status: 'Draft' }); setEditing(null); setError(''); };
+  const resetForm = () => { setForm({ title: '', title_rw: '', title_fr: '', content: '', content_rw: '', content_fr: '', status: 'Draft' }); setEditing(null); setError(''); };
 
   const handleSave = async () => {
-    if (!form.title.trim()) return setError('Title is required.');
+    if (!form.title.trim()) return setError('English title is required.');
     setSaving(true); setError('');
     try {
       if (editing) {
@@ -281,7 +289,7 @@ function AnnouncementsTab({ token }) {
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${item.status === 'Published' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}>
                 {item.status === 'Published' ? 'Unpublish' : 'Publish'}
               </button>
-              <button onClick={() => { setEditing(item); setForm({ title: item.title, content: item.content, status: item.status }); }}
+              <button onClick={() => { setEditing(item); setForm({ title: item.title, title_rw: item.title_rw || '', title_fr: item.title_fr || '', content: item.content || '', content_rw: item.content_rw || '', content_fr: item.content_fr || '', status: item.status }); }}
                 className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Edit</button>
               <button onClick={() => handleDelete(item.id)}
                 className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200">Delete</button>
@@ -294,13 +302,37 @@ function AnnouncementsTab({ token }) {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm self-start sticky top-4">
         <h3 className="text-base font-semibold text-slate-900">{editing ? 'Edit Announcement' : 'New Announcement'}</h3>
         <div className="mt-4 space-y-4">
-          <div>
-            <label className={labelClass()}>Title</label>
-            <input type="text" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. New stock arrived" className={fieldClass()} />
+          {/* Title multilingual */}
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</p>
+            <div>
+              <label className={labelClass()}>English <span className="text-red-500">*</span></label>
+              <input type="text" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. New stock arrived" className={fieldClass()} />
+            </div>
+            <div>
+              <label className={labelClass()}>Kinyarwanda</label>
+              <input type="text" value={form.title_rw} onChange={(e) => setForm((p) => ({ ...p, title_rw: e.target.value }))} placeholder="Amakuru mu Kinyarwanda" className={fieldClass()} />
+            </div>
+            <div>
+              <label className={labelClass()}>French</label>
+              <input type="text" value={form.title_fr} onChange={(e) => setForm((p) => ({ ...p, title_fr: e.target.value }))} placeholder="Titre en français" className={fieldClass()} />
+            </div>
           </div>
-          <div>
-            <label className={labelClass()}>Content</label>
-            <textarea rows={4} value={form.content} onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))} placeholder="Announcement details…" className={fieldClass()} />
+          {/* Content multilingual */}
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Content</p>
+            <div>
+              <label className={labelClass()}>English</label>
+              <textarea rows={3} value={form.content} onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))} placeholder="Announcement details…" className={fieldClass()} />
+            </div>
+            <div>
+              <label className={labelClass()}>Kinyarwanda</label>
+              <textarea rows={2} value={form.content_rw} onChange={(e) => setForm((p) => ({ ...p, content_rw: e.target.value }))} placeholder="Ibisobanuro mu Kinyarwanda…" className={fieldClass()} />
+            </div>
+            <div>
+              <label className={labelClass()}>French</label>
+              <textarea rows={2} value={form.content_fr} onChange={(e) => setForm((p) => ({ ...p, content_fr: e.target.value }))} placeholder="Détails en français…" className={fieldClass()} />
+            </div>
           </div>
           <div>
             <label className={labelClass()}>Status</label>
