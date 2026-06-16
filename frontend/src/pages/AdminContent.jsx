@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
@@ -65,11 +64,7 @@ function HomepageTab({ token }) {
       if (heroFile) {
         const form = new FormData();
         form.append('image', heroFile);
-        // Raw axios: avoids the API instance's Content-Type: application/json default
-        // which would break multer's multipart parser.
-        const res = await axios.post(`${BACKEND}/api/admin/upload/hero`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await API.post('/admin/upload/hero', form);
         payload.heroImage = res.data.image_path;
       }
       await API.post('/admin/settings', payload, { headers });
@@ -389,11 +384,7 @@ function GalleryTab({ token }) {
       const form = new FormData();
       form.append('image', file);
       form.append('title', title);
-      // Raw axios: avoids the API instance's Content-Type: application/json default
-      // which would break multer's multipart parser.
-      const res = await axios.post(`${BACKEND}/api/admin/gallery/upload`, form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await API.post('/admin/gallery/upload', form);
       setImages((prev) => [{ id: res.data.id, title, image_path: res.data.image_path, created_at: new Date().toISOString() }, ...prev]);
       setFile(null); setPreview(null); setTitle('');
       if (inputRef.current) inputRef.current.value = '';

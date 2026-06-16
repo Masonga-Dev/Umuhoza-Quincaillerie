@@ -89,8 +89,8 @@ export default function AdminAddProduct() {
 
           {/* Pricing + Stock */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div><label className={labelCls}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls} /></div>
             <div><label className={labelCls}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls} /></div>
+            <div><label className={labelCls}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls} /></div>
             <div><label className={labelCls}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls} /></div>
             <div><label className={labelCls}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls} /></div>
           </div>

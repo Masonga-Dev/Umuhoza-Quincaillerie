@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { exportToCSV } from '../utils/exportCSV';
 
 function fmtPrice(v) {
   return Number(v || 0).toLocaleString('en-RW');
@@ -48,9 +49,41 @@ function AdminReports() {
     <AdminLayout currentPage="/admin/reports">
       <div className="space-y-8">
         {/* Header */}
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Reports & Analytics</h2>
-          <p className="mt-1 text-sm text-slate-500">Overview of today's sales and current inventory health.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Reports & Analytics</h2>
+            <p className="mt-1 text-sm text-slate-500">Overview of today's sales and current inventory health.</p>
+          </div>
+          {!loading && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => exportToCSV(
+                  `best-sellers-${new Date().toISOString().slice(0, 10)}.csv`,
+                  ['Product', 'Units Sold', 'Revenue (RWF)'],
+                  (daily?.best_selling || []).map(i => [i.name, i.quantity_sold, i.total_revenue])
+                )}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export Sales
+              </button>
+              <button
+                onClick={() => exportToCSV(
+                  `inventory-${new Date().toISOString().slice(0, 10)}.csv`,
+                  ['Product', 'SKU', 'Category', 'Stock', 'Min Stock', 'Status'],
+                  inventory.map(i => [i.name, i.sku || '', i.category_name || '', i.stock_quantity, i.minimum_stock || 5, i.status])
+                )}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export Inventory
+              </button>
+            </div>
+          )}
         </div>
 
         {loading ? (

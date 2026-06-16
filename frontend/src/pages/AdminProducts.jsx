@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { exportToCSV } from '../utils/exportCSV';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
@@ -83,6 +84,18 @@ function AdminProducts() {
   const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const pageEnd = Math.min(page * pageSize, total);
 
+  const handleExport = () => {
+    exportToCSV(
+      `products-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['SKU', 'Name', 'Category', 'Purchase Price (RWF)', 'Selling Price (RWF)', 'Stock Qty', 'Min Stock', 'Status'],
+      products.map(p => [
+        p.sku || '', p.name, p.category_name || '',
+        p.cost_price || 0, p.selling_price || 0,
+        p.stock_quantity, p.minimum_stock || 5, p.status,
+      ])
+    );
+  };
+
   return (
     <AdminLayout currentPage="/admin/products">
       <div className="space-y-6">
@@ -91,12 +104,23 @@ function AdminProducts() {
             <h2 className="text-3xl font-bold text-slate-900">Products</h2>
             <p className="mt-2 text-slate-600">Manage your product catalog with search, filters, and product actions.</p>
           </div>
-          <button
-            onClick={() => navigate('/admin/products/add')}
-            className="inline-flex items-center rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            + Add Product
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Export CSV
+            </button>
+            <button
+              onClick={() => navigate('/admin/products/add')}
+              className="inline-flex items-center rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              + Add Product
+            </button>
+          </div>
         </div>
 
         <div className="rounded-3xl bg-white p-6 shadow-sm">

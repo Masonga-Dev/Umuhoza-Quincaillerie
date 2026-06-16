@@ -58,7 +58,10 @@ function colorNameToCss(name) {
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+
+  const localCatName = cat => (lang === 'rw' && cat.name_rw) ? cat.name_rw : (lang === 'fr' && cat.name_fr) ? cat.name_fr : cat.name;
+  const localCatDesc = cat => (lang === 'rw' && cat.description_rw) ? cat.description_rw : (lang === 'fr' && cat.description_fr) ? cat.description_fr : cat.description;
 
   const [categories, setCategories] = useState([]);
   const [products,   setProducts]   = useState([]);
@@ -124,7 +127,7 @@ export default function Products() {
         <div className="mt-5 flex items-center gap-2 text-sm text-zinc-500">
           <button onClick={handleBack} className="transition hover:text-green-400">All Categories</button>
           <span className="text-zinc-700">›</span>
-          <span className="font-semibold text-zinc-200">{selectedCategory.name}</span>
+          <span className="font-semibold text-zinc-200">{localCatName(selectedCategory)}</span>
         </div>
       )}
 
@@ -145,8 +148,10 @@ export default function Products() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {categories.map(cat => {
-                const emoji  = getCategoryEmoji(cat.name);
-                const hasImg = !!cat.representative_image;
+                const emoji   = getCategoryEmoji(cat.name);
+                const hasImg  = !!cat.representative_image;
+                const catName = localCatName(cat);
+                const catDesc = localCatDesc(cat);
                 return (
                   <button
                     key={cat.id}
@@ -192,9 +197,9 @@ export default function Products() {
                         </span>
                       </div>
 
-                      <p className="text-lg font-bold leading-snug text-white">{cat.name}</p>
-                      {cat.description && (
-                        <p className="mt-1 text-xs leading-relaxed text-zinc-400 line-clamp-2">{cat.description}</p>
+                      <p className="text-lg font-bold leading-snug text-white">{catName}</p>
+                      {catDesc && (
+                        <p className="mt-1 text-xs leading-relaxed text-zinc-400 line-clamp-2">{catDesc}</p>
                       )}
                     </div>
                   </button>
@@ -211,7 +216,7 @@ export default function Products() {
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="text-3xl font-extrabold tracking-tight text-white">
-                {search ? <>Results for <span className="text-green-400">"{search}"</span></> : selectedCategory?.name || 'Products'}
+                {search ? <>Results for <span className="text-green-400">"{search}"</span></> : (selectedCategory ? localCatName(selectedCategory) : 'Products')}
               </h2>
               {!loading && (
                 <p className="mt-1 text-sm text-zinc-500">{products.length} product{products.length !== 1 ? 's' : ''} found</p>

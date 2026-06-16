@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
@@ -76,8 +75,8 @@ function DetailsTab({ product, categories, token, onSaved }) {
 
       {/* Pricing + Stock */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
         <div><label className={labelCls()}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
+        <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
         <div><label className={labelCls()}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
         <div><label className={labelCls()}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
       </div>
@@ -124,9 +123,7 @@ function ImagesTab({ product, token }) {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await axios.post(`${BACKEND}/api/products/${product.id}/images`, form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await API.post(`/products/${product.id}/images`, form);
       setImages(prev => [...prev, { id: res.data.id, image_path: res.data.image_path, is_primary: res.data.is_primary }]);
     } catch (e) { console.error(e); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
@@ -249,8 +246,8 @@ function VariantsTab({ product, token }) {
           <div><label className={labelCls()}>Color</label><input value={form.color} onChange={set('color')} className={fieldCls()} placeholder="White" /></div>
           <div><label className={labelCls()}>Size</label><input value={form.size} onChange={set('size')} className={fieldCls()} placeholder="5L" /></div>
           <div><label className={labelCls()}>SKU</label><input value={form.sku} onChange={set('sku')} className={fieldCls()} /></div>
-          <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
           <div><label className={labelCls()}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
+          <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
           <div><label className={labelCls()}>Stock Qty</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
           <div><label className={labelCls()}>Min Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
         </div>

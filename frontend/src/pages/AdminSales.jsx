@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { exportToCSV } from '../utils/exportCSV';
 
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = (v) => Number(v || 0).toLocaleString('en-RW');
@@ -458,10 +459,32 @@ export default function AdminSales() {
             <h2 className="text-2xl font-bold text-slate-900">Sales</h2>
             <p className="mt-1 text-sm text-slate-500">Record transactions and track sales history.</p>
           </div>
-          <button onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
-            <span className="text-lg leading-none">+</span> Record New Sale
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => exportToCSV(
+                `sales-${new Date().toISOString().slice(0, 10)}.csv`,
+                ['Invoice', 'Date', 'Customer', 'Payment Method', 'Status', 'Total (RWF)'],
+                filtered.map(s => [
+                  s.invoice_number,
+                  new Date(s.sale_date).toLocaleDateString('en-RW'),
+                  s.customer_name || '',
+                  s.payment_method || 'Cash',
+                  s.status || 'Completed',
+                  s.total_amount,
+                ])
+              )}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Export CSV
+            </button>
+            <button onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
+              <span className="text-lg leading-none">+</span> Record New Sale
+            </button>
+          </div>
         </div>
 
         {success && (
