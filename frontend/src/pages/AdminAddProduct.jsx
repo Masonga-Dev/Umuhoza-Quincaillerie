@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
-function fieldCls() { return 'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100'; }
-function labelCls() { return 'block text-sm font-medium text-slate-700'; }
+const fieldCls = 'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100';
+const labelCls = 'block text-sm font-medium text-slate-700';
 
-function genSKU() {
-  return 'UMU-' + Math.random().toString(36).toUpperCase().slice(2, 8);
-}
+function genSKU() { return 'UMU-' + Math.random().toString(36).toUpperCase().slice(2, 8); }
 
 export default function AdminAddProduct() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({ category_id: '', name: '', sku: genSKU(), description: '', selling_price: '', cost_price: '', stock_quantity: 0, minimum_stock: 5 });
+  const [form, setForm] = useState({
+    category_id: '', name: '', name_rw: '', name_fr: '',
+    sku: genSKU(), description: '', description_rw: '', description_fr: '',
+    selling_price: '', cost_price: '', stock_quantity: 0, minimum_stock: 5,
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const token = localStorage.getItem('umuhoza_token');
@@ -23,7 +25,7 @@ export default function AdminAddProduct() {
     API.get('/categories').then(r => setCategories(r.data || [])).catch(console.error);
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setError(''); setSaving(true);
     try {
@@ -44,38 +46,74 @@ export default function AdminAddProduct() {
 
         {error && <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-        <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+        <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+          {/* Category + SKU */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className={labelCls()}>Product Name *</label>
-              <input required value={form.name} onChange={set('name')} className={fieldCls()} placeholder="e.g. Portland Cement 50kg" />
-            </div>
             <div>
-              <label className={labelCls()}>Category *</label>
-              <select required value={form.category_id} onChange={set('category_id')} className={fieldCls()}>
+              <label className={labelCls}>Category <span className="text-red-500">*</span></label>
+              <select required value={form.category_id} onChange={set('category_id')} className={fieldCls}>
                 <option value="">Select category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className={labelCls()}>SKU *</label>
+              <label className={labelCls}>SKU <span className="text-red-500">*</span></label>
               <div className="flex gap-2">
-                <input required value={form.sku} onChange={set('sku')} className={fieldCls()} />
+                <input required value={form.sku} onChange={set('sku')} className={fieldCls} />
                 <button type="button" onClick={() => setForm(p => ({ ...p, sku: genSKU() }))}
                   className="mt-2 flex-shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                  Generate
+                  Gen
                 </button>
               </div>
             </div>
-            <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
-            <div><label className={labelCls()}>Cost Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
-            <div><label className={labelCls()}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
-            <div><label className={labelCls()}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
-            <div className="sm:col-span-2">
-              <label className={labelCls()}>Description</label>
-              <textarea rows={3} value={form.description} onChange={set('description')} className={fieldCls()} placeholder="Describe the product…" />
+          </div>
+
+          {/* Product Name (multilingual) */}
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Product Name</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className={labelCls}>English <span className="text-red-500">*</span></label>
+                <input required value={form.name} onChange={set('name')} placeholder="e.g. Portland Cement" className={fieldCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Kinyarwanda</label>
+                <input value={form.name_rw} onChange={set('name_rw')} placeholder="e.g. Sima ya Portland" className={fieldCls} />
+              </div>
+              <div>
+                <label className={labelCls}>French</label>
+                <input value={form.name_fr} onChange={set('name_fr')} placeholder="e.g. Ciment Portland" className={fieldCls} />
+              </div>
             </div>
           </div>
+
+          {/* Pricing + Stock */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div><label className={labelCls}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls} /></div>
+            <div><label className={labelCls}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls} /></div>
+            <div><label className={labelCls}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls} /></div>
+            <div><label className={labelCls}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls} /></div>
+          </div>
+
+          {/* Description (multilingual) */}
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Description</p>
+            <div>
+              <label className={labelCls}>English</label>
+              <textarea rows={3} value={form.description} onChange={set('description')} placeholder="Describe the product…" className={fieldCls} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelCls}>Kinyarwanda</label>
+                <textarea rows={3} value={form.description_rw} onChange={set('description_rw')} placeholder="Ibisobanuro by'igicuruzwa…" className={fieldCls} />
+              </div>
+              <div>
+                <label className={labelCls}>French</label>
+                <textarea rows={3} value={form.description_fr} onChange={set('description_fr')} placeholder="Description du produit…" className={fieldCls} />
+              </div>
+            </div>
+          </div>
+
           <button type="submit" disabled={saving}
             className="rounded-xl bg-blue-600 px-8 py-3 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:opacity-60">
             {saving ? 'Creating…' : 'Create Product & Continue →'}
