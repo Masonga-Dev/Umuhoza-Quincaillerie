@@ -7,7 +7,9 @@ const fmt = (v) => Number(v || 0).toLocaleString('en-RW');
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-RW', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtDateTime = (d) => new Date(d).toLocaleString('en-RW', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-// ── Receipt printer ──────────────────────────────────────────────────────────
+const PAYMENT_COLORS = { Cash: 'bg-emerald-100 text-emerald-700', 'Mobile Money': 'bg-purple-100 text-purple-700', 'Bank Transfer': 'bg-blue-100 text-blue-700' };
+const STATUS_COLORS = { Completed: 'bg-emerald-100 text-emerald-700', Cancelled: 'bg-red-100 text-red-700' };
+
 function printReceipt(sale) {
   const rows = (sale.items || []).map(it => {
     const variant = [it.variant_color, it.variant_size].filter(Boolean).join(' / ');
@@ -33,7 +35,7 @@ function printReceipt(sale) {
   <body>
     <div style="text-align:center;padding-bottom:12px">
       <h1>UMUHOZA QUINCAILLERIE</h1>
-      <p style="margin:3px 0;font-size:11px;color:#555">Kigali, Rwanda &nbsp;|&nbsp; +250 788 123 456</p>
+      <p style="margin:3px 0;font-size:11px;color:#555">Kigali, Rwanda</p>
       <p style="margin:3px 0;font-size:11px;color:#555">umuhozacompanyltd@gmail.com</p>
     </div>
     <hr class="hr">
@@ -41,6 +43,8 @@ function printReceipt(sale) {
       <tr><td style="padding:2px 0"><strong>Invoice:</strong></td><td style="padding:2px 0;text-align:right">${sale.invoice_number}</td></tr>
       <tr><td style="padding:2px 0"><strong>Date:</strong></td><td style="padding:2px 0;text-align:right">${fmtDateTime(sale.sale_date)}</td></tr>
       <tr><td style="padding:2px 0"><strong>Served by:</strong></td><td style="padding:2px 0;text-align:right">${sale.sold_by_name || 'Staff'}</td></tr>
+      ${sale.customer_name ? `<tr><td style="padding:2px 0"><strong>Customer:</strong></td><td style="padding:2px 0;text-align:right">${sale.customer_name}</td></tr>` : ''}
+      <tr><td style="padding:2px 0"><strong>Payment:</strong></td><td style="padding:2px 0;text-align:right">${sale.payment_method || 'Cash'}</td></tr>
     </table>
     <hr class="hr">
     <table>
@@ -62,10 +66,10 @@ function printReceipt(sale) {
   w.document.close();
 }
 
-// ── Sale Detail Modal ────────────────────────────────────────────────────────
-function SaleDetailModal({ saleId, onClose }) {
+function SaleDetailModal({ saleId, onClose, onCancelled }) {
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     API.get(`/sales/${saleId}`, { headers: HEADERS() })
@@ -75,10 +79,21 @@ function SaleDetailModal({ saleId, onClose }) {
   }, [saleId]);
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = e => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  const handleCancel = async () => {
+    if (!window.confirm('Mark this sale as Cancelled?')) return;
+    setCancelling(true);
+    try {
+      await API.patch(`/sales/${saleId}/cancel`, {}, { headers: HEADERS() });
+      setSale(s => ({ ...s, status: 'Cancelled' }));
+      onCancelled?.();
+    } catch (e) { console.error(e); }
+    finally { setCancelling(false); }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
@@ -91,28 +106,35 @@ function SaleDetailModal({ saleId, onClose }) {
           <div className="flex h-40 items-center justify-center text-slate-400">Failed to load sale.</div>
         ) : (
           <>
-            {/* Header */}
             <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
-              <div>
+              <div className="space-y-1">
                 <span className="font-mono text-xl font-bold text-blue-600">{sale.invoice_number}</span>
-                <p className="mt-1 text-sm text-slate-500">{fmtDateTime(sale.sale_date)}</p>
+                <p className="text-sm text-slate-500">{fmtDateTime(sale.sale_date)}</p>
                 <p className="text-sm text-slate-500">Served by: <span className="font-semibold text-slate-700">{sale.sold_by_name || 'Staff'}</span></p>
+                {sale.customer_name && <p className="text-sm text-slate-500">Customer: <span className="font-semibold text-slate-700">{sale.customer_name}</span></p>}
+                <div className="flex gap-2 pt-1">
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PAYMENT_COLORS[sale.payment_method] || 'bg-slate-100 text-slate-600'}`}>
+                    {sale.payment_method || 'Cash'}
+                  </span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[sale.status] || 'bg-slate-100 text-slate-600'}`}>
+                    {sale.status || 'Completed'}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => printReceipt(sale)}
                   className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
                     <rect x="6" y="14" width="12" height="8"/>
                   </svg>
-                  Print Receipt
+                  Print
                 </button>
                 <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 text-lg">✕</button>
               </div>
             </div>
 
-            {/* Items table */}
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-72 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-slate-50">
                   <tr className="border-b border-slate-200">
@@ -130,9 +152,7 @@ function SaleDetailModal({ saleId, onClose }) {
                         <td className="px-6 py-3.5">
                           <p className="font-medium text-slate-800">{item.product_name}</p>
                           {variant && <p className="text-xs text-slate-400 mt-0.5">{variant}</p>}
-                          {(item.variant_sku || item.product_sku) && (
-                            <p className="font-mono text-xs text-slate-400 mt-0.5">SKU: {item.variant_sku || item.product_sku}</p>
-                          )}
+                          {(item.variant_sku || item.product_sku) && <p className="font-mono text-xs text-slate-400 mt-0.5">SKU: {item.variant_sku || item.product_sku}</p>}
                         </td>
                         <td className="px-4 py-3.5 text-center font-bold text-slate-800">{item.quantity}</td>
                         <td className="px-4 py-3.5 text-right text-slate-600">{fmt(item.unit_price)} RWF</td>
@@ -144,9 +164,15 @@ function SaleDetailModal({ saleId, onClose }) {
               </table>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <span className="text-sm text-slate-500">{sale.items?.length || 0} line item{sale.items?.length !== 1 ? 's' : ''}</span>
+              <div>
+                {sale.status !== 'Cancelled' && (
+                  <button onClick={handleCancel} disabled={cancelling}
+                    className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-60">
+                    {cancelling ? 'Cancelling…' : 'Cancel Sale'}
+                  </button>
+                )}
+              </div>
               <div className="text-right">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Amount</p>
                 <p className="text-2xl font-extrabold text-slate-900">{fmt(sale.total_amount)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
@@ -159,21 +185,22 @@ function SaleDetailModal({ saleId, onClose }) {
   );
 }
 
-// ── New Sale Form ────────────────────────────────────────────────────────────
 function NewSaleForm({ products, onSuccess, onClose }) {
   const [items, setItems] = useState([{ product_id: '', variant_id: '', quantity: 1, unit_price: 0 }]);
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [customerName, setCustomerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = e => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const getProduct = (id) => products.find(p => String(p.id) === String(id));
-  const getVariants = (id) => getProduct(id)?.variants || [];
-  const getStock = (item) => {
+  const getProduct = id => products.find(p => String(p.id) === String(id));
+  const getVariants = id => getProduct(id)?.variants || [];
+  const getStock = item => {
     const p = getProduct(item.product_id);
     if (!p) return 0;
     if (item.variant_id) return p.variants?.find(v => String(v.id) === String(item.variant_id))?.stock_quantity ?? 0;
@@ -198,12 +225,12 @@ function NewSaleForm({ products, onSuccess, onClose }) {
   };
 
   const addItem = () => setItems(p => [...p, { product_id: '', variant_id: '', quantity: 1, unit_price: 0 }]);
-  const removeItem = (i) => setItems(p => p.filter((_, idx) => idx !== i));
+  const removeItem = i => setItems(p => p.filter((_, idx) => idx !== i));
 
   const total = items.reduce((s, it) => s + Number(it.unit_price || 0) * Number(it.quantity || 0), 0);
   const validItems = items.filter(it => it.product_id && Number(it.quantity) > 0);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setError('');
     if (!validItems.length) return setError('Add at least one product with quantity > 0.');
@@ -219,6 +246,8 @@ function NewSaleForm({ products, onSuccess, onClose }) {
           unit_price: Number(it.unit_price),
         })),
         total_amount: total,
+        payment_method: paymentMethod,
+        customer_name: customerName.trim() || null,
       }, { headers: HEADERS() });
       onSuccess(res.data.invoice_number);
     } catch (e) {
@@ -229,17 +258,34 @@ function NewSaleForm({ products, onSuccess, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4" onClick={onClose}>
       <div className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 flex-shrink-0">
           <div>
             <h3 className="text-lg font-bold text-slate-900">Record New Sale</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Add products and quantities to record a transaction</p>
+            <p className="text-xs text-slate-400 mt-0.5">Add products, select payment method, confirm.</p>
           </div>
           <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 text-lg">✕</button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-3">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Customer + Payment */}
+          <div className="grid gap-3 sm:grid-cols-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Customer Name (optional)</label>
+              <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="e.g. Jean-Paul Hakizimana"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Payment Method</label>
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                <option value="Cash">Cash</option>
+                <option value="Mobile Money">Mobile Money</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Items */}
           {items.map((item, i) => {
             const variants = getVariants(item.product_id);
             const maxQty = getStock(item);
@@ -256,7 +302,6 @@ function NewSaleForm({ products, onSuccess, onClose }) {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {/* Product select */}
                   <div className="sm:col-span-2">
                     <label className="mb-1 block text-xs font-semibold text-slate-600">Product *</label>
                     <select value={item.product_id} onChange={e => updateItem(i, 'product_id', e.target.value)} required
@@ -270,7 +315,6 @@ function NewSaleForm({ products, onSuccess, onClose }) {
                     </select>
                   </div>
 
-                  {/* Variant (when applicable) */}
                   {variants.length > 0 && (
                     <div className="sm:col-span-2">
                       <label className="mb-1 block text-xs font-semibold text-slate-600">Variant *</label>
@@ -287,23 +331,20 @@ function NewSaleForm({ products, onSuccess, onClose }) {
                     </div>
                   )}
 
-                  {/* Quantity */}
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-slate-600">
                       Quantity {item.product_id && <span className="font-normal text-slate-400">(available: {maxQty})</span>}
                     </label>
                     <input type="number" min="1" max={maxQty || undefined} value={item.quantity}
                       onChange={e => updateItem(i, 'quantity', e.target.value)} required
-                      className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 ${overStock ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 bg-white focus:border-blue-400 focus:ring-blue-100'}`}/>
-                    {overStock && <p className="mt-1 text-xs font-medium text-red-600">Exceeds available stock ({maxQty})</p>}
+                      className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 ${overStock ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 bg-white focus:border-blue-400 focus:ring-blue-100'}`} />
+                    {overStock && <p className="mt-1 text-xs font-medium text-red-600">Exceeds stock ({maxQty})</p>}
                   </div>
 
-                  {/* Unit price */}
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-slate-600">Unit Price (RWF)</label>
-                    <input type="number" min="0" step="any" value={item.unit_price}
-                      onChange={e => updateItem(i, 'unit_price', e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"/>
+                    <input type="number" min="0" step="any" value={item.unit_price} onChange={e => updateItem(i, 'unit_price', e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
                   </div>
                 </div>
 
@@ -323,19 +364,16 @@ function NewSaleForm({ products, onSuccess, onClose }) {
           </button>
         </div>
 
-        {/* Footer */}
         <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 flex-shrink-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-500">{validItems.length} item{validItems.length !== 1 ? 's' : ''}</span>
+            <span className="text-sm text-slate-500">{validItems.length} item{validItems.length !== 1 ? 's' : ''} · <span className={`font-semibold ${PAYMENT_COLORS[paymentMethod] ? '' : ''}`}>{paymentMethod}</span></span>
             <div className="text-right">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Grand Total</p>
               <p className="text-2xl font-extrabold text-slate-900">{fmt(total)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div>
-          )}
+          {error && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div>}
 
           <div className="flex gap-3">
             <button onClick={handleSubmit} disabled={submitting || !validItems.length}
@@ -353,7 +391,6 @@ function NewSaleForm({ products, onSuccess, onClose }) {
   );
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
 export default function AdminSales() {
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
@@ -364,6 +401,7 @@ export default function AdminSales() {
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
 
   const loadSales = useCallback(() => {
     setLoading(true);
@@ -389,22 +427,24 @@ export default function AdminSales() {
       }).catch(console.error);
   }, []);
 
-  // Client-side date range filter
   const filtered = sales.filter(s => {
     const d = new Date(s.sale_date);
     if (dateFrom && d < new Date(dateFrom)) return false;
     if (dateTo && d > new Date(dateTo + 'T23:59:59')) return false;
+    if (paymentFilter && s.payment_method !== paymentFilter) return false;
     return true;
   });
 
   const today = new Date().toDateString();
-  const todaySales = filtered.filter(s => new Date(s.sale_date).toDateString() === today);
+  const todaySales = filtered.filter(s => new Date(s.sale_date).toDateString() === today && s.status !== 'Cancelled');
   const todayRevenue = todaySales.reduce((s, x) => s + Number(x.total_amount || 0), 0);
-  const totalRevenue = filtered.reduce((s, x) => s + Number(x.total_amount || 0), 0);
+  const totalRevenue = filtered.filter(s => s.status !== 'Cancelled').reduce((s, x) => s + Number(x.total_amount || 0), 0);
+  const cashRevenue = filtered.filter(s => s.payment_method === 'Cash' && s.status !== 'Cancelled').reduce((s, x) => s + Number(x.total_amount || 0), 0);
+  const mmRevenue = filtered.filter(s => s.payment_method === 'Mobile Money' && s.status !== 'Cancelled').reduce((s, x) => s + Number(x.total_amount || 0), 0);
 
-  const handleSuccess = (invoice) => {
+  const handleSuccess = invoice => {
     setShowForm(false);
-    setSuccess(`Sale recorded successfully — Invoice: ${invoice}`);
+    setSuccess(`Sale recorded — Invoice: ${invoice}`);
     loadSales();
     setTimeout(() => setSuccess(''), 8000);
   };
@@ -413,94 +453,87 @@ export default function AdminSales() {
     <AdminLayout currentPage="/admin/sales">
       <div className="space-y-6">
 
-        {/* Page header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Sales</h2>
             <p className="mt-1 text-sm text-slate-500">Record transactions and track sales history.</p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
-          >
+          <button onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
             <span className="text-lg leading-none">+</span> Record New Sale
           </button>
         </div>
 
-        {/* Success banner */}
         {success && (
           <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              {success}
-            </div>
+            <span className="text-sm font-semibold text-emerald-700">{success}</span>
             <button onClick={() => setSuccess('')} className="text-emerald-400 hover:text-emerald-700 text-lg">✕</button>
           </div>
         )}
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-500">Today's Revenue</p>
             <p className="mt-1.5 text-2xl font-extrabold text-blue-600">{fmt(todayRevenue)} <span className="text-sm font-semibold text-slate-400">RWF</span></p>
-            <p className="mt-1 text-xs text-slate-400">{todaySales.length} transaction{todaySales.length !== 1 ? 's' : ''} today</p>
+            <p className="mt-1 text-xs text-slate-400">{todaySales.length} transaction{todaySales.length !== 1 ? 's' : ''}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-500">Total Revenue</p>
             <p className="mt-1.5 text-2xl font-extrabold text-emerald-600">{fmt(totalRevenue)} <span className="text-sm font-semibold text-slate-400">RWF</span></p>
-            <p className="mt-1 text-xs text-slate-400">All time</p>
+            <p className="mt-1 text-xs text-slate-400">All time (excl. cancelled)</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Total Transactions</p>
-            <p className="mt-1.5 text-2xl font-extrabold text-violet-600">{filtered.length}</p>
-            <p className="mt-1 text-xs text-slate-400">All time</p>
+            <p className="text-sm font-medium text-slate-500">Cash Sales</p>
+            <p className="mt-1.5 text-2xl font-extrabold text-slate-700">{fmt(cashRevenue)} <span className="text-sm font-semibold text-slate-400">RWF</span></p>
+            <p className="mt-1 text-xs text-emerald-500 font-semibold">Cash</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">Mobile Money</p>
+            <p className="mt-1.5 text-2xl font-extrabold text-purple-600">{fmt(mmRevenue)} <span className="text-sm font-semibold text-slate-400">RWF</span></p>
+            <p className="mt-1 text-xs text-purple-500 font-semibold">Mobile Money</p>
           </div>
         </div>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-          {/* Search */}
-          <div className="relative flex-1" style={{ minWidth: '200px' }}>
+          <div className="relative flex-1" style={{ minWidth: '180px' }}>
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search invoice or staff name…"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice, customer, staff…"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
           </div>
-          {/* Date from */}
+          <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400">
+            <option value="">All payments</option>
+            <option value="Cash">Cash</option>
+            <option value="Mobile Money">Mobile Money</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">From</label>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
           </div>
-          {/* Date to */}
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">To</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
           </div>
-          {(search || dateFrom || dateTo) && (
-            <button onClick={() => { setSearch(''); setDateFrom(''); setDateTo(''); }}
+          {(search || dateFrom || dateTo || paymentFilter) && (
+            <button onClick={() => { setSearch(''); setDateFrom(''); setDateTo(''); setPaymentFilter(''); }}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-              Clear filters
+              Clear
             </button>
           )}
         </div>
 
-        {/* Sales table */}
+        {/* Table */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
             <h3 className="font-semibold text-slate-900">Sales History</h3>
-            {!loading && (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {filtered.length} record{filtered.length !== 1 ? 's' : ''}
-              </span>
-            )}
+            {!loading && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>}
           </div>
 
           {loading ? (
@@ -509,13 +542,7 @@ export default function AdminSales() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center gap-3 text-slate-400">
-              <svg className="h-12 w-12 opacity-25" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              <div className="text-center">
-                <p className="text-sm font-semibold">No sales records found</p>
-                <p className="text-xs mt-1">Record your first sale using the button above.</p>
-              </div>
+              <p className="text-sm font-semibold">No sales records found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -524,29 +551,40 @@ export default function AdminSales() {
                   <tr className="border-b border-slate-100 bg-slate-50">
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Invoice</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date & Time</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Customer</th>
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Amount</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Served By</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Payment</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filtered.map(sale => (
-                    <tr key={sale.id} className="group hover:bg-slate-50 transition">
+                    <tr key={sale.id} className={`group transition ${sale.status === 'Cancelled' ? 'opacity-60' : 'hover:bg-slate-50'}`}>
                       <td className="px-6 py-4">
                         <span className="font-mono text-sm font-bold text-blue-600">{sale.invoice_number}</span>
+                        {sale.sold_by_name && <p className="text-xs text-slate-400 mt-0.5">{sale.sold_by_name}</p>}
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-600">
                         <span>{fmtDate(sale.sale_date)}</span>
                         <span className="ml-2 text-slate-400 text-xs">{new Date(sale.sale_date).toLocaleTimeString('en-RW', { hour: '2-digit', minute: '2-digit' })}</span>
                       </td>
+                      <td className="px-5 py-4 text-sm text-slate-600">{sale.customer_name || <span className="text-slate-300">—</span>}</td>
                       <td className="px-5 py-4 text-right font-bold text-slate-900">{fmt(sale.total_amount)} <span className="text-xs font-normal text-slate-400">RWF</span></td>
-                      <td className="px-5 py-4 text-sm text-slate-600">{sale.sold_by_name || '—'}</td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PAYMENT_COLORS[sale.payment_method] || 'bg-slate-100 text-slate-600'}`}>
+                          {sale.payment_method || 'Cash'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[sale.status] || 'bg-emerald-100 text-emerald-700'}`}>
+                          {sale.status || 'Completed'}
+                        </span>
+                      </td>
                       <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={() => setViewId(sale.id)}
-                          className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-blue-600 hover:text-white"
-                        >
-                          View Details
+                        <button onClick={() => setViewId(sale.id)}
+                          className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-blue-600 hover:text-white">
+                          View
                         </button>
                       </td>
                     </tr>
@@ -559,9 +597,8 @@ export default function AdminSales() {
 
       </div>
 
-      {/* Modals */}
       {showForm && <NewSaleForm products={products} onSuccess={handleSuccess} onClose={() => setShowForm(false)} />}
-      {viewId && <SaleDetailModal saleId={viewId} onClose={() => setViewId(null)} />}
+      {viewId && <SaleDetailModal saleId={viewId} onClose={() => setViewId(null)} onCancelled={loadSales} />}
     </AdminLayout>
   );
 }
