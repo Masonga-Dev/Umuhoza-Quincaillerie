@@ -20,6 +20,8 @@ import AdminAddProduct from './pages/AdminAddProduct';
 import AdminEditProduct from './pages/AdminEditProduct';
 import AdminProductDetails from './pages/AdminProductDetails';
 import AdminCategories from './pages/AdminCategories';
+import AdminSuppliers from './pages/AdminSuppliers';
+import AdminPurchases from './pages/AdminPurchases';
 import ForgotPassword from './pages/ForgotPassword';
 
 const LANGS = [
@@ -156,6 +158,8 @@ function AppContent() {
           <Route path="/admin/stock" element={<ProtectedRoute element={<AdminStock />} />} />
           <Route path="/admin/sales" element={<ProtectedRoute element={<AdminSales />} />} />
           <Route path="/admin/reports" element={<ProtectedRoute element={<AdminReports />} />} />
+          <Route path="/admin/suppliers" element={<ProtectedRoute element={<AdminSuppliers />} />} />
+          <Route path="/admin/purchases" element={<ProtectedRoute element={<AdminPurchases />} />} />
           <Route path="/admin/content" element={<ProtectedRoute element={<AdminContent />} />} />
           <Route path="/admin/settings" element={<ProtectedRoute element={<AdminSettings />} />} />
         </Routes>
