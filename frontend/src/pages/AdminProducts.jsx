@@ -171,6 +171,7 @@ function AdminProducts() {
                     <th className="py-3 px-3 text-left font-semibold">Product Name</th>
                     <th className="py-3 px-3 text-left font-semibold">Category</th>
                     <th className="py-3 px-3 text-left font-semibold">Selling Price</th>
+                    <th className="py-3 px-3 text-left font-semibold">Purchase Price</th>
                     <th className="py-3 px-3 text-left font-semibold">Stock</th>
                     <th className="py-3 px-3 text-left font-semibold">Status</th>
                     <th className="py-3 px-3 text-left font-semibold">Actions</th>
@@ -179,7 +180,7 @@ function AdminProducts() {
                 <tbody>
                   {products.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="py-8 text-center text-slate-500">
+                      <td colSpan="9" className="py-8 text-center text-slate-500">
                         No products found.
                       </td>
                     </tr>
@@ -203,6 +204,7 @@ function AdminProducts() {
                         <td className="py-3 px-3 text-slate-900">{product.name}</td>
                         <td className="py-3 px-3 text-slate-600">{product.category_name || 'Uncategorized'}</td>
                         <td className="py-3 px-3 font-semibold text-slate-900">{product.selling_price} RWF</td>
+                        <td className="py-3 px-3 text-slate-600">{product.cost_price ? `${Number(product.cost_price).toLocaleString('en-RW')} RWF` : '—'}</td>
                         <td className="py-3 px-3 text-slate-700">{product.stock_quantity}</td>
                         <td className="py-3 px-3">
                           <span
