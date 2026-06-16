@@ -6,7 +6,7 @@ dotenv.config();
 
 const ADMIN_EMAIL = 'umuhozacompanyltd@gmail.com';
 const ADMIN_PASSWORD = 'Umuhoza@02';
-const ADMIN_NAME = 'Umuhoza Admin';
+const ADMIN_NAME = 'Umuhoza Company Ltd';
 const ADMIN_ROLE = 'admin';
 
 const pool = mysql.createPool({
