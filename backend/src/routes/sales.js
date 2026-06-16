@@ -15,7 +15,7 @@ router.get('/', authMiddleware, async (req, res) => {
   const { q } = req.query;
   let query = 'SELECT s.*, u.name AS sold_by_name FROM sales s LEFT JOIN users u ON s.sold_by=u.id';
   const params = [], filters = [];
-  if (q) { filters.push('(s.invoice_number LIKE ? OR u.name LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  if (q) { filters.push('(s.invoice_number LIKE ? OR u.name LIKE ? OR s.customer_name LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (filters.length) query += ' WHERE ' + filters.join(' AND ');
   query += ' ORDER BY s.sale_date DESC';
   try {
@@ -37,7 +37,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
               pv.color AS variant_color, pv.size AS variant_size, pv.sku AS variant_sku
        FROM sale_items si
        JOIN products p ON p.id = si.product_id
-       LEFT JOIN product_variants pv ON pv.id = si.variant_id
+       LEFT JOIN product_variants pv ON pv.id = si.product_variant_id
        WHERE si.sale_id = ?`,
       [req.params.id]
     );
@@ -47,7 +47,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 router.post('/', authMiddleware, async (req, res) => {
-  const { items, total_amount } = req.body;
+  const { items, total_amount, payment_method, customer_name } = req.body;
   if (!items?.length) return res.status(400).json({ message: 'Sale items are required' });
 
   const conn = await pool.getConnection();
@@ -56,8 +56,8 @@ router.post('/', authMiddleware, async (req, res) => {
     const [cnt] = await conn.query('SELECT COUNT(*) AS total FROM sales WHERE DATE(sale_date)=CURDATE()');
     const invoiceNumber = `INV-${new Date().getFullYear()}-${String(cnt[0].total + 1).padStart(3, '0')}`;
     const [sale] = await conn.query(
-      'INSERT INTO sales (invoice_number,total_amount,sold_by,sale_date,created_at) VALUES (?,?,?,NOW(),NOW())',
-      [invoiceNumber, total_amount, req.user.id]
+      'INSERT INTO sales (invoice_number,total_amount,payment_method,customer_name,sold_by,sale_date,created_at) VALUES (?,?,?,?,?,NOW(),NOW())',
+      [invoiceNumber, total_amount, payment_method || 'Cash', customer_name || null, req.user.id]
     );
 
     for (const item of items) {
@@ -65,7 +65,6 @@ router.post('/', authMiddleware, async (req, res) => {
       const subtotal = Number(quantity) * Number(unit_price);
 
       if (variant_id) {
-        // Deduct from variant stock
         const [vRows] = await conn.query('SELECT stock_quantity,minimum_stock FROM product_variants WHERE id=? AND product_id=?', [variant_id, product_id]);
         if (!vRows.length) throw new Error(`Variant not found: ${variant_id}`);
         const newStock = vRows[0].stock_quantity - Number(quantity);
@@ -73,11 +72,10 @@ router.post('/', authMiddleware, async (req, res) => {
         const status = determineStatus(newStock, vRows[0].minimum_stock);
         await conn.query('UPDATE product_variants SET stock_quantity=?,status=? WHERE id=?', [newStock, status, variant_id]);
         await conn.query(
-          'INSERT INTO sale_items (sale_id,product_id,variant_id,quantity,unit_price,subtotal) VALUES (?,?,?,?,?,?)',
+          'INSERT INTO sale_items (sale_id,product_id,product_variant_id,quantity,unit_price,subtotal) VALUES (?,?,?,?,?,?)',
           [sale.insertId, product_id, variant_id, quantity, unit_price, subtotal]
         );
       } else {
-        // Deduct from product stock
         const [pRows] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [product_id]);
         if (!pRows.length) throw new Error(`Product not found: ${product_id}`);
         const newStock = pRows[0].stock_quantity - Number(quantity);
@@ -91,8 +89,8 @@ router.post('/', authMiddleware, async (req, res) => {
       }
 
       await conn.query(
-        'INSERT INTO stock_transactions (product_id,quantity,transaction_type,transaction_date,created_at) VALUES (?,?,?,NOW(),NOW())',
-        [product_id, -Number(quantity), 'OUT']
+        'INSERT INTO stock_transactions (product_id,quantity,transaction_type,created_by,transaction_date,created_at) VALUES (?,?,?,?,NOW(),NOW())',
+        [product_id, -Number(quantity), 'OUT', req.user.id]
       );
     }
 
@@ -105,6 +103,13 @@ router.post('/', authMiddleware, async (req, res) => {
   } finally {
     conn.release();
   }
+});
+
+router.patch('/:id/cancel', authMiddleware, async (req, res) => {
+  try {
+    await pool.query("UPDATE sales SET status='Cancelled' WHERE id=?", [req.params.id]);
+    res.json({ message: 'Sale cancelled' });
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not cancel sale' }); }
 });
 
 export default router;
