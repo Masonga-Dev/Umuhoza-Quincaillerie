@@ -14,6 +14,7 @@ const DEFAULTS = {
   facebook: '',
   instagram: '',
   footerText: '',
+  show_prices: 'true',
 };
 
 function fieldClass() {
@@ -36,6 +37,19 @@ function AdminSettings() {
   }, []);
 
   const set = (k) => (e) => setSettings((p) => ({ ...p, [k]: e.target.value }));
+
+  const handlePriceToggle = async () => {
+    const newVal = settings.show_prices === 'false' ? 'true' : 'false';
+    setSettings(p => ({ ...p, show_prices: newVal }));
+    try {
+      await API.post('/admin/settings', { show_prices: newVal }, { headers });
+      setToast(newVal === 'false' ? 'Prices hidden on customer site.' : 'Prices now visible on customer site.');
+      setTimeout(() => setToast(''), 3000);
+    } catch {
+      setToast('Failed to update price visibility.');
+      setTimeout(() => setToast(''), 3000);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -116,6 +130,30 @@ function AdminSettings() {
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Physical Address</label>
               <textarea rows={2} value={settings.siteAddress} onChange={set('siteAddress')} placeholder="Kigali, Rwanda" className={fieldClass()} />
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Experience */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Customer Experience</h2>
+          <p className="mt-1 text-sm text-slate-400">Control what customers see on the public website.</p>
+          <div className="mt-5 space-y-3">
+            {/* Show Prices toggle */}
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Show Prices to Customers</p>
+                <p className="text-xs text-slate-500 mt-0.5">When OFF, all prices are hidden on the public catalogue. Saves immediately.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handlePriceToggle}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${settings.show_prices !== 'false' ? 'bg-blue-600' : 'bg-slate-300'}`}
+                role="switch"
+                aria-checked={settings.show_prices !== 'false'}
+              >
+                <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.show_prices !== 'false' ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
             </div>
           </div>
         </div>

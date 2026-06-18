@@ -67,23 +67,124 @@ function printReceipt(sale) {
   w.document.close();
 }
 
-function SaleDetailModal({ saleId, onClose, onCancelled }) {
+function SaleReturnModal({ sale, onClose, onSuccess }) {
+  const [returnQtys, setReturnQtys] = useState((sale.items || []).map(() => 0));
+  const [refundAmount, setRefundAmount] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const items = sale.items || [];
+  const suggestedRefund = items.reduce((s, item, i) => s + returnQtys[i] * Number(item.unit_price || 0), 0);
+  const hasItems = returnQtys.some(q => q > 0);
+
+  const handleSubmit = async () => {
+    if (!hasItems) return setError('Set quantity > 0 for at least one item.');
+    setError(''); setSubmitting(true);
+    try {
+      await API.post(`/sales/${sale.id}/return`, {
+        notes: notes.trim() || null,
+        refund_amount: Number(refundAmount) || suggestedRefund,
+        items: items
+          .map((item, i) => ({ ...item, quantity: returnQtys[i] }))
+          .filter(item => item.quantity > 0)
+          .map(item => ({
+            product_id: item.product_id,
+            product_variant_id: item.product_variant_id || null,
+            quantity: item.quantity,
+            unit_price: Number(item.unit_price || 0),
+          })),
+      }, { headers: HEADERS() });
+      onSuccess();
+    } catch (e) { setError(e?.response?.data?.message || 'Failed to record return.'); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div>
+            <p className="text-base font-bold text-slate-900">Process Customer Return</p>
+            <p className="text-xs text-slate-400">Invoice {sale.invoice_number} — enter quantities being returned</p>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 text-lg">✕</button>
+        </div>
+        <div className="max-h-[45vh] overflow-y-auto p-4 space-y-3">
+          {items.map((item, i) => {
+            const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{item.product_name}</p>
+                  {variant && <p className="text-xs text-slate-400">{variant}</p>}
+                  <p className="text-xs text-slate-400">Sold: {item.quantity} × {fmt(item.unit_price)} RWF</p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="text-xs text-slate-500">Return:</span>
+                  <input
+                    type="number" min="0" max={item.quantity}
+                    value={returnQtys[i]}
+                    onChange={e => { const next = [...returnQtys]; next[i] = Math.min(Math.max(0, parseInt(e.target.value) || 0), item.quantity); setReturnQtys(next); }}
+                    className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-center font-bold outline-none focus:border-emerald-400"
+                  />
+                  <span className="text-xs text-slate-400">/{item.quantity}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="border-t border-slate-200 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-slate-600 whitespace-nowrap">Refund amount (RWF):</label>
+            <input type="number" min="0" value={refundAmount}
+              onChange={e => setRefundAmount(e.target.value)}
+              placeholder={String(suggestedRefund)}
+              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-emerald-400" />
+          </div>
+          <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Reason for return (optional)…"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400" />
+          {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-slate-500">
+              Suggested refund: <span className="font-bold text-slate-800">{fmt(suggestedRefund)} RWF</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={handleSubmit} disabled={submitting || !hasItems}
+                className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition">
+                {submitting ? 'Processing…' : 'Confirm Return — Stock Restored'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [showReturn, setShowReturn] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     API.get(`/sales/${saleId}`, { headers: HEADERS() })
       .then(r => setSale(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [saleId]);
 
+  useEffect(() => { load(); }, [load]);
+
   useEffect(() => {
-    const handler = e => { if (e.key === 'Escape') onClose(); };
+    const handler = e => { if (e.key === 'Escape') { if (showReturn) setShowReturn(false); else onClose(); } };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [onClose, showReturn]);
 
   const handleCancel = async () => {
     if (!window.confirm('Mark this sale as Cancelled?')) return;
@@ -96,7 +197,14 @@ function SaleDetailModal({ saleId, onClose, onCancelled }) {
     finally { setCancelling(false); }
   };
 
+  const handleReturnSuccess = () => {
+    setShowReturn(false);
+    load();
+    onReturned?.();
+  };
+
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         {loading ? (
@@ -166,12 +274,18 @@ function SaleDetailModal({ saleId, onClose, onCancelled }) {
             </div>
 
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <div>
+              <div className="flex gap-2">
                 {sale.status !== 'Cancelled' && (
-                  <button onClick={handleCancel} disabled={cancelling}
-                    className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-60">
-                    {cancelling ? 'Cancelling…' : 'Cancel Sale'}
-                  </button>
+                  <>
+                    <button onClick={handleCancel} disabled={cancelling}
+                      className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-60">
+                      {cancelling ? 'Cancelling…' : 'Cancel Sale'}
+                    </button>
+                    <button onClick={() => setShowReturn(true)}
+                      className="rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
+                      ↩ Customer Return
+                    </button>
+                  </>
                 )}
               </div>
               <div className="text-right">
@@ -183,6 +297,10 @@ function SaleDetailModal({ saleId, onClose, onCancelled }) {
         )}
       </div>
     </div>
+    {showReturn && sale && (
+      <SaleReturnModal sale={sale} onClose={() => setShowReturn(false)} onSuccess={handleReturnSuccess} />
+    )}
+    </>
   );
 }
 
@@ -621,7 +739,7 @@ export default function AdminSales() {
       </div>
 
       {showForm && <NewSaleForm products={products} onSuccess={handleSuccess} onClose={() => setShowForm(false)} />}
-      {viewId && <SaleDetailModal saleId={viewId} onClose={() => setViewId(null)} onCancelled={loadSales} />}
+      {viewId && <SaleDetailModal saleId={viewId} onClose={() => setViewId(null)} onCancelled={loadSales} onReturned={loadSales} />}
     </AdminLayout>
   );
 }

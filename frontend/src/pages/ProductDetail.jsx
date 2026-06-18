@@ -23,12 +23,17 @@ export default function ProductDetail() {
   const [activeImg, setActiveImg] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [zoomed, setZoomed] = useState(false);
+  const [showPrices, setShowPrices] = useState(true);
 
   useEffect(() => {
     API.get(`/public/products/${id}`)
       .then(r => {
         setProduct(r.data);
-        if (r.data.variants?.length) setSelectedVariant(r.data.variants[0]);
+        setShowPrices(r.data?.show_prices !== 'false');
+        if (r.data.variants?.length) {
+          const inStock = r.data.variants.find(v => v.stock_quantity > 0);
+          setSelectedVariant(inStock || r.data.variants[0]);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -171,7 +176,7 @@ export default function ProductDetail() {
           <h1 className="text-3xl font-bold text-slate-900 leading-snug">{product.name}</h1>
 
           {/* Price */}
-          {currentPrice > 0 && (
+          {showPrices && currentPrice > 0 && (
             <div className="text-2xl font-extrabold text-blue-600">{fmtPrice(currentPrice)} RWF</div>
           )}
 
@@ -237,15 +242,15 @@ export default function ProductDetail() {
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-slate-200">
                       <th className="py-2 pr-4 text-left text-xs font-semibold text-slate-500">Variant</th>
-                      <th className="py-2 pr-4 text-right text-xs font-semibold text-slate-500">Price</th>
-                      <th className="py-2 text-left text-xs font-semibold text-slate-500">Stock</th>
+                      {showPrices && <th className="py-2 pr-4 text-right text-xs font-semibold text-slate-500">Price</th>}
+                      <th className="py-2 text-left text-xs font-semibold text-slate-500">Availability</th>
                     </tr></thead>
                     <tbody>
                       {variants.map(v => (
                         <tr key={v.id} onClick={() => setSelectedVariant(v)}
                           className={`cursor-pointer border-b border-slate-100 transition hover:bg-white ${selectedVariant?.id === v.id ? 'bg-blue-50' : ''}`}>
                           <td className="py-2 pr-4 font-medium text-slate-800">{v.sku || `Variant ${v.id}`}</td>
-                          <td className="py-2 pr-4 text-right text-blue-600 font-semibold">{fmtPrice(v.selling_price)} RWF</td>
+                          {showPrices && <td className="py-2 pr-4 text-right text-blue-600 font-semibold">{fmtPrice(v.selling_price)} RWF</td>}
                           <td className="py-2"><StatusBadge status={v.status}/></td>
                         </tr>
                       ))}

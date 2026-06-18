@@ -33,6 +33,7 @@ export default function Products() {
   const [products,   setProducts]   = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [search,     setSearch]     = useState(searchParams.get('q') || '');
+  const [showPrices, setShowPrices] = useState(true);
 
   const categoryId    = searchParams.get('category') || '';
   const subcategoryId = searchParams.get('subcategory') || '';
@@ -57,9 +58,15 @@ export default function Products() {
              : categoryId ? (hasSubcats ? 'subcategories' : 'products')
              : 'categories';
 
-  /* Fetch products when needed */
+  /* Fetch categories + price-visibility setting in one call */
   useEffect(() => {
-    API.get('/public/categories').then(r => setCategories(r.data || [])).catch(console.error);
+    API.get('/public/categories')
+      .then(r => {
+        const d = r.data || {};
+        setCategories(Array.isArray(d) ? d : (d.categories || []));
+        if (!Array.isArray(d)) setShowPrices(d.show_prices !== 'false');
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -360,8 +367,12 @@ export default function Products() {
 
                       <div className="mt-5 flex items-center justify-between border-t border-zinc-800 pt-4">
                         <span className="text-xs font-semibold text-green-400 transition group-hover:text-green-300">View Details →</span>
-                        {product.selling_price > 0 && (
-                          <span className="text-sm font-bold text-white">{Number(product.selling_price).toLocaleString('en-RW')} <span className="text-xs font-normal text-zinc-500">RWF</span></span>
+                        {showPrices && (product.min_variant_price > 0 || product.selling_price > 0) && (
+                          <span className="text-sm font-bold text-white">
+                            {product.min_variant_price > 0 ? <span className="text-xs font-normal text-zinc-500 mr-0.5">From </span> : null}
+                            {Number(product.min_variant_price > 0 ? product.min_variant_price : product.selling_price).toLocaleString('en-RW')}
+                            <span className="text-xs font-normal text-zinc-500 ml-0.5">RWF</span>
+                          </span>
                         )}
                       </div>
                     </div>

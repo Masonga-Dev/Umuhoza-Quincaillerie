@@ -16,7 +16,7 @@ function determineStatus(qty, min = 5) {
   return 'In Stock';
 }
 
-function DetailsTab({ product, categories, token, onSaved }) {
+function DetailsTab({ product, categories, onSaved }) {
   const [form, setForm] = useState({
     category_id: product.category_id || '',
     subcategory_id: product.subcategory_id || '',
@@ -27,10 +27,6 @@ function DetailsTab({ product, categories, token, onSaved }) {
     description: product.description || '',
     description_rw: product.description_rw || '',
     description_fr: product.description_fr || '',
-    cost_price: product.cost_price || 0,
-    selling_price: product.selling_price || 0,
-    stock_quantity: product.stock_quantity || 0,
-    minimum_stock: product.minimum_stock || 5,
   });
   const [subcategories, setSubcategories] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -47,7 +43,7 @@ function DetailsTab({ product, categories, token, onSaved }) {
   const handleSave = async () => {
     setError(''); setSaving(true);
     try {
-      await API.put(`/products/${product.id}`, form, { headers: { Authorization: `Bearer ${token}` } });
+      await API.put(`/products/${product.id}`, form);
       setSaved(true); setTimeout(() => setSaved(false), 3000);
       onSaved?.(form);
     } catch (e) { setError(e?.response?.data?.message || 'Save failed'); }
@@ -73,8 +69,10 @@ function DetailsTab({ product, categories, token, onSaved }) {
           </select>
         </div>
         <div>
-          <label className={labelCls()}>SKU *</label>
-          <input value={form.sku} onChange={set('sku')} className={fieldCls()} />
+          <label className={labelCls()}>SKU</label>
+          <p className="mt-2 rounded-xl border border-slate-100 bg-slate-100 px-4 py-3 font-mono text-sm text-slate-500 select-all">
+            {form.sku || <span className="italic text-slate-400">auto-generated</span>}
+          </p>
         </div>
       </div>
 
@@ -86,14 +84,6 @@ function DetailsTab({ product, categories, token, onSaved }) {
           <div><label className={labelCls()}>Kinyarwanda</label><input value={form.name_rw} onChange={set('name_rw')} placeholder="Izina mu Kinyarwanda" className={fieldCls()} /></div>
           <div><label className={labelCls()}>French</label><input value={form.name_fr} onChange={set('name_fr')} placeholder="Nom en français" className={fieldCls()} /></div>
         </div>
-      </div>
-
-      {/* Pricing + Stock */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div><label className={labelCls()}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
-        <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
-        <div><label className={labelCls()}>Stock Quantity</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
-        <div><label className={labelCls()}>Minimum Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
       </div>
 
       {/* Description multilingual */}
@@ -126,7 +116,7 @@ function DetailsTab({ product, categories, token, onSaved }) {
   );
 }
 
-function ImagesTab({ product, token }) {
+function ImagesTab({ product }) {
   const [images, setImages] = useState(product.images || []);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef();
@@ -146,7 +136,7 @@ function ImagesTab({ product, token }) {
 
   const handleSetPrimary = async (imgId) => {
     try {
-      await API.put(`/products/${product.id}/images/${imgId}/primary`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await API.put(`/products/${product.id}/images/${imgId}/primary`, {});
       setImages(prev => prev.map(i => ({ ...i, is_primary: i.id === imgId ? 1 : 0 })));
     } catch (e) { console.error(e); }
   };
@@ -154,7 +144,7 @@ function ImagesTab({ product, token }) {
   const handleDelete = async (imgId) => {
     if (!window.confirm('Delete this image?')) return;
     try {
-      await API.delete(`/products/${product.id}/images/${imgId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await API.delete(`/products/${product.id}/images/${imgId}`);
       setImages(prev => prev.filter(i => i.id !== imgId));
     } catch (e) { console.error(e); }
   };
@@ -189,9 +179,9 @@ function ImagesTab({ product, token }) {
   );
 }
 
-const EMPTY_V = { color: '', size: '', sku: '', selling_price: '', cost_price: '', stock_quantity: 0, minimum_stock: 5 };
+const EMPTY_V = { color: '', size: '', selling_price: '', cost_price: '', minimum_stock: 5 };
 
-function VariantsTab({ product, token }) {
+function VariantsTab({ product }) {
   const [variants, setVariants] = useState(product.variants || []);
   const [form, setForm] = useState(EMPTY_V);
   const [editing, setEditing] = useState(null);
@@ -203,50 +193,76 @@ function VariantsTab({ product, token }) {
     setError(''); setSaving(true);
     try {
       if (editing) {
-        await API.put(`/products/${product.id}/variants/${editing.id}`, form, { headers: { Authorization: `Bearer ${token}` } });
-        setVariants(prev => prev.map(v => v.id === editing.id ? { ...v, ...form, status: determineStatus(form.stock_quantity, form.minimum_stock) } : v));
+        await API.put(`/products/${product.id}/variants/${editing.id}`, form);
+        setVariants(prev => prev.map(v => v.id === editing.id
+          ? { ...v, ...form, status: determineStatus(v.stock_quantity, form.minimum_stock) }
+          : v));
       } else {
-        const res = await API.post(`/products/${product.id}/variants`, form, { headers: { Authorization: `Bearer ${token}` } });
-        setVariants(prev => [...prev, { id: res.data.id, product_id: product.id, ...form, status: determineStatus(form.stock_quantity, form.minimum_stock) }]);
+        const res = await API.post(`/products/${product.id}/variants`, form);
+        setVariants(prev => [...prev, { id: res.data.id, sku: res.data.sku, product_id: product.id, ...form, stock_quantity: 0, status: 'Out of Stock' }]);
       }
       setForm(EMPTY_V); setEditing(null);
     } catch (e) { setError(e?.response?.data?.message || 'Save failed'); }
     finally { setSaving(false); }
   };
 
-  const handleEdit = v => { setEditing(v); setForm({ color: v.color || '', size: v.size || '', sku: v.sku || '', selling_price: v.selling_price || '', cost_price: v.cost_price || '', stock_quantity: v.stock_quantity || 0, minimum_stock: v.minimum_stock || 5 }); };
+  const handleEdit = v => {
+    setEditing(v);
+    setForm({ color: v.color || '', size: v.size || '', selling_price: v.selling_price || '', cost_price: v.cost_price || '', minimum_stock: v.minimum_stock || 5 });
+  };
 
   const handleDelete = async id => {
     if (!window.confirm('Delete this variant?')) return;
     try {
-      await API.delete(`/products/${product.id}/variants/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await API.delete(`/products/${product.id}/variants/${id}`);
       setVariants(prev => prev.filter(v => v.id !== id));
     } catch (e) { console.error(e); }
   };
 
   const sc = s => s === 'In Stock' ? 'bg-emerald-100 text-emerald-700' : s === 'Low Stock' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  const fmt = v => Number(v || 0).toLocaleString('en-RW');
 
   return (
     <div className="space-y-5">
+      {/* Stock info banner */}
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4">
+        <svg className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <p className="text-sm text-amber-800">
+          <span className="font-semibold">Stock is managed through Purchases.</span> To add stock for a variant, go to <span className="font-semibold">Purchases → Record Purchase</span> and select the product variant. Stock quantity cannot be set manually.
+        </p>
+      </div>
+
       {variants.length > 0 && (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-slate-200 bg-slate-50">
-                <tr>{['Color','Size','SKU','Price (RWF)','Stock','Status',''].map(h => <th key={h} className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{h}</th>)}</tr>
+                <tr>
+                  {['Color','Size','SKU','Cost Price','Selling Price','Stock','Status',''].map(h => (
+                    <th key={h} className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{h}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {variants.map(v => (
                   <tr key={v.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-3 px-4">{v.color || '—'}</td>
-                    <td className="py-3 px-4">{v.size || '—'}</td>
-                    <td className="py-3 px-4 font-mono text-xs text-slate-500">{v.sku || '—'}</td>
-                    <td className="py-3 px-4 font-semibold text-blue-600">{Number(v.selling_price || 0).toLocaleString('en-RW')}</td>
-                    <td className="py-3 px-4">{v.stock_quantity}</td>
+                    <td className="py-3 px-4 font-medium">{v.color || <span className="text-slate-300">—</span>}</td>
+                    <td className="py-3 px-4">{v.size || <span className="text-slate-300">—</span>}</td>
+                    <td className="py-3 px-4 font-mono text-xs text-slate-500">{v.sku || <span className="text-slate-300">—</span>}</td>
+                    <td className="py-3 px-4 text-slate-600">{fmt(v.cost_price)}</td>
+                    <td className="py-3 px-4 font-semibold text-blue-600">{fmt(v.selling_price)}</td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                        <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        {v.stock_quantity}
+                      </span>
+                    </td>
                     <td className="py-3 px-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${sc(v.status)}`}>{v.status}</span></td>
-                    <td className="py-3 px-4 flex gap-2">
-                      <button onClick={() => handleEdit(v)} className="text-xs font-semibold text-blue-600 hover:underline">Edit</button>
-                      <button onClick={() => handleDelete(v.id)} className="text-xs font-semibold text-red-500 hover:underline">Delete</button>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(v)} className="text-xs font-semibold text-blue-600 hover:underline">Edit</button>
+                        <button onClick={() => handleDelete(v.id)} className="text-xs font-semibold text-red-500 hover:underline">Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -255,17 +271,20 @@ function VariantsTab({ product, token }) {
           </div>
         </div>
       )}
+
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h4 className="text-sm font-bold text-slate-800 mb-4">{editing ? 'Edit Variant' : 'Add New Variant'}</h4>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div><label className={labelCls()}>Color</label><input value={form.color} onChange={set('color')} className={fieldCls()} placeholder="White" /></div>
-          <div><label className={labelCls()}>Size</label><input value={form.size} onChange={set('size')} className={fieldCls()} placeholder="5L" /></div>
-          <div><label className={labelCls()}>SKU</label><input value={form.sku} onChange={set('sku')} className={fieldCls()} /></div>
-          <div><label className={labelCls()}>Purchase Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><label className={labelCls()}>Color</label><input value={form.color} onChange={set('color')} className={fieldCls()} placeholder="e.g. Red" /></div>
+          <div><label className={labelCls()}>Size</label><input value={form.size} onChange={set('size')} className={fieldCls()} placeholder="e.g. 5kg" /></div>
+          <div><label className={labelCls()}>Cost Price (RWF)</label><input type="number" min="0" value={form.cost_price} onChange={set('cost_price')} className={fieldCls()} /></div>
           <div><label className={labelCls()}>Selling Price (RWF)</label><input type="number" min="0" value={form.selling_price} onChange={set('selling_price')} className={fieldCls()} /></div>
-          <div><label className={labelCls()}>Stock Qty</label><input type="number" min="0" value={form.stock_quantity} onChange={set('stock_quantity')} className={fieldCls()} /></div>
-          <div><label className={labelCls()}>Min Stock</label><input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} /></div>
+          <div className="sm:col-span-2">
+            <label className={labelCls()}>Low Stock Alert (qty)</label>
+            <input type="number" min="0" value={form.minimum_stock} onChange={set('minimum_stock')} className={fieldCls()} />
+          </div>
         </div>
+        <p className="mt-3 text-xs text-slate-400">SKU is auto-generated. Stock is read-only — updated via Purchases.</p>
         {error && <p className="mt-3 rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
         <div className="mt-4 flex gap-3">
           <button onClick={handleSave} disabled={saving} className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
@@ -286,12 +305,11 @@ export default function AdminEditProduct() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const token = localStorage.getItem('umuhoza_token');
   const activeTab = searchParams.get('tab') || 'Details';
 
   useEffect(() => {
     Promise.all([
-      API.get(`/products/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+      API.get(`/products/${id}`),
       API.get('/categories'),
     ])
       .then(([pRes, cRes]) => { setProduct(pRes.data); setCategories(cRes.data); })
@@ -324,9 +342,9 @@ export default function AdminEditProduct() {
                 </button>
               ))}
             </div>
-            {activeTab === 'Details' && <DetailsTab product={product} categories={categories} token={token} onSaved={f => setProduct(p => ({ ...p, ...f }))} />}
-            {activeTab === 'Images' && <ImagesTab product={product} token={token} />}
-            {activeTab === 'Variants' && <VariantsTab product={product} token={token} />}
+            {activeTab === 'Details' && <DetailsTab product={product} categories={categories} onSaved={f => setProduct(p => ({ ...p, ...f }))} />}
+            {activeTab === 'Images' && <ImagesTab product={product} />}
+            {activeTab === 'Variants' && <VariantsTab product={product} />}
           </>
         ) : null}
       </div>

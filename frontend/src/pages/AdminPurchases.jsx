@@ -8,24 +8,125 @@ const fmt = v => Number(v || 0).toLocaleString('en-RW');
 const fmtDate = d => new Date(d).toLocaleDateString('en-RW', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtDateTime = d => new Date(d).toLocaleString('en-RW', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-function PurchaseDetailModal({ purchaseId, onClose }) {
+function PurchaseReturnModal({ purchase, onClose, onSuccess }) {
+  const [returnQtys, setReturnQtys] = useState(
+    (purchase.items || []).map(() => 0)
+  );
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const items = purchase.items || [];
+  const totalCost = items.reduce((s, item, i) => s + returnQtys[i] * Number(item.unit_cost || 0), 0);
+  const hasItems = returnQtys.some(q => q > 0);
+
+  const handleSubmit = async () => {
+    if (!hasItems) return setError('Set quantity > 0 for at least one item.');
+    setError(''); setSubmitting(true);
+    try {
+      await API.post(`/purchases/${purchase.id}/return`, {
+        notes: notes.trim() || null,
+        items: items
+          .map((item, i) => ({ ...item, quantity: returnQtys[i] }))
+          .filter(item => item.quantity > 0)
+          .map(item => ({
+            product_id: item.product_id,
+            product_variant_id: item.product_variant_id || null,
+            quantity: item.quantity,
+            unit_cost: Number(item.unit_cost || 0),
+          })),
+      }, { headers: HEADERS() });
+      onSuccess();
+    } catch (e) { setError(e?.response?.data?.message || 'Failed to record return.'); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div>
+            <p className="text-base font-bold text-slate-900">Return to Supplier</p>
+            <p className="text-xs text-slate-400">Purchase #{purchase.id} — enter quantities to return</p>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 text-lg">✕</button>
+        </div>
+        <div className="max-h-[50vh] overflow-y-auto p-4 space-y-3">
+          {items.map((item, i) => {
+            const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{item.product_name}</p>
+                  {variant && <p className="text-xs text-slate-400">{variant}</p>}
+                  <p className="text-xs text-slate-400">Purchased: {item.quantity} × {fmt(item.unit_cost)} RWF</p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="text-xs text-slate-500">Return:</span>
+                  <input
+                    type="number" min="0" max={item.quantity}
+                    value={returnQtys[i]}
+                    onChange={e => { const next = [...returnQtys]; next[i] = Math.min(Math.max(0, parseInt(e.target.value) || 0), item.quantity); setReturnQtys(next); }}
+                    className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-center font-bold outline-none focus:border-orange-400"
+                  />
+                  <span className="text-xs text-slate-400">/{item.quantity}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="border-t border-slate-200 p-4 space-y-3">
+          <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Reason for return (optional)…"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-orange-400" />
+          {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-slate-500">
+              Value returned: <span className="font-bold text-slate-800">{fmt(totalCost)} RWF</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={handleSubmit} disabled={submitting || !hasItems}
+                className="rounded-xl bg-orange-500 px-5 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50 transition">
+                {submitting ? 'Processing…' : 'Confirm Return — Stock Reduced'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
   const [purchase, setPurchase] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showReturn, setShowReturn] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     API.get(`/purchases/${purchaseId}`, { headers: HEADERS() })
       .then(r => setPurchase(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [purchaseId]);
 
+  useEffect(() => { load(); }, [load]);
+
   useEffect(() => {
-    const handler = e => { if (e.key === 'Escape') onClose(); };
+    const handler = e => { if (e.key === 'Escape') { if (showReturn) setShowReturn(false); else onClose(); } };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [onClose, showReturn]);
+
+  const handleReturnSuccess = () => {
+    setShowReturn(false);
+    load();
+    onReturned?.();
+  };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         {loading ? (
@@ -74,7 +175,10 @@ function PurchaseDetailModal({ purchaseId, onClose }) {
             </div>
 
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <span className="text-sm text-slate-500">{purchase.items?.length || 0} item{purchase.items?.length !== 1 ? 's' : ''}</span>
+              <button onClick={() => setShowReturn(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 transition">
+                ↩ Return to Supplier
+              </button>
               <div className="text-right">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Cost</p>
                 <p className="text-2xl font-extrabold text-slate-900">{fmt(purchase.total_cost)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
@@ -84,6 +188,10 @@ function PurchaseDetailModal({ purchaseId, onClose }) {
         )}
       </div>
     </div>
+    {showReturn && purchase && (
+      <PurchaseReturnModal purchase={purchase} onClose={() => setShowReturn(false)} onSuccess={handleReturnSuccess} />
+    )}
+    </>
   );
 }
 
@@ -408,7 +516,7 @@ export default function AdminPurchases() {
       </div>
 
       {showForm && <NewPurchaseForm products={products} suppliers={suppliers} onSuccess={handleSuccess} onClose={() => setShowForm(false)} />}
-      {viewId && <PurchaseDetailModal purchaseId={viewId} onClose={() => setViewId(null)} />}
+      {viewId && <PurchaseDetailModal purchaseId={viewId} onClose={() => setViewId(null)} onReturned={load} />}
     </AdminLayout>
   );
 }
