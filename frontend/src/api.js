@@ -2,14 +2,19 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'http://localhost:4000/api',
-  headers: { 'Content-Type': 'application/json' },
 });
 
-// Auto-attach token to every request
+// Auto-attach token; strip Content-Type for FormData so browser sets the multipart boundary
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('umuhoza_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (config.data instanceof FormData) {
+    // Let the browser set Content-Type with the correct multipart boundary
+    delete config.headers['Content-Type'];
+  } else {
+    config.headers['Content-Type'] = 'application/json';
   }
   return config;
 });

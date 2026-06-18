@@ -11,25 +11,32 @@ function genSKU() { return 'UMU-' + Math.random().toString(36).toUpperCase().sli
 export default function AdminAddProduct() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [form, setForm] = useState({
-    category_id: '', name: '', name_rw: '', name_fr: '',
+    category_id: '', subcategory_id: '', name: '', name_rw: '', name_fr: '',
     sku: genSKU(), description: '', description_rw: '', description_fr: '',
     selling_price: '', cost_price: '', stock_quantity: 0, minimum_stock: 5,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const token = localStorage.getItem('umuhoza_token');
   const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
   useEffect(() => {
     API.get('/categories').then(r => setCategories(r.data || [])).catch(console.error);
   }, []);
 
+  useEffect(() => {
+    if (!form.category_id) { setSubcategories([]); setForm(p => ({ ...p, subcategory_id: '' })); return; }
+    API.get('/subcategories', { params: { category_id: form.category_id } })
+      .then(r => setSubcategories(r.data || []))
+      .catch(console.error);
+  }, [form.category_id]);
+
   const handleSubmit = async e => {
     e.preventDefault();
     setError(''); setSaving(true);
     try {
-      const res = await API.post('/products', form, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await API.post('/products', form);
       navigate(`/admin/products/${res.data.id}/edit?tab=Images`);
     } catch (e) { setError(e?.response?.data?.message || 'Could not create product'); }
     finally { setSaving(false); }
@@ -47,13 +54,20 @@ export default function AdminAddProduct() {
         {error && <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
         <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-          {/* Category + SKU */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Category + Subcategory + SKU */}
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className={labelCls}>Category <span className="text-red-500">*</span></label>
               <select required value={form.category_id} onChange={set('category_id')} className={fieldCls}>
                 <option value="">Select category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Subcategory</label>
+              <select value={form.subcategory_id} onChange={set('subcategory_id')} className={fieldCls} disabled={!form.category_id || !subcategories.length}>
+                <option value="">{form.category_id ? (subcategories.length ? 'Select subcategory' : 'No subcategories') : 'Select category first'}</option>
+                {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div>

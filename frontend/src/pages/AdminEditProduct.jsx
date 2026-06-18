@@ -19,6 +19,7 @@ function determineStatus(qty, min = 5) {
 function DetailsTab({ product, categories, token, onSaved }) {
   const [form, setForm] = useState({
     category_id: product.category_id || '',
+    subcategory_id: product.subcategory_id || '',
     sku: product.sku || '',
     name: product.name || '',
     name_rw: product.name_rw || '',
@@ -31,10 +32,17 @@ function DetailsTab({ product, categories, token, onSaved }) {
     stock_quantity: product.stock_quantity || 0,
     minimum_stock: product.minimum_stock || 5,
   });
+  const [subcategories, setSubcategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  useEffect(() => {
+    if (!form.category_id) { setSubcategories([]); return; }
+    API.get('/subcategories', { params: { category_id: form.category_id } })
+      .then(r => setSubcategories(r.data || [])).catch(console.error);
+  }, [form.category_id]);
 
   const handleSave = async () => {
     setError(''); setSaving(true);
@@ -48,13 +56,20 @@ function DetailsTab({ product, categories, token, onSaved }) {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-      {/* Category + SKU */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Category + Subcategory + SKU */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label className={labelCls()}>Category *</label>
-          <select value={form.category_id} onChange={set('category_id')} className={fieldCls()}>
+          <select value={form.category_id} onChange={e => { set('category_id')(e); setForm(p => ({ ...p, subcategory_id: '' })); }} className={fieldCls()}>
             <option value="">Select category</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls()}>Subcategory</label>
+          <select value={form.subcategory_id} onChange={set('subcategory_id')} className={fieldCls()} disabled={!form.category_id || !subcategories.length}>
+            <option value="">{form.category_id ? (subcategories.length ? 'Select subcategory' : 'No subcategories') : 'Select category first'}</option>
+            {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>

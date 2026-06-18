@@ -9,8 +9,10 @@ function fmtPrice(v) {
 }
 
 function StatusBadge({ status }) {
-  const cls = status === 'In Stock' ? 'bg-emerald-100 text-emerald-700' : status === 'Low Stock' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
-  return <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${cls}`}>{status}</span>;
+  const isAvailable = status === 'In Stock' || status === 'Low Stock';
+  const label = isAvailable ? 'Available In Store' : 'Out of Stock';
+  const cls = isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
+  return <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${cls}`}>{label}</span>;
 }
 
 export default function ProductDetail() {
@@ -176,9 +178,6 @@ export default function ProductDetail() {
           {/* Stock status */}
           <div className="flex items-center gap-3">
             <StatusBadge status={currentStock.label}/>
-            {currentStock.qty > 0 && (
-              <span className="text-sm text-slate-500">{currentStock.qty} units available</span>
-            )}
           </div>
 
           {product.description && (

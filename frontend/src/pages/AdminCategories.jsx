@@ -142,29 +142,19 @@ export default function AdminCategories() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="font-semibold text-slate-900 truncate">{cat.name}</p>
-                        {cat.name_rw && <LangBadge lang="RW" />}
-                        {cat.name_fr && <LangBadge lang="FR" />}
-                      </div>
+                      <p className="font-semibold text-slate-900 truncate">{cat.name}</p>
                       {(cat.name_rw || cat.name_fr) && (
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {[cat.name_rw && `${cat.name_rw}`, cat.name_fr && `${cat.name_fr}`].filter(Boolean).join(' · ')}
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">
+                          {[cat.name_rw, cat.name_fr].filter(Boolean).join(' · ')}
                         </p>
                       )}
-                      {cat.description && (
-                        <p className="text-sm text-slate-500 mt-1 line-clamp-2 leading-snug">{cat.description}</p>
-                      )}
-                      {(cat.description_rw || cat.description_fr) && (
-                        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                          {cat.description_rw && (
-                            <span className="text-xs text-emerald-600 line-clamp-1"><span className="font-semibold">RW:</span> {cat.description_rw}</span>
-                          )}
-                          {cat.description_fr && (
-                            <span className="text-xs text-violet-600 line-clamp-1"><span className="font-semibold">FR:</span> {cat.description_fr}</span>
-                          )}
-                        </div>
-                      )}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        {cat.name_rw && <LangBadge lang="RW" />}
+                        {cat.name_fr && <LangBadge lang="FR" />}
+                        {cat.description && <LangBadge lang="EN" />}
+                        {cat.description_rw && <span className="inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none bg-emerald-100 text-emerald-700">Desc RW</span>}
+                        {cat.description_fr && <span className="inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none bg-violet-100 text-violet-700">Desc FR</span>}
+                      </div>
                     </div>
 
                     {/* Actions */}

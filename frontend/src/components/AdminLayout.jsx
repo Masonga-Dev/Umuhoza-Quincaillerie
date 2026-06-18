@@ -87,6 +87,7 @@ const menuItems = [
       { label: 'All Products', path: '/admin/products' },
       { label: 'Add Product', path: '/admin/products/add' },
       { label: 'Categories', path: '/admin/products/categories' },
+      { label: 'Subcategories', path: '/admin/products/subcategories' },
     ],
   },
   { label: 'Stock', path: '/admin/stock', icon: 'stock' },
