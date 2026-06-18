@@ -53,8 +53,13 @@ router.post('/', authMiddleware, async (req, res) => {
   const conn = await pool.getConnection();
   await conn.beginTransaction();
   try {
-    const [cnt] = await conn.query('SELECT COUNT(*) AS total FROM sales WHERE DATE(sale_date)=CURDATE()');
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(cnt[0].total + 1).padStart(3, '0')}`;
+    const year = new Date().getFullYear();
+    const [maxRow] = await conn.query(
+      "SELECT MAX(CAST(SUBSTRING_INDEX(invoice_number, '-', -1) AS UNSIGNED)) AS max_num FROM sales WHERE invoice_number LIKE ?",
+      [`INV-${year}-%`]
+    );
+    const nextNum = (Number(maxRow[0]?.max_num) || 0) + 1;
+    const invoiceNumber = `INV-${year}-${String(nextNum).padStart(4, '0')}`;
     const [sale] = await conn.query(
       'INSERT INTO sales (invoice_number,total_amount,payment_method,customer_name,sold_by,sale_date,created_at) VALUES (?,?,?,?,?,NOW(),NOW())',
       [invoiceNumber, total_amount, payment_method || 'Cash', customer_name || null, req.user.id]
@@ -75,6 +80,13 @@ router.post('/', authMiddleware, async (req, res) => {
           'INSERT INTO sale_items (sale_id,product_id,product_variant_id,quantity,unit_price,subtotal) VALUES (?,?,?,?,?,?)',
           [sale.insertId, product_id, variant_id, quantity, unit_price, subtotal]
         );
+        // Aggregate variant stock back to product row so all admin modules stay in sync
+        const [agg] = await conn.query(
+          'SELECT COALESCE(SUM(stock_quantity),0) AS total, COALESCE(MIN(minimum_stock),5) AS min_stk FROM product_variants WHERE product_id=?',
+          [product_id]
+        );
+        await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?',
+          [agg[0].total, determineStatus(agg[0].total, agg[0].min_stk), product_id]);
       } else {
         const [pRows] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [product_id]);
         if (!pRows.length) throw new Error(`Product not found: ${product_id}`);
@@ -110,6 +122,58 @@ router.patch('/:id/cancel', authMiddleware, async (req, res) => {
     await pool.query("UPDATE sales SET status='Cancelled' WHERE id=?", [req.params.id]);
     res.json({ message: 'Sale cancelled' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not cancel sale' }); }
+});
+
+// ── Customer return ────────────────────────────────────────────────────────────
+router.post('/:id/return', authMiddleware, async (req, res) => {
+  const { items, notes, refund_amount } = req.body;
+  if (!items?.length) return res.status(400).json({ message: 'Return items are required' });
+
+  const conn = await pool.getConnection();
+  await conn.beginTransaction();
+  try {
+    const [r] = await conn.query(
+      'INSERT INTO sale_returns (sale_id,notes,refund_amount,created_by,created_at) VALUES (?,?,?,?,NOW())',
+      [req.params.id, notes || null, Number(refund_amount || 0), req.user.id]
+    );
+    const returnId = r.insertId;
+
+    for (const item of items) {
+      const { product_id, product_variant_id, quantity, unit_price } = item;
+      const qty = Number(quantity);
+      if (!qty || !product_id) continue;
+
+      await conn.query(
+        'INSERT INTO sale_return_items (return_id,product_id,product_variant_id,quantity,unit_price,subtotal) VALUES (?,?,?,?,?,?)',
+        [returnId, product_id, product_variant_id || null, qty, Number(unit_price || 0), qty * Number(unit_price || 0)]
+      );
+
+      // Customer returns item → stock increases
+      if (product_variant_id) {
+        await conn.query('UPDATE product_variants SET stock_quantity=stock_quantity+? WHERE id=?', [qty, product_variant_id]);
+        const [v] = await conn.query('SELECT stock_quantity,minimum_stock FROM product_variants WHERE id=?', [product_variant_id]);
+        if (v.length) await conn.query('UPDATE product_variants SET status=? WHERE id=?', [determineStatus(v[0].stock_quantity, v[0].minimum_stock), product_variant_id]);
+        const [agg] = await conn.query('SELECT COALESCE(SUM(stock_quantity),0) AS total,COALESCE(MIN(minimum_stock),5) AS min_stk FROM product_variants WHERE product_id=?', [product_id]);
+        await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?', [agg[0].total, determineStatus(agg[0].total, agg[0].min_stk), product_id]);
+      } else {
+        await conn.query('UPDATE products SET stock_quantity=stock_quantity+? WHERE id=?', [qty, product_id]);
+        const [p] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [product_id]);
+        if (p.length) await conn.query('UPDATE products SET status=? WHERE id=?', [determineStatus(p[0].stock_quantity, p[0].minimum_stock), product_id]);
+      }
+
+      await conn.query(
+        'INSERT INTO stock_transactions (product_id,product_variant_id,quantity,transaction_type,notes,created_by,transaction_date,created_at) VALUES (?,?,?,?,?,?,NOW(),NOW())',
+        [product_id, product_variant_id || null, qty, 'RETURN_IN', `Customer return — Sale #${req.params.id}`, req.user.id]
+      );
+    }
+
+    await conn.commit();
+    res.status(201).json({ id: returnId, message: 'Return recorded, stock restored' });
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    res.status(500).json({ message: e.message || 'Could not record return' });
+  } finally { conn.release(); }
 });
 
 export default router;

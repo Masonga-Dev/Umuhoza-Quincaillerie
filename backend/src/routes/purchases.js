@@ -78,6 +78,13 @@ router.post('/', async (req, res) => {
         await conn.query('UPDATE product_variants SET stock_quantity=stock_quantity+? WHERE id=?', [quantity, product_variant_id]);
         const [v] = await conn.query('SELECT stock_quantity,minimum_stock FROM product_variants WHERE id=?', [product_variant_id]);
         if (v.length) await conn.query('UPDATE product_variants SET status=? WHERE id=?', [determineStatus(v[0].stock_quantity, v[0].minimum_stock), product_variant_id]);
+        // Aggregate variant stock back to the product row so all admin modules stay in sync
+        const [agg] = await conn.query(
+          'SELECT COALESCE(SUM(stock_quantity),0) AS total, COALESCE(MIN(minimum_stock),5) AS min_stk FROM product_variants WHERE product_id=?',
+          [product_id]
+        );
+        await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?',
+          [agg[0].total, determineStatus(agg[0].total, agg[0].min_stk), product_id]);
       } else {
         await conn.query('UPDATE products SET stock_quantity=stock_quantity+? WHERE id=?', [quantity, product_id]);
         const [p] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [product_id]);
@@ -105,6 +112,58 @@ router.delete('/:id', async (req, res) => {
     await pool.query('DELETE FROM purchases WHERE id=?', [req.params.id]);
     res.json({ message: 'Purchase deleted' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not delete purchase' }); }
+});
+
+// ── Return items to supplier ───────────────────────────────────────────────────
+router.post('/:id/return', async (req, res) => {
+  const { items, notes } = req.body;
+  if (!items?.length) return res.status(400).json({ message: 'Return items are required' });
+
+  const conn = await pool.getConnection();
+  await conn.beginTransaction();
+  try {
+    const totalCost = items.reduce((s, i) => s + Number(i.unit_cost || 0) * Number(i.quantity || 0), 0);
+    const [r] = await conn.query(
+      'INSERT INTO purchase_returns (purchase_id,notes,total_returned_cost,created_by,created_at) VALUES (?,?,?,?,NOW())',
+      [req.params.id, notes || null, totalCost, req.user.id]
+    );
+    const returnId = r.insertId;
+
+    for (const item of items) {
+      const { product_id, product_variant_id, quantity, unit_cost } = item;
+      const qty = Number(quantity);
+      if (!qty || !product_id) continue;
+
+      await conn.query(
+        'INSERT INTO purchase_return_items (return_id,product_id,product_variant_id,quantity,unit_cost,subtotal) VALUES (?,?,?,?,?,?)',
+        [returnId, product_id, product_variant_id || null, qty, Number(unit_cost || 0), qty * Number(unit_cost || 0)]
+      );
+
+      if (product_variant_id) {
+        await conn.query('UPDATE product_variants SET stock_quantity=GREATEST(0,stock_quantity-?) WHERE id=?', [qty, product_variant_id]);
+        const [v] = await conn.query('SELECT stock_quantity,minimum_stock FROM product_variants WHERE id=?', [product_variant_id]);
+        if (v.length) await conn.query('UPDATE product_variants SET status=? WHERE id=?', [determineStatus(v[0].stock_quantity, v[0].minimum_stock), product_variant_id]);
+        const [agg] = await conn.query('SELECT COALESCE(SUM(stock_quantity),0) AS total,COALESCE(MIN(minimum_stock),5) AS min_stk FROM product_variants WHERE product_id=?', [product_id]);
+        await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?', [agg[0].total, determineStatus(agg[0].total, agg[0].min_stk), product_id]);
+      } else {
+        await conn.query('UPDATE products SET stock_quantity=GREATEST(0,stock_quantity-?) WHERE id=?', [qty, product_id]);
+        const [p] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [product_id]);
+        if (p.length) await conn.query('UPDATE products SET status=? WHERE id=?', [determineStatus(p[0].stock_quantity, p[0].minimum_stock), product_id]);
+      }
+
+      await conn.query(
+        'INSERT INTO stock_transactions (product_id,product_variant_id,quantity,transaction_type,notes,created_by,transaction_date,created_at) VALUES (?,?,?,?,?,?,NOW(),NOW())',
+        [product_id, product_variant_id || null, -qty, 'RETURN_OUT', `Return to supplier — Purchase #${req.params.id}`, req.user.id]
+      );
+    }
+
+    await conn.commit();
+    res.status(201).json({ id: returnId, message: 'Return recorded, stock reduced' });
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    res.status(500).json({ message: e.message || 'Could not record return' });
+  } finally { conn.release(); }
 });
 
 export default router;

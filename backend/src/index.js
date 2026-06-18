@@ -12,6 +12,7 @@ import publicRoutes from './routes/public.js';
 import adminRoutes from './routes/admin.js';
 import supplierRoutes from './routes/suppliers.js';
 import purchaseRoutes from './routes/purchases.js';
+import subcategoryRoutes from './routes/subcategories.js';
 import { initDb } from './config/db.js';
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use('/api/public', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/subcategories', subcategoryRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Umuhoza Quincaillerie API is running.' });

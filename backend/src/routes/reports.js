@@ -19,7 +19,21 @@ router.get('/daily', async (req, res) => {
        WHERE s.status != 'Cancelled'
        GROUP BY si.product_id ORDER BY quantity_sold DESC LIMIT 10`
     );
-    res.json({ summary: summary[0], best_selling: bestSelling });
+    const [paymentMethods] = await pool.query(
+      `SELECT payment_method, COUNT(*) AS count, SUM(total_amount) AS total
+       FROM sales WHERE status != 'Cancelled'
+       GROUP BY payment_method ORDER BY count DESC`
+    );
+    const [categoryRevenue] = await pool.query(
+      `SELECT c.name AS category, SUM(si.subtotal) AS revenue, SUM(si.quantity) AS units
+       FROM sale_items si
+       JOIN products p ON p.id = si.product_id
+       LEFT JOIN categories c ON c.id = p.category_id
+       JOIN sales s ON s.id = si.sale_id
+       WHERE s.status != 'Cancelled'
+       GROUP BY p.category_id ORDER BY revenue DESC LIMIT 8`
+    );
+    res.json({ summary: summary[0], best_selling: bestSelling, payment_methods: paymentMethods, category_revenue: categoryRevenue });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch daily report' }); }
 });
 
