@@ -16,6 +16,14 @@ const pool = mysql.createPool({
 export async function initDb() {
   const connection = await pool.getConnection();
   try {
+    // Extend stock_transactions ENUM to include return types
+    try {
+      await connection.query(`ALTER TABLE stock_transactions MODIFY COLUMN transaction_type ENUM('IN','OUT','ADJUSTMENT','RETURN_IN','RETURN_OUT') NOT NULL`);
+    } catch (_) { /* already extended or column name differs */ }
+
+    // Ensure notes column exists on stock_transactions
+    await connection.query(`ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL`);
+
     // Category multilingual descriptions
     await connection.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS description_rw TEXT DEFAULT NULL AFTER description`);
     await connection.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS description_fr TEXT DEFAULT NULL AFTER description_rw`);

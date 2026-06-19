@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS stock_transactions (
     product_id INT NOT NULL,
     product_variant_id INT NULL,
     quantity INT NOT NULL,
-    transaction_type ENUM('IN','OUT','ADJUSTMENT') NOT NULL,
+    transaction_type ENUM('IN','OUT','ADJUSTMENT','RETURN_IN','RETURN_OUT') NOT NULL,
     notes TEXT,
     created_by INT NULL,
     transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,

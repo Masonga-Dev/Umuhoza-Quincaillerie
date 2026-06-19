@@ -101,8 +101,8 @@ router.post('/', authMiddleware, async (req, res) => {
       }
 
       await conn.query(
-        'INSERT INTO stock_transactions (product_id,quantity,transaction_type,created_by,transaction_date,created_at) VALUES (?,?,?,?,NOW(),NOW())',
-        [product_id, -Number(quantity), 'OUT', req.user.id]
+        'INSERT INTO stock_transactions (product_id,product_variant_id,quantity,transaction_type,notes,created_by,transaction_date,created_at) VALUES (?,?,?,?,?,?,NOW(),NOW())',
+        [product_id, item.variant_id || null, -Number(quantity), 'OUT', `Sale #${sale.insertId}`, req.user.id]
       );
     }
 

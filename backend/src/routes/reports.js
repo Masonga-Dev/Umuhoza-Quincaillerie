@@ -77,7 +77,7 @@ router.get('/stock-movements', async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 20, 100);
   try {
     const [rows] = await pool.query(
-      `SELECT st.id, st.type, st.quantity, st.notes, st.created_at, st.reference_type,
+      `SELECT st.id, st.transaction_type, st.quantity, st.notes, st.created_at,
               p.name AS product_name, p.sku,
               u.name AS created_by_name
        FROM stock_transactions st
