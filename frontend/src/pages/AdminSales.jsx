@@ -169,6 +169,7 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
+  const [returnBanner, setReturnBanner] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -201,6 +202,8 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
     setShowReturn(false);
     load();
     onReturned?.();
+    setReturnBanner('Return recorded. Stock has been restored — check Stock Management to confirm.');
+    setTimeout(() => setReturnBanner(''), 8000);
   };
 
   return (
@@ -273,6 +276,11 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
               </table>
             </div>
 
+            {returnBanner && (
+              <div className="border-t border-emerald-100 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-700">
+                ✓ {returnBanner}
+              </div>
+            )}
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
               <div className="flex gap-2">
                 {sale.status !== 'Cancelled' && (

@@ -138,15 +138,14 @@ export default function AdminStock() {
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
             <div>
               <h3 className="font-semibold text-slate-900">Recent Stock Movements</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Last 15 transactions — IN from purchases, OUT from sales</p>
+              <p className="text-xs text-slate-400 mt-0.5">Last 15 transactions — purchases, sales, and returns</p>
             </div>
-            <div className="flex items-center gap-3 text-xs font-semibold">
-              <span className="flex items-center gap-1.5 text-emerald-600">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block"/>IN (Purchases)
-              </span>
-              <span className="flex items-center gap-1.5 text-red-500">
-                <span className="h-2 w-2 rounded-full bg-red-400 inline-block"/>OUT (Sales)
-              </span>
+            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+              <span className="flex items-center gap-1.5 text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500 inline-block"/>IN</span>
+              <span className="flex items-center gap-1.5 text-red-500"><span className="h-2 w-2 rounded-full bg-red-400 inline-block"/>OUT</span>
+              <span className="flex items-center gap-1.5 text-blue-600"><span className="h-2 w-2 rounded-full bg-blue-400 inline-block"/>RETURN IN</span>
+              <span className="flex items-center gap-1.5 text-orange-600"><span className="h-2 w-2 rounded-full bg-orange-400 inline-block"/>RETURN OUT</span>
+              <button onClick={loadData} className="ml-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">↻ Refresh</button>
             </div>
           </div>
 
@@ -170,39 +169,52 @@ export default function AdminStock() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {movements.map(m => (
+                  {movements.map(m => {
+                    // Infer type from notes when transaction_type is empty (old records before ENUM fix)
+                    let type = m.transaction_type || '';
+                    if (!type) {
+                      if (m.notes?.includes('Return to supplier')) type = 'RETURN_OUT';
+                      else if (m.notes?.includes('Customer return')) type = 'RETURN_IN';
+                      else type = Number(m.quantity) >= 0 ? 'IN' : 'OUT';
+                    }
+                    const isIn = type === 'IN' || type === 'RETURN_IN';
+                    const badgeCls = type === 'IN'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : type === 'RETURN_IN'
+                      ? 'bg-blue-100 text-blue-700'
+                      : type === 'RETURN_OUT'
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'bg-red-100 text-red-600';
+                    const arrow = isIn ? '↑' : '↓';
+                    const label = type === 'RETURN_IN' ? 'RETURN IN' : type === 'RETURN_OUT' ? 'RETURN OUT' : type;
+                    return (
                     <tr key={m.id} className="hover:bg-slate-50 transition">
                       <td className="py-2.5 px-4">
                         <p className="font-medium text-slate-800">{m.product_name}</p>
                         {m.sku && <p className="font-mono text-xs text-slate-400">{m.sku}</p>}
                       </td>
                       <td className="py-2.5 px-4">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          m.type === 'IN'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-red-100 text-red-600'
-                        }`}>
-                          {m.type === 'IN' ? '↑' : '↓'} {m.type}
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${badgeCls}`}>
+                          {arrow} {label}
                         </span>
                       </td>
-                      <td className={`py-2.5 px-4 text-right font-bold ${m.type === 'IN' ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {m.type === 'IN' ? '+' : '−'}{m.quantity}
+                      <td className={`py-2.5 px-4 text-right font-bold ${isIn ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {isIn ? '+' : '−'}{Math.abs(m.quantity)}
                       </td>
                       <td className="py-2.5 px-4 text-slate-500 text-xs">
-                        {m.reference_type === 'purchase' ? (
-                          <button onClick={() => navigate('/admin/purchases')}
-                            className="text-emerald-600 hover:underline font-semibold">Purchase</button>
-                        ) : m.reference_type === 'sale' ? (
-                          <button onClick={() => navigate('/admin/sales')}
-                            className="text-blue-600 hover:underline font-semibold">Sale</button>
-                        ) : (
-                          <span>{m.notes || m.reference_type || '—'}</span>
-                        )}
+                        {m.notes ? (
+                          <span className="text-slate-600">{m.notes}</span>
+                        ) : type === 'IN' ? (
+                          <button onClick={() => navigate('/admin/purchases')} className="text-emerald-600 hover:underline font-semibold">Purchase</button>
+                        ) : type === 'OUT' ? (
+                          <button onClick={() => navigate('/admin/sales')} className="text-blue-600 hover:underline font-semibold">Sale</button>
+                        ) : '—'}
                       </td>
                       <td className="py-2.5 px-4 text-slate-400 text-xs whitespace-nowrap">{fmtDT(m.created_at)}</td>
                       <td className="py-2.5 px-4 text-slate-500 text-xs">{m.created_by_name || '—'}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

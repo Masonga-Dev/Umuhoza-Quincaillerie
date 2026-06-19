@@ -102,6 +102,7 @@ function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
   const [purchase, setPurchase] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showReturn, setShowReturn] = useState(false);
+  const [returnBanner, setReturnBanner] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -123,6 +124,8 @@ function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
     setShowReturn(false);
     load();
     onReturned?.();
+    setReturnBanner('Return recorded. Stock has been reduced — check Stock Management to confirm.');
+    setTimeout(() => setReturnBanner(''), 8000);
   };
 
   return (
@@ -174,6 +177,11 @@ function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
               </table>
             </div>
 
+            {returnBanner && (
+              <div className="border-t border-emerald-100 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-700">
+                ✓ {returnBanner}
+              </div>
+            )}
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
               <button onClick={() => setShowReturn(true)}
                 className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 transition">
