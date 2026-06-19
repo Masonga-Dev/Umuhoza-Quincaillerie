@@ -55,22 +55,28 @@ function PurchaseReturnModal({ purchase, onClose, onSuccess }) {
         <div className="max-h-[50vh] overflow-y-auto p-4 space-y-3">
           {items.map((item, i) => {
             const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+            const alreadyReturned = Number(item.returned_quantity || 0);
+            const maxReturnable = item.quantity - alreadyReturned;
             return (
-              <div key={i} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div key={i} className={`flex items-center gap-3 rounded-xl border p-3 ${maxReturnable <= 0 ? 'border-slate-100 bg-slate-50 opacity-50' : 'border-slate-200 bg-slate-50'}`}>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate">{item.product_name}</p>
                   {variant && <p className="text-xs text-slate-400">{variant}</p>}
-                  <p className="text-xs text-slate-400">Purchased: {item.quantity} × {fmt(item.unit_cost)} RWF</p>
+                  <p className="text-xs text-slate-400">
+                    Purchased: {item.quantity} × {fmt(item.unit_cost)} RWF
+                    {alreadyReturned > 0 && <span className="ml-2 text-orange-500">· {alreadyReturned} already returned · {maxReturnable} remaining</span>}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-xs text-slate-500">Return:</span>
                   <input
-                    type="number" min="0" max={item.quantity}
+                    type="number" min="0" max={maxReturnable}
                     value={returnQtys[i]}
-                    onChange={e => { const next = [...returnQtys]; next[i] = Math.min(Math.max(0, parseInt(e.target.value) || 0), item.quantity); setReturnQtys(next); }}
-                    className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-center font-bold outline-none focus:border-orange-400"
+                    disabled={maxReturnable <= 0}
+                    onChange={e => { const next = [...returnQtys]; next[i] = Math.min(Math.max(0, parseInt(e.target.value) || 0), maxReturnable); setReturnQtys(next); }}
+                    className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-center font-bold outline-none focus:border-orange-400 disabled:opacity-50"
                   />
-                  <span className="text-xs text-slate-400">/{item.quantity}</span>
+                  <span className="text-xs text-slate-400">/{maxReturnable}</span>
                 </div>
               </div>
             );
@@ -163,15 +169,35 @@ function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
                 <tbody className="divide-y divide-slate-50">
                   {(purchase.items || []).map((item, i) => {
                     const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+                    const returned = Number(item.returned_quantity || 0);
+                    const net = item.quantity - returned;
+                    const netSubtotal = net * Number(item.unit_cost || 0);
                     return (
-                      <tr key={i}>
+                      <tr key={i} className={returned > 0 ? 'bg-orange-50/40' : ''}>
                         <td className="px-6 py-3.5">
                           <p className="font-medium text-slate-800">{item.product_name}</p>
                           {variant && <p className="text-xs text-slate-400">{variant}</p>}
                         </td>
-                        <td className="px-4 py-3.5 text-center font-bold text-slate-800">{item.quantity}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="font-bold text-slate-800">{item.quantity}</span>
+                          {returned > 0 && (
+                            <div className="text-xs text-orange-500 font-semibold">−{returned} returned</div>
+                          )}
+                          {returned > 0 && (
+                            <div className="text-xs text-emerald-600 font-bold">= {net} net</div>
+                          )}
+                        </td>
                         <td className="px-4 py-3.5 text-right text-slate-600">{fmt(item.unit_cost)} RWF</td>
-                        <td className="px-6 py-3.5 text-right font-bold text-slate-900">{fmt(item.subtotal)} RWF</td>
+                        <td className="px-6 py-3.5 text-right">
+                          {returned > 0 ? (
+                            <>
+                              <p className="text-xs text-slate-400 line-through">{fmt(item.subtotal)} RWF</p>
+                              <p className="font-bold text-slate-900">{fmt(netSubtotal)} RWF</p>
+                            </>
+                          ) : (
+                            <p className="font-bold text-slate-900">{fmt(item.subtotal)} RWF</p>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -190,8 +216,20 @@ function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
                 ↩ Return to Supplier
               </button>
               <div className="text-right">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Cost</p>
-                <p className="text-2xl font-extrabold text-slate-900">{fmt(purchase.total_cost)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
+                {Number(purchase.total_returned_cost) > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Net Cost <span className="text-orange-400">(after returns)</span></p>
+                    <p className="text-2xl font-extrabold text-slate-900">
+                      {fmt(Number(purchase.total_cost) - Number(purchase.total_returned_cost))} <span className="text-base font-semibold text-slate-400">RWF</span>
+                    </p>
+                    <p className="text-xs text-slate-400">Original: {fmt(purchase.total_cost)} · Returned: <span className="text-orange-500">{fmt(purchase.total_returned_cost)}</span></p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Cost</p>
+                    <p className="text-2xl font-extrabold text-slate-900">{fmt(purchase.total_cost)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
+                  </>
+                )}
               </div>
             </div>
           </>
