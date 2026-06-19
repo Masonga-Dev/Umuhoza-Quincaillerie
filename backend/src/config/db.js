@@ -49,6 +49,13 @@ export async function initDb() {
       await connection.query(`ALTER TABLE products ADD CONSTRAINT fk_products_subcategory FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE SET NULL`);
     } catch (_) { /* constraint already exists */ }
 
+    // Brand field on products
+    await connection.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(100) NULL AFTER subcategory_id`);
+
+    // Unit and image on product variants
+    await connection.query(`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS unit VARCHAR(50) NULL AFTER size`);
+    await connection.query(`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS image_path VARCHAR(500) NULL`);
+
     // Purchase returns
     await connection.query(`CREATE TABLE IF NOT EXISTS purchase_returns (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -90,6 +97,29 @@ export async function initDb() {
       subtotal DECIMAL(12,2) DEFAULT 0,
       FOREIGN KEY (return_id) REFERENCES sale_returns(id) ON DELETE CASCADE
     )`);
+
+    // Bulk-sync products table from their variants (fixes stock/price/status for variant-based products)
+    await connection.query(`
+      UPDATE products p
+      INNER JOIN (
+        SELECT product_id,
+          COUNT(*) AS cnt,
+          COALESCE(SUM(stock_quantity), 0) AS total_stock,
+          COALESCE(MIN(NULLIF(selling_price, 0)), 0) AS min_sell,
+          COALESCE(MIN(NULLIF(cost_price, 0)), 0) AS min_cost
+        FROM product_variants
+        GROUP BY product_id
+      ) v ON v.product_id = p.id
+      SET
+        p.stock_quantity = v.total_stock,
+        p.selling_price  = v.min_sell,
+        p.cost_price     = v.min_cost,
+        p.status = CASE
+          WHEN v.total_stock <= 0 THEN 'Out of Stock'
+          WHEN v.total_stock <= p.minimum_stock THEN 'Low Stock'
+          ELSE 'In Stock'
+        END
+    `);
 
     // Default settings
     await connection.query(`INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('show_prices', 'true')`);

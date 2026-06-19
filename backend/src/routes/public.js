@@ -8,9 +8,15 @@ router.get('/homepage', async (req, res) => {
     const [sections] = await pool.query('SELECT * FROM homepage_content WHERE is_active=1 ORDER BY display_order ASC');
     const [featured] = await pool.query(
       `SELECT p.id, p.name, p.sku, p.description, p.selling_price, p.stock_quantity, p.status, p.category_id, c.name AS category_name,
-        (SELECT image_path FROM product_images WHERE product_id=p.id ORDER BY is_primary DESC, created_at ASC LIMIT 1) AS image_path
+        (SELECT image_path FROM product_images WHERE product_id=p.id ORDER BY is_primary DESC, created_at ASC LIMIT 1) AS image_path,
+        (SELECT MIN(pv.selling_price) FROM product_variants pv WHERE pv.product_id=p.id AND pv.selling_price>0) AS min_variant_price
        FROM products p LEFT JOIN categories c ON p.category_id=c.id
-       WHERE p.status<>'Out of Stock' ORDER BY p.created_at DESC LIMIT 8`
+       WHERE (
+         CASE WHEN (SELECT COUNT(*) FROM product_variants pv2 WHERE pv2.product_id=p.id) > 0
+              THEN (SELECT SUM(pv3.stock_quantity) FROM product_variants pv3 WHERE pv3.product_id=p.id) > 0
+              ELSE p.status <> 'Out of Stock'
+         END
+       ) ORDER BY p.created_at DESC LIMIT 8`
     );
     const [announcements] = await pool.query("SELECT * FROM announcements WHERE status='Published' ORDER BY created_at DESC");
     const [gallery] = await pool.query('SELECT * FROM gallery ORDER BY created_at DESC LIMIT 8');
@@ -147,7 +153,7 @@ router.get('/products/:id', async (req, res) => {
       [req.params.id]
     );
     const [variants] = await pool.query(
-      'SELECT id, product_id, color, size, sku, selling_price, stock_quantity, minimum_stock, status FROM product_variants WHERE product_id=? ORDER BY created_at ASC',
+      'SELECT id, product_id, color, size, unit, sku, selling_price, cost_price, stock_quantity, minimum_stock, status, image_path FROM product_variants WHERE product_id=? ORDER BY created_at ASC',
       [req.params.id]
     );
     const [[spRow]] = await pool.query("SELECT setting_value FROM settings WHERE setting_key='show_prices' LIMIT 1");
@@ -155,6 +161,13 @@ router.get('/products/:id', async (req, res) => {
     product.variants = variants;
     product.image_path = images.find(i => i.is_primary)?.image_path || images[0]?.image_path || null;
     product.show_prices = spRow?.setting_value ?? 'true';
+    // Compute status dynamically from variants so it reflects current stock
+    if (variants.length > 0) {
+      const totalStock = variants.reduce((sum, v) => sum + Number(v.stock_quantity || 0), 0);
+      const minStock = Number(product.minimum_stock || 5);
+      product.status = totalStock <= 0 ? 'Out of Stock' : totalStock <= minStock ? 'Low Stock' : 'In Stock';
+      product.stock_quantity = totalStock;
+    }
     res.json(product);
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch product' }); }
 });

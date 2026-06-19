@@ -21,6 +21,17 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+const variantUploadDir = path.join(__dirname, '../../uploads/variants');
+if (!fs.existsSync(variantUploadDir)) fs.mkdirSync(variantUploadDir, { recursive: true });
+const variantStorage = multer.diskStorage({
+  destination: variantUploadDir,
+  filename: (req, file, cb) => {
+    const safe = file.originalname.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
+    cb(null, `${Date.now()}-${safe}`);
+  },
+});
+const variantUpload = multer({ storage: variantStorage });
+
 function determineStatus(qty, min = 5) {
   const q = Number(qty ?? 0), m = Number(min ?? 5);
   if (q <= 0) return 'Out of Stock';
@@ -34,6 +45,28 @@ async function deleteFile(imagePath) {
     const full = path.join(__dirname, '../../', imagePath);
     if (fs.existsSync(full)) await fs.promises.unlink(full);
   } catch {}
+}
+
+async function syncProductFromVariants(productId) {
+  try {
+    const [[p]] = await pool.query('SELECT minimum_stock FROM products WHERE id=?', [productId]);
+    if (!p) return;
+    const [[agg]] = await pool.query(
+      `SELECT COUNT(*) AS cnt,
+        COALESCE(SUM(stock_quantity), 0) AS total_stock,
+        COALESCE(MIN(NULLIF(selling_price, 0)), 0) AS min_sell,
+        COALESCE(MIN(NULLIF(cost_price, 0)), 0) AS min_cost
+       FROM product_variants WHERE product_id=?`,
+      [productId]
+    );
+    const stock = Number(agg.total_stock);
+    const minStock = Number(p.minimum_stock || 5);
+    const status = Number(agg.cnt) === 0 || stock <= 0 ? 'Out of Stock' : stock <= minStock ? 'Low Stock' : 'In Stock';
+    await pool.query(
+      'UPDATE products SET stock_quantity=?, selling_price=?, cost_price=?, status=? WHERE id=?',
+      [stock, agg.min_sell, agg.min_cost, status, productId]
+    );
+  } catch (e) { console.error('syncProductFromVariants error:', e.message); }
 }
 
 // ── Legacy single upload (backward compat) ────────────────────────────────────
@@ -60,7 +93,14 @@ router.get('/', async (req, res) => {
       [...params, Number(pageSize), offset]
     );
     const [cnt] = await pool.query(`SELECT COUNT(*) AS total FROM products p WHERE 1=1 ${where}`, params);
-    res.json({ data: rows, total: cnt[0].total, page: Number(page), pageSize: Number(pageSize) });
+    const [summary] = await pool.query(
+      `SELECT COUNT(*) AS total,
+        SUM(CASE WHEN status='In Stock' THEN 1 ELSE 0 END) AS in_stock,
+        SUM(CASE WHEN status='Low Stock' THEN 1 ELSE 0 END) AS low_stock,
+        SUM(CASE WHEN status='Out of Stock' THEN 1 ELSE 0 END) AS out_of_stock
+       FROM products`
+    );
+    res.json({ data: rows, total: cnt[0].total, page: Number(page), pageSize: Number(pageSize), summary: summary[0] });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch products' }); }
 });
 
@@ -90,15 +130,13 @@ router.get('/:id', async (req, res) => {
 
 // ── Create product ────────────────────────────────────────────────────────────
 router.post('/', authMiddleware, async (req, res) => {
-  const { category_id, subcategory_id, name, name_rw, name_fr, description, description_rw, description_fr, image_path } = req.body;
+  const { category_id, subcategory_id, name, name_rw, name_fr, description, description_rw, description_fr, image_path, selling_price, cost_price, minimum_stock, brand } = req.body;
   let { sku } = req.body;
   if (!name || !category_id) return res.status(400).json({ message: 'Name and category are required' });
-  // Auto-generate SKU if not provided
   if (!sku) {
     const prefix = name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3) || 'UMU';
     sku = `${prefix}-${Date.now().toString(36).toUpperCase().slice(-5)}`;
   }
-  // Products start with no stock/price — managed at variant level through purchases
   let effective_category_id = category_id;
   if (subcategory_id) {
     const [subRows] = await pool.query('SELECT category_id FROM subcategories WHERE id=?', [subcategory_id]);
@@ -108,8 +146,8 @@ router.post('/', authMiddleware, async (req, res) => {
     const [ex] = await pool.query('SELECT id FROM products WHERE sku=?', [sku]);
     if (ex.length) sku = sku + '-' + Math.random().toString(36).slice(2, 5).toUpperCase();
     const [result] = await pool.query(
-      'INSERT INTO products (category_id,subcategory_id,sku,name,name_rw,name_fr,description,description_rw,description_fr,cost_price,selling_price,stock_quantity,minimum_stock,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,0,0,0,5,?,NOW())',
-      [effective_category_id, subcategory_id || null, sku, name, name_rw || null, name_fr || null, description || '', description_rw || null, description_fr || null, 'Out of Stock']
+      'INSERT INTO products (category_id,subcategory_id,sku,name,name_rw,name_fr,description,description_rw,description_fr,cost_price,selling_price,stock_quantity,minimum_stock,brand,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,NOW())',
+      [effective_category_id, subcategory_id || null, sku, name, name_rw || null, name_fr || null, description || '', description_rw || null, description_fr || null, Number(cost_price || 0), Number(selling_price || 0), Number(minimum_stock || 5), brand || null, 'Out of Stock']
     );
     if (image_path) {
       await pool.query('INSERT INTO product_images (product_id,image_path,is_primary,created_at) VALUES (?,?,1,NOW())', [result.insertId, image_path]);
@@ -120,7 +158,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
 // ── Update product ────────────────────────────────────────────────────────────
 router.put('/:id', authMiddleware, async (req, res) => {
-  const { category_id, subcategory_id, sku, name, name_rw, name_fr, description, description_rw, description_fr } = req.body;
+  const { category_id, subcategory_id, sku, name, name_rw, name_fr, description, description_rw, description_fr, brand } = req.body;
   if (!name || !category_id) return res.status(400).json({ message: 'Name and category are required' });
   let effective_category_id = category_id;
   if (subcategory_id) {
@@ -133,8 +171,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
       if (ex.length) return res.status(400).json({ message: 'SKU already exists' });
     }
     await pool.query(
-      'UPDATE products SET category_id=?,subcategory_id=?,sku=COALESCE(?,sku),name=?,name_rw=?,name_fr=?,description=?,description_rw=?,description_fr=? WHERE id=?',
-      [effective_category_id, subcategory_id || null, sku || null, name, name_rw || null, name_fr || null, description || '', description_rw || null, description_fr || null, req.params.id]
+      'UPDATE products SET category_id=?,subcategory_id=?,sku=COALESCE(?,sku),name=?,name_rw=?,name_fr=?,description=?,description_rw=?,description_fr=?,brand=? WHERE id=?',
+      [effective_category_id, subcategory_id || null, sku || null, name, name_rw || null, name_fr || null, description || '', description_rw || null, description_fr || null, brand || null, req.params.id]
     );
     res.json({ message: 'Product updated' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not update product' }); }
@@ -198,9 +236,9 @@ router.get('/:id/variants', authMiddleware, async (req, res) => {
   res.json(rows);
 });
 
-router.post('/:id/variants', authMiddleware, async (req, res) => {
-  const { color, size, selling_price, cost_price, minimum_stock } = req.body;
-  // SKU always auto-generated; stock always starts at 0
+router.post('/:id/variants', authMiddleware, variantUpload.single('image'), async (req, res) => {
+  const { color, size, unit, selling_price, cost_price, minimum_stock } = req.body;
+  const image_path = req.file ? `uploads/variants/${req.file.filename}` : null;
   try {
     const [pRows] = await pool.query('SELECT sku FROM products WHERE id=?', [req.params.id]);
     const productSku = pRows[0]?.sku || 'VAR';
@@ -208,31 +246,34 @@ router.post('/:id/variants', authMiddleware, async (req, res) => {
     const sizeCode  = (size  || '').replace(/\s+/g, '').toUpperCase().slice(0, 3) || 'X';
     const varSku    = `${productSku}-${colorCode}${sizeCode}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
     const [r] = await pool.query(
-      'INSERT INTO product_variants (product_id,color,size,sku,selling_price,cost_price,stock_quantity,minimum_stock,status) VALUES (?,?,?,?,?,?,0,?,?)',
-      [req.params.id, color || null, size || null, varSku, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), 'Out of Stock']
+      'INSERT INTO product_variants (product_id,color,size,unit,sku,selling_price,cost_price,stock_quantity,minimum_stock,image_path,status) VALUES (?,?,?,?,?,?,?,0,?,?,?)',
+      [req.params.id, color || null, size || null, unit || null, varSku, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), image_path, 'Out of Stock']
     );
-    res.status(201).json({ id: r.insertId, sku: varSku, message: 'Variant created' });
+    await syncProductFromVariants(req.params.id);
+    res.status(201).json({ id: r.insertId, sku: varSku, image_path, message: 'Variant created' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not create variant' }); }
 });
 
-router.put('/:id/variants/:vid', authMiddleware, async (req, res) => {
-  const { color, size, selling_price, cost_price, minimum_stock } = req.body;
+router.put('/:id/variants/:vid', authMiddleware, variantUpload.single('image'), async (req, res) => {
+  const { color, size, unit, selling_price, cost_price, minimum_stock, existing_image_path } = req.body;
+  const image_path = req.file ? `uploads/variants/${req.file.filename}` : (existing_image_path || null);
   try {
-    // Preserve stock_quantity (only purchases can change it) and SKU (auto-generated, immutable)
     const [existing] = await pool.query('SELECT stock_quantity FROM product_variants WHERE id=? AND product_id=?', [req.params.vid, req.params.id]);
     if (!existing.length) return res.status(404).json({ message: 'Variant not found' });
     const status = determineStatus(existing[0].stock_quantity, minimum_stock);
     await pool.query(
-      'UPDATE product_variants SET color=?,size=?,selling_price=?,cost_price=?,minimum_stock=?,status=? WHERE id=? AND product_id=?',
-      [color || null, size || null, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), status, req.params.vid, req.params.id]
+      'UPDATE product_variants SET color=?,size=?,unit=?,selling_price=?,cost_price=?,minimum_stock=?,image_path=?,status=? WHERE id=? AND product_id=?',
+      [color || null, size || null, unit || null, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), image_path, status, req.params.vid, req.params.id]
     );
-    res.json({ message: 'Variant updated' });
+    await syncProductFromVariants(req.params.id);
+    res.json({ message: 'Variant updated', image_path });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not update variant' }); }
 });
 
 router.delete('/:id/variants/:vid', authMiddleware, async (req, res) => {
   try {
     await pool.query('DELETE FROM product_variants WHERE id=? AND product_id=?', [req.params.vid, req.params.id]);
+    await syncProductFromVariants(req.params.id);
     res.json({ message: 'Variant deleted' });
   } catch (e) { res.status(500).json({ message: 'Could not delete variant' }); }
 });
