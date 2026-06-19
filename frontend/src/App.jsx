@@ -149,6 +149,7 @@ function AppContent() {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/forgot-password" element={<ForgotPassword />} />
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} />} />
           <Route path="/admin/products/add" element={<ProtectedRoute element={<AdminAddProduct />} />} />

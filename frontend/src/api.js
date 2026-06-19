@@ -26,8 +26,8 @@ API.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('umuhoza_token');
       localStorage.removeItem('umuhoza_user');
-      if (!window.location.pathname.includes('/admin/login')) {
-        window.location.href = '/admin/login';
+      if (window.location.pathname !== '/admin') {
+        window.location.href = '/admin';
       }
     }
     return Promise.reject(error);

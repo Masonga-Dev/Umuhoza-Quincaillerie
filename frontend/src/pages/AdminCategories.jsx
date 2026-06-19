@@ -59,7 +59,8 @@ export default function AdminCategories() {
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => data.append(k, v));
       if (imageFile) data.append('image', imageFile);
-      if (editing?.image_path) data.append('existing_image_path', editing.image_path);
+      // Only preserve existing image if user hasn't explicitly removed it
+      if (!imageFile && imagePreview && editing?.image_path) data.append('existing_image_path', editing.image_path);
 
       if (editing) {
         await API.put(`/categories/${editing.id}`, data);
@@ -90,7 +91,7 @@ export default function AdminCategories() {
   };
 
   const handleDelete = async cat => {
-    if (!window.confirm(`Delete category '${cat.name}'?`)) return;
+    if (!window.confirm(`Delete category "${cat.name}"?\n\nWarning: All subcategories under this category will be permanently deleted. Products in those subcategories will be kept but un-linked from their subcategory.`)) return;
     try {
       await API.delete(`/categories/${cat.id}`);
       fetchCategories();

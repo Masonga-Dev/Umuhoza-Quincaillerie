@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { emitDataChanged, useDataRefresh } from '../utils/dataEvents';
 import { exportToCSV } from '../utils/exportCSV';
 
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
@@ -124,6 +125,7 @@ function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
     setShowReturn(false);
     load();
     onReturned?.();
+    emitDataChanged();
     setReturnBanner('Return recorded. Stock has been reduced — check Stock Management to confirm.');
     setTimeout(() => setReturnBanner(''), 8000);
   };
@@ -384,6 +386,11 @@ export default function AdminPurchases() {
   const [showForm, setShowForm] = useState(false);
   const [viewId, setViewId] = useState(null);
   const [success, setSuccess] = useState('');
+  const [search, setSearch] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const { refreshKey, bindRefresh } = useDataRefresh();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -393,7 +400,8 @@ export default function AdminPurchases() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
+  useEffect(bindRefresh, [bindRefresh]);
 
   useEffect(() => {
     API.get('/suppliers', { headers: HEADERS() }).then(r => setSuppliers(r.data || [])).catch(console.error);
@@ -411,10 +419,26 @@ export default function AdminPurchases() {
     setShowForm(false);
     setSuccess('Purchase recorded and stock updated successfully.');
     load();
+    emitDataChanged();
     setTimeout(() => setSuccess(''), 8000);
   };
 
   const totalCost = purchases.reduce((s, p) => s + Number(p.total_cost || 0), 0);
+
+  const filtered = purchases.filter(p => {
+    const q = search.toLowerCase();
+    if (q && !(
+      (p.supplier_name || '').toLowerCase().includes(q) ||
+      (p.reference_number || '').toLowerCase().includes(q) ||
+      String(p.id).includes(q)
+    )) return false;
+    if (supplierFilter && String(p.supplier_id) !== supplierFilter && p.supplier_name !== supplierFilter) return false;
+    const d = new Date(p.purchase_date);
+    if (dateFrom && d < new Date(dateFrom)) return false;
+    if (dateTo && d > new Date(dateTo + 'T23:59:59')) return false;
+    return true;
+  });
+  const filteredCost = filtered.reduce((s, p) => s + Number(p.total_cost || 0), 0);
 
   return (
     <AdminLayout currentPage="/admin/purchases">
@@ -429,7 +453,7 @@ export default function AdminPurchases() {
               onClick={() => exportToCSV(
                 `purchases-${new Date().toISOString().slice(0, 10)}.csv`,
                 ['#', 'Date', 'Supplier', 'Reference', 'Total Cost (RWF)'],
-                purchases.map(p => [
+                filtered.map(p => [
                   p.id,
                   new Date(p.purchase_date).toLocaleDateString('en-RW'),
                   p.supplier_name || '',
@@ -442,7 +466,7 @@ export default function AdminPurchases() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              Export CSV
+              Export
             </button>
             <button onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
@@ -479,14 +503,51 @@ export default function AdminPurchases() {
 
         {/* Table */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <h3 className="font-semibold text-slate-900">Purchase History</h3>
+          {/* Filter bar */}
+          <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50 px-6 py-4">
+            <div className="relative flex-1" style={{ minWidth: '180px' }}>
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search supplier, reference, or #…"
+                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+            </div>
+            <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400">
+              <option value="">All Suppliers</option>
+              {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+            </select>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">From</label>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">To</label>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+            </div>
+            {(search || supplierFilter || dateFrom || dateTo) && (
+              <button onClick={() => { setSearch(''); setSupplierFilter(''); setDateFrom(''); setDateTo(''); }}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                Clear
+              </button>
+            )}
           </div>
+
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
+            <span className="text-sm text-slate-500">{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
+            {(search || supplierFilter || dateFrom || dateTo) && (
+              <span className="text-sm text-slate-500">Filtered total: <span className="font-bold text-slate-800">{fmt(filteredCost)} RWF</span></span>
+            )}
+          </div>
+
           {loading ? (
             <div className="flex h-48 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"/></div>
-          ) : purchases.length === 0 ? (
-            <div className="flex h-48 flex-col items-center justify-center text-slate-400">
-              <p className="text-sm font-semibold">No purchases recorded yet.</p>
+          ) : filtered.length === 0 ? (
+            <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-400">
+              <p className="text-sm font-semibold">{purchases.length === 0 ? 'No purchases recorded yet.' : 'No purchases match your filters.'}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -502,15 +563,16 @@ export default function AdminPurchases() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {purchases.map(p => (
+                  {filtered.map(p => (
                     <tr key={p.id} className="hover:bg-slate-50 transition">
                       <td className="px-6 py-4 font-mono text-sm font-bold text-slate-600">#{p.id}</td>
                       <td className="px-5 py-4 text-sm text-slate-600">{fmtDate(p.purchase_date)}</td>
-                      <td className="px-5 py-4 text-sm text-slate-700 font-medium">{p.supplier_name || <span className="text-slate-300">—</span>}</td>
-                      <td className="px-5 py-4 text-sm font-mono text-slate-500">{p.reference_number || <span className="text-slate-300">—</span>}</td>
+                      <td className="px-5 py-4 text-sm font-medium text-slate-700">{p.supplier_name || <span className="text-slate-300">—</span>}</td>
+                      <td className="px-5 py-4 font-mono text-sm text-slate-500">{p.reference_number || <span className="text-slate-300">—</span>}</td>
                       <td className="px-5 py-4 text-right font-bold text-slate-900">{fmt(p.total_cost)} <span className="text-xs font-normal text-slate-400">RWF</span></td>
                       <td className="px-5 py-4 text-right">
-                        <button onClick={() => setViewId(p.id)} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-blue-600 hover:text-white">
+                        <button onClick={() => setViewId(p.id)}
+                          className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-blue-600 hover:text-white">
                           View
                         </button>
                       </td>

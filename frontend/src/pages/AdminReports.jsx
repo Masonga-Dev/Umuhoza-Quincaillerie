@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
+import { useDataRefresh } from '../utils/dataEvents';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -138,8 +139,9 @@ function AdminReports() {
   const [monthly, setMonthly] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { refreshKey, bindRefresh } = useDataRefresh();
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     Promise.all([
       API.get('/reports/daily'),
       API.get('/reports/monthly'),
@@ -153,6 +155,9 @@ function AdminReports() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadData(); }, [loadData, refreshKey]);
+  useEffect(bindRefresh, [bindRefresh]);
 
   const totalProducts  = inventory.length;
   const inStockCount   = inventory.filter(i => i.status === 'In Stock').length;

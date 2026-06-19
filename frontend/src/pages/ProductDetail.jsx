@@ -51,6 +51,9 @@ export default function ProductDetail() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [zoomed, product]);
 
+  // Reset to image 0 whenever the selected variant changes
+  useEffect(() => { setActiveImg(0); }, [selectedVariant?.id]);
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center rounded-3xl bg-white border border-slate-200">
@@ -68,14 +71,19 @@ export default function ProductDetail() {
     );
   }
 
-  const images = product.images?.length ? product.images : (product.image_path ? [{ id: 0, image_path: product.image_path, is_primary: 1 }] : []);
+  const productImages = product.images?.length ? product.images : (product.image_path ? [{ id: 0, image_path: product.image_path, is_primary: 1 }] : []);
+  // If selected variant has its own image, show it first
+  const variantImg = selectedVariant?.image_path ? { id: `v-${selectedVariant.id}`, image_path: selectedVariant.image_path } : null;
+  const images = variantImg
+    ? [variantImg, ...productImages.filter(i => i.image_path !== variantImg.image_path)]
+    : productImages;
   const variants = product.variants || [];
   const hasVariants = variants.length > 0;
   const currentPrice = selectedVariant ? selectedVariant.selling_price : product.selling_price;
   const currentStock = selectedVariant ? { label: selectedVariant.status, qty: selectedVariant.stock_quantity } : { label: product.status, qty: product.stock_quantity };
 
   const variantColors = [...new Set(variants.filter(v => v.color).map(v => v.color))];
-  const variantSizes = [...new Set(variants.filter(v => v.size).map(v => v.size))];
+  const variantSizes = [...new Set(variants.filter(v => v.size).map(v => [v.size, v.unit].filter(Boolean).join(' ')))].filter(Boolean);
 
   const prevImg = () => setActiveImg(i => (i - 1 + images.length) % Math.max(images.length, 1));
   const nextImg = () => setActiveImg(i => (i + 1) % Math.max(images.length, 1));
@@ -219,9 +227,10 @@ export default function ProductDetail() {
                 <div>
                   <p className="text-xs font-semibold text-slate-500 mb-2">Size</p>
                   <div className="flex flex-wrap gap-2">
-                    {variantSizes.map(size => {
-                      const v = variants.find(x => x.size === size && (!selectedVariant?.color || x.color === selectedVariant.color));
-                      const active = selectedVariant?.size === size;
+                    {variantSizes.map(sizeLabel => {
+                      const v = variants.find(x => [x.size, x.unit].filter(Boolean).join(' ') === sizeLabel && (!selectedVariant?.color || x.color === selectedVariant.color));
+                      const active = [selectedVariant?.size, selectedVariant?.unit].filter(Boolean).join(' ') === sizeLabel;
+                      const size = sizeLabel;
                       return (
                         <button
                           key={size}

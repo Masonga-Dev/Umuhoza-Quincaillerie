@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { useDataRefresh } from '../utils/dataEvents';
 
 function fmtPrice(value) {
   return Number(value || 0).toLocaleString('en-RW');
@@ -57,6 +58,7 @@ function StatCard({ label, value, sub, icon, colorClass, bgClass }) {
 function AdminDashboard() {
   const navigate = useNavigate();
   const token = localStorage.getItem('umuhoza_token');
+  const { refreshKey, bindRefresh } = useDataRefresh();
 
   const [daily, setDaily] = useState(null);
   const [inventory, setInventory] = useState([]);
@@ -65,9 +67,8 @@ function AdminDashboard() {
   const [recentProducts, setRecentProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     const headers = { Authorization: `Bearer ${token}` };
-
     Promise.all([
       API.get('/reports/daily', { headers }),
       API.get('/reports/inventory', { headers }),
@@ -84,6 +85,9 @@ function AdminDashboard() {
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [token]);
+
+  useEffect(() => { loadData(); }, [loadData, refreshKey]);
+  useEffect(bindRefresh, [bindRefresh]);
 
   const lowStock = inventory.filter((i) => i.status === 'Low Stock');
   const outOfStock = inventory.filter((i) => i.status === 'Out of Stock');

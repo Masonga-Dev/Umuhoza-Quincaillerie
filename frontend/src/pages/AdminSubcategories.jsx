@@ -57,7 +57,8 @@ export default function AdminSubcategories() {
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => data.append(k, v));
       if (imageFile) data.append('image', imageFile);
-      if (editing?.image_path) data.append('existing_image_path', editing.image_path);
+      // Only preserve existing image if user hasn't explicitly removed it
+      if (!imageFile && imagePreview && editing?.image_path) data.append('existing_image_path', editing.image_path);
       if (editing) { await API.put(`/subcategories/${editing.id}`, data); }
       else { await API.post('/subcategories', data); }
       reset();
@@ -80,8 +81,6 @@ export default function AdminSubcategories() {
     catch (err) { setError(err?.response?.data?.message || 'Could not delete.'); }
   };
 
-  const displayedSubs = filterCatId ? subcategories.filter(s => String(s.category_id) === filterCatId) : subcategories;
-
   return (
     <AdminLayout currentPage="/admin/products/subcategories">
       <div className="space-y-6">
@@ -96,7 +95,7 @@ export default function AdminSubcategories() {
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-slate-900">All Subcategories</h3>
-                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">{displayedSubs.length}</span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">{subcategories.length}</span>
               </div>
               <select
                 value={filterCatId}
@@ -110,14 +109,14 @@ export default function AdminSubcategories() {
 
             {loading ? (
               <div className="flex h-40 items-center justify-center text-slate-400 text-sm">Loading…</div>
-            ) : displayedSubs.length === 0 ? (
+            ) : subcategories.length === 0 ? (
               <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-400">
                 <span className="text-3xl">📂</span>
                 <p className="text-sm">No subcategories yet. Add one →</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {displayedSubs.map(sub => (
+                {subcategories.map(sub => (
                   <div key={sub.id} className="flex items-start gap-4 p-4 hover:bg-slate-50 transition group">
                     {sub.image_path ? (
                       <img src={`${BACKEND}/${sub.image_path}`} alt={sub.name} className="h-14 w-14 flex-shrink-0 rounded-xl object-cover border border-slate-200" />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
+import { useDataRefresh } from '../utils/dataEvents';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
@@ -36,6 +37,7 @@ export default function AdminStock() {
   const [search, setSearch]         = useState('');
   const [view, setView]             = useState('alerts');
   const navigate = useNavigate();
+  const { refreshKey, bindRefresh } = useDataRefresh();
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -51,7 +53,8 @@ export default function AdminStock() {
       .finally(() => setMovLoading(false));
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData, refreshKey]);
+  useEffect(bindRefresh, [bindRefresh]);
 
   const lowStock  = inventory.filter(i => i.status === 'Low Stock');
   const outOfStock = inventory.filter(i => i.status === 'Out of Stock');

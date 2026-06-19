@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
+import { emitDataChanged, useDataRefresh } from '../utils/dataEvents';
 
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = (v) => Number(v || 0).toLocaleString('en-RW');
@@ -202,6 +203,7 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
     setShowReturn(false);
     load();
     onReturned?.();
+    emitDataChanged();
     setReturnBanner('Return recorded. Stock has been restored — check Stock Management to confirm.');
     setTimeout(() => setReturnBanner(''), 8000);
   };
@@ -529,6 +531,7 @@ export default function AdminSales() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
+  const { refreshKey, bindRefresh } = useDataRefresh();
 
   const loadSales = useCallback(() => {
     setLoading(true);
@@ -538,7 +541,8 @@ export default function AdminSales() {
       .finally(() => setLoading(false));
   }, [search]);
 
-  useEffect(() => { loadSales(); }, [loadSales]);
+  useEffect(() => { loadSales(); }, [loadSales, refreshKey]);
+  useEffect(bindRefresh, [bindRefresh]);
 
   useEffect(() => {
     API.get('/products', { headers: HEADERS(), params: { pageSize: 500 } })
@@ -573,6 +577,7 @@ export default function AdminSales() {
     setShowForm(false);
     setSuccess(`Sale recorded — Invoice: ${invoice}`);
     loadSales();
+    emitDataChanged();
     setTimeout(() => setSuccess(''), 8000);
   };
 
