@@ -223,6 +223,7 @@ function AnnouncementsTab({ token }) {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
@@ -232,7 +233,10 @@ function AnnouncementsTab({ token }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const resetForm = () => { setForm({ title: '', title_rw: '', title_fr: '', content: '', content_rw: '', content_fr: '', status: 'Draft' }); setEditing(null); setError(''); };
+  const resetForm = () => {
+    setForm({ title: '', title_rw: '', title_fr: '', content: '', content_rw: '', content_fr: '', status: 'Draft' });
+    setEditing(null); setError(''); setShowForm(false);
+  };
 
   const handleSave = async () => {
     if (!form.title.trim()) return setError('English title is required.');
@@ -250,6 +254,13 @@ function AnnouncementsTab({ token }) {
     finally { setSaving(false); }
   };
 
+  const handleEdit = (item) => {
+    setEditing(item);
+    setForm({ title: item.title, title_rw: item.title_rw || '', title_fr: item.title_fr || '', content: item.content || '', content_rw: item.content_rw || '', content_fr: item.content_fr || '', status: item.status });
+    setError('');
+    setShowForm(true);
+  };
+
   const toggleStatus = async (item) => {
     const newStatus = item.status === 'Published' ? 'Draft' : 'Published';
     await API.put(`/admin/announcements/${item.id}`, { ...item, status: newStatus }, { headers });
@@ -263,11 +274,25 @@ function AnnouncementsTab({ token }) {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-slate-500">{items.length} announcement{items.length !== 1 ? 's' : ''}</p>
+        <button
+          onClick={() => { setEditing(null); setForm({ title: '', title_rw: '', title_fr: '', content: '', content_rw: '', content_fr: '', status: 'Draft' }); setError(''); setShowForm(true); }}
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition">
+          <span className="text-base leading-none">+</span> New Announcement
+        </button>
+      </div>
+
       {/* List */}
       <div className="space-y-3">
-        {loading ? <p className="text-sm text-slate-500">Loading…</p> : null}
-        {!loading && items.length === 0 && <p className="text-sm text-slate-400">No announcements yet. Create one →</p>}
+        {loading && <p className="text-sm text-slate-500">Loading…</p>}
+        {!loading && items.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-400">
+            <p className="text-sm">No announcements yet. Create the first one!</p>
+          </div>
+        )}
         {items.map((item) => (
           <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
@@ -284,7 +309,7 @@ function AnnouncementsTab({ token }) {
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${item.status === 'Published' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}>
                 {item.status === 'Published' ? 'Unpublish' : 'Publish'}
               </button>
-              <button onClick={() => { setEditing(item); setForm({ title: item.title, title_rw: item.title_rw || '', title_fr: item.title_fr || '', content: item.content || '', content_rw: item.content_rw || '', content_fr: item.content_fr || '', status: item.status }); }}
+              <button onClick={() => handleEdit(item)}
                 className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Edit</button>
               <button onClick={() => handleDelete(item.id)}
                 className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200">Delete</button>
@@ -293,63 +318,82 @@ function AnnouncementsTab({ token }) {
         ))}
       </div>
 
-      {/* Form */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm self-start sticky top-4">
-        <h3 className="text-base font-semibold text-slate-900">{editing ? 'Edit Announcement' : 'New Announcement'}</h3>
-        <div className="mt-4 space-y-4">
-          {/* Title multilingual */}
-          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</p>
-            <div>
-              <label className={labelClass()}>English <span className="text-red-500">*</span></label>
-              <input type="text" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. New stock arrived" className={fieldClass()} />
+      {/* Centered modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={resetForm}>
+          <div className="w-full max-w-lg max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{editing ? 'Edit Announcement' : 'New Announcement'}</h3>
+                {editing && <p className="mt-0.5 text-xs text-slate-400">Editing: <span className="font-semibold text-slate-600">{editing.title}</span></p>}
+              </div>
+              <button onClick={resetForm} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition text-xl leading-none">✕</button>
             </div>
-            <div>
-              <label className={labelClass()}>Kinyarwanda</label>
-              <input type="text" value={form.title_rw} onChange={(e) => setForm((p) => ({ ...p, title_rw: e.target.value }))} placeholder="Amakuru mu Kinyarwanda" className={fieldClass()} />
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto space-y-5 p-6">
+              {/* Title */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</p>
+                <div>
+                  <label className={labelClass()}>English <span className="text-red-500">*</span></label>
+                  <input type="text" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. New stock arrived" className={fieldClass()} />
+                </div>
+                <div>
+                  <label className={labelClass()}>Kinyarwanda</label>
+                  <input type="text" value={form.title_rw} onChange={(e) => setForm((p) => ({ ...p, title_rw: e.target.value }))} placeholder="Amakuru mu Kinyarwanda" className={fieldClass()} />
+                </div>
+                <div>
+                  <label className={labelClass()}>French</label>
+                  <input type="text" value={form.title_fr} onChange={(e) => setForm((p) => ({ ...p, title_fr: e.target.value }))} placeholder="Titre en français" className={fieldClass()} />
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Content</p>
+                <div>
+                  <label className={labelClass()}>English</label>
+                  <textarea rows={3} value={form.content} onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))} placeholder="Announcement details…" className={fieldClass()} />
+                </div>
+                <div>
+                  <label className={labelClass()}>Kinyarwanda</label>
+                  <textarea rows={2} value={form.content_rw} onChange={(e) => setForm((p) => ({ ...p, content_rw: e.target.value }))} placeholder="Ibisobanuro mu Kinyarwanda…" className={fieldClass()} />
+                </div>
+                <div>
+                  <label className={labelClass()}>French</label>
+                  <textarea rows={2} value={form.content_fr} onChange={(e) => setForm((p) => ({ ...p, content_fr: e.target.value }))} placeholder="Détails en français…" className={fieldClass()} />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className={labelClass()}>Status</label>
+                <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className={fieldClass()}>
+                  <option value="Draft">Draft</option>
+                  <option value="Published">Published</option>
+                </select>
+              </div>
+
+              {error && <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
             </div>
-            <div>
-              <label className={labelClass()}>French</label>
-              <input type="text" value={form.title_fr} onChange={(e) => setForm((p) => ({ ...p, title_fr: e.target.value }))} placeholder="Titre en français" className={fieldClass()} />
-            </div>
-          </div>
-          {/* Content multilingual */}
-          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Content</p>
-            <div>
-              <label className={labelClass()}>English</label>
-              <textarea rows={3} value={form.content} onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))} placeholder="Announcement details…" className={fieldClass()} />
-            </div>
-            <div>
-              <label className={labelClass()}>Kinyarwanda</label>
-              <textarea rows={2} value={form.content_rw} onChange={(e) => setForm((p) => ({ ...p, content_rw: e.target.value }))} placeholder="Ibisobanuro mu Kinyarwanda…" className={fieldClass()} />
-            </div>
-            <div>
-              <label className={labelClass()}>French</label>
-              <textarea rows={2} value={form.content_fr} onChange={(e) => setForm((p) => ({ ...p, content_fr: e.target.value }))} placeholder="Détails en français…" className={fieldClass()} />
-            </div>
-          </div>
-          <div>
-            <label className={labelClass()}>Status</label>
-            <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className={fieldClass()}>
-              <option value="Draft">Draft</option>
-              <option value="Published">Published</option>
-            </select>
-          </div>
-          {error && <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-          <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving}
-              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
-              {saving ? 'Saving…' : editing ? 'Update' : 'Create'}
-            </button>
-            {editing && (
-              <button onClick={resetForm} className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+
+            {/* Footer */}
+            <div className="flex gap-3 border-t border-slate-200 p-6">
+              <button type="button" onClick={resetForm}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
                 Cancel
               </button>
-            )}
+              <button onClick={handleSave} disabled={saving}
+                className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition">
+                {saving ? 'Saving…' : editing ? 'Update Announcement' : 'Create Announcement'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
