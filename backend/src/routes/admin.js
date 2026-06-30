@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
 import pool from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -29,7 +30,15 @@ function makeStorage(dir) {
 }
 
 const uploadGallery = multer({ storage: makeStorage(galleryDir) });
-const uploadHero = multer({ storage: makeStorage(heroDir) });
+const uploadHero    = multer({ storage: makeStorage(heroDir) });
+
+const avatarDir = path.join(__dirname, '../../uploads/avatars');
+if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
+const uploadAvatar = multer({ storage: makeStorage(avatarDir), limits: { fileSize: 3 * 1024 * 1024 } });
+
+const pageHeroesDir = path.join(__dirname, '../../uploads/page-heroes');
+if (!fs.existsSync(pageHeroesDir)) fs.mkdirSync(pageHeroesDir, { recursive: true });
+const uploadPageHero = multer({ storage: makeStorage(pageHeroesDir) });
 
 async function removeFile(filePath) {
   if (!filePath) return;
@@ -38,6 +47,58 @@ async function removeFile(filePath) {
     if (fs.existsSync(full)) await fs.promises.unlink(full);
   } catch {}
 }
+
+// ── Admin profile ─────────────────────────────────────────────────────────────
+router.get('/me', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, name, email, phone, role, avatar_path, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    if (!rows[0]) return res.status(404).json({ message: 'User not found' });
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+router.put('/me', uploadAvatar.single('avatar'), async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+    const [existing] = await pool.query('SELECT avatar_path FROM users WHERE id = ?', [req.user.id]);
+    let avatar_path = existing[0]?.avatar_path;
+    if (req.body.remove_avatar === 'true' && !req.file) {
+      await removeFile(avatar_path);
+      avatar_path = null;
+    } else if (req.file) {
+      await removeFile(avatar_path);
+      avatar_path = `uploads/avatars/${req.file.filename}`;
+    }
+    await pool.query(
+      'UPDATE users SET name = ?, email = ?, phone = ?, avatar_path = ? WHERE id = ?',
+      [name, email, phone || null, avatar_path || null, req.user.id]
+    );
+    const [updated] = await pool.query(
+      'SELECT id, name, email, phone, role, avatar_path, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    res.json(updated[0]);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+router.put('/me/password', async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password)
+      return res.status(400).json({ message: 'Both current and new password are required' });
+    if (new_password.length < 6)
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    const [rows] = await pool.query('SELECT password FROM users WHERE id = ?', [req.user.id]);
+    const match = await bcrypt.compare(current_password, rows[0].password);
+    if (!match) return res.status(400).json({ message: 'Current password is incorrect' });
+    const hashed = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashed, req.user.id]);
+    res.json({ message: 'Password updated successfully' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
 
 // ── Hero image upload ─────────────────────────────────────────────────────────
 router.post('/upload/hero', uploadHero.single('image'), async (req, res) => {
@@ -106,12 +167,12 @@ router.get('/announcements', async (req, res) => {
 });
 
 router.post('/announcements', async (req, res) => {
-  const { title, content, status } = req.body;
+  const { title, title_rw, title_fr, content, content_rw, content_fr, status } = req.body;
   if (!title?.trim()) return res.status(400).json({ message: 'Title is required' });
   try {
     const [result] = await pool.query(
-      'INSERT INTO announcements (title, content, status, created_at) VALUES (?, ?, ?, NOW())',
-      [title, content || '', status || 'Draft']
+      'INSERT INTO announcements (title, title_rw, title_fr, content, content_rw, content_fr, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+      [title, title_rw || '', title_fr || '', content || '', content_rw || '', content_fr || '', status || 'Draft']
     );
     res.status(201).json({ id: result.insertId, message: 'Announcement created' });
   } catch (error) {
@@ -121,11 +182,11 @@ router.post('/announcements', async (req, res) => {
 });
 
 router.put('/announcements/:id', async (req, res) => {
-  const { title, content, status } = req.body;
+  const { title, title_rw, title_fr, content, content_rw, content_fr, status } = req.body;
   try {
     await pool.query(
-      'UPDATE announcements SET title=?, content=?, status=? WHERE id=?',
-      [title, content || '', status, req.params.id]
+      'UPDATE announcements SET title=?, title_rw=?, title_fr=?, content=?, content_rw=?, content_fr=?, status=? WHERE id=?',
+      [title, title_rw || '', title_fr || '', content || '', content_rw || '', content_fr || '', status, req.params.id]
     );
     res.json({ message: 'Announcement updated' });
   } catch (error) {
@@ -210,6 +271,36 @@ router.post('/settings', async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Error saving settings' });
   }
+});
+
+// ── Page Hero Sections ────────────────────────────────────────────────────────
+router.get('/heroes/:page', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM page_heroes WHERE page_key = ? LIMIT 1', [req.params.page]);
+    res.json(rows[0] || null);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Error fetching hero' }); }
+});
+
+router.put('/heroes/:page', uploadPageHero.single('image'), async (req, res) => {
+  const { title_en, title_rw, title_fr, subtitle_en, subtitle_rw, subtitle_fr, is_active } = req.body;
+  try {
+    const [existing] = await pool.query('SELECT * FROM page_heroes WHERE page_key = ? LIMIT 1', [req.params.page]);
+    let image_path = existing[0]?.image_path || null;
+    if (req.file) {
+      if (image_path) await removeFile(image_path);
+      image_path = `uploads/page-heroes/${req.file.filename}`;
+    }
+    await pool.query(
+      `INSERT INTO page_heroes (page_key, title_en, title_rw, title_fr, subtitle_en, subtitle_rw, subtitle_fr, image_path, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE title_en=VALUES(title_en), title_rw=VALUES(title_rw), title_fr=VALUES(title_fr),
+         subtitle_en=VALUES(subtitle_en), subtitle_rw=VALUES(subtitle_rw), subtitle_fr=VALUES(subtitle_fr),
+         image_path=VALUES(image_path), is_active=VALUES(is_active), updated_at=NOW()`,
+      [req.params.page, title_en || '', title_rw || '', title_fr || '', subtitle_en || '', subtitle_rw || '', subtitle_fr || '', image_path, is_active ?? 1]
+    );
+    const [rows] = await pool.query('SELECT * FROM page_heroes WHERE page_key = ? LIMIT 1', [req.params.page]);
+    res.json(rows[0]);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Error saving hero' }); }
 });
 
 export default router;

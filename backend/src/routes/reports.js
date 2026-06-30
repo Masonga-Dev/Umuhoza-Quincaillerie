@@ -91,4 +91,105 @@ router.get('/stock-movements', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch stock movements' }); }
 });
 
+router.get('/kpis', async (req, res) => {
+  try {
+    const [[thisM]] = await pool.query(
+      `SELECT COUNT(*) AS transactions, COALESCE(SUM(total_amount),0) AS revenue,
+              COUNT(DISTINCT customer_name) AS customers
+       FROM sales WHERE status != 'Cancelled'
+       AND MONTH(sale_date) = MONTH(CURDATE()) AND YEAR(sale_date) = YEAR(CURDATE())`
+    );
+    const [[lastM]] = await pool.query(
+      `SELECT COUNT(*) AS transactions, COALESCE(SUM(total_amount),0) AS revenue,
+              COUNT(DISTINCT customer_name) AS customers
+       FROM sales WHERE status != 'Cancelled'
+       AND MONTH(sale_date) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+       AND YEAR(sale_date) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`
+    );
+    const [[itemsThis]] = await pool.query(
+      `SELECT COALESCE(SUM(si.quantity),0) AS items_sold
+       FROM sale_items si JOIN sales s ON si.sale_id = s.id
+       WHERE s.status != 'Cancelled'
+       AND MONTH(s.sale_date) = MONTH(CURDATE()) AND YEAR(s.sale_date) = YEAR(CURDATE())`
+    );
+    const [[itemsLast]] = await pool.query(
+      `SELECT COALESCE(SUM(si.quantity),0) AS items_sold
+       FROM sale_items si JOIN sales s ON si.sale_id = s.id
+       WHERE s.status != 'Cancelled'
+       AND MONTH(s.sale_date) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+       AND YEAR(s.sale_date) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`
+    );
+    const [[stockVal]] = await pool.query(
+      `SELECT COALESCE(SUM(stock_quantity * cost_price),0) AS total_value FROM products`
+    );
+
+    const pct = (cur, prev) => {
+      const c = Number(cur || 0), p = Number(prev || 0);
+      if (!p) return c > 0 ? 100 : 0;
+      return Math.round(((c - p) / p) * 100);
+    };
+
+    const avgThis = thisM.transactions ? thisM.revenue / thisM.transactions : 0;
+    const avgLast = lastM.transactions ? lastM.revenue / lastM.transactions : 0;
+
+    res.json({
+      items_sold:    { value: Number(itemsThis.items_sold), pct: pct(itemsThis.items_sold, itemsLast.items_sold) },
+      avg_sale:      { value: Math.round(avgThis), pct: pct(avgThis, avgLast) },
+      new_customers: { value: Number(thisM.customers), pct: pct(thisM.customers, lastM.customers) },
+      stock_value:   { value: Number(stockVal.total_value), pct: null },
+    });
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch KPIs' }); }
+});
+
+router.get('/recent-sales', async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, invoice_number, customer_name, total_amount, payment_method, sale_date
+       FROM sales WHERE status != 'Cancelled' ORDER BY sale_date DESC LIMIT ?`,
+      [limit]
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch recent sales' }); }
+});
+
+router.get('/top-customers', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT customer_name, COUNT(*) AS total_purchases,
+              COALESCE(SUM(total_amount),0) AS amount_spent, MAX(sale_date) AS last_purchase
+       FROM sales WHERE status != 'Cancelled'
+       AND MONTH(sale_date) = MONTH(CURDATE()) AND YEAR(sale_date) = YEAR(CURDATE())
+       AND customer_name IS NOT NULL AND customer_name != ''
+       GROUP BY customer_name ORDER BY amount_spent DESC LIMIT 10`
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch top customers' }); }
+});
+
+router.get('/supplier-performance', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT s.name AS supplier, COUNT(*) AS purchases,
+              COALESCE(SUM(p.total_cost),0) AS total_value
+       FROM purchases p JOIN suppliers s ON p.supplier_id = s.id
+       WHERE MONTH(p.purchase_date) = MONTH(CURDATE()) AND YEAR(p.purchase_date) = YEAR(CURDATE())
+       GROUP BY s.id, s.name ORDER BY total_value DESC LIMIT 10`
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch supplier performance' }); }
+});
+
+router.get('/sales-by-day', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT DAY(sale_date) AS day, COALESCE(SUM(total_amount),0) AS total, COUNT(*) AS transactions
+       FROM sales WHERE status != 'Cancelled'
+       AND MONTH(sale_date) = MONTH(CURDATE()) AND YEAR(sale_date) = YEAR(CURDATE())
+       GROUP BY DAY(sale_date) ORDER BY day`
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sales by day' }); }
+});
+
 export default router;

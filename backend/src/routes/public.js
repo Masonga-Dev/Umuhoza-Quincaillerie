@@ -26,10 +26,12 @@ router.get('/homepage', async (req, res) => {
     const [customerCount] = await pool.query('SELECT COUNT(DISTINCT sold_by) AS total FROM sales WHERE sold_by IS NOT NULL');
     const [categories] = await pool.query(
       `SELECT c.id, c.name, c.name_rw, c.name_fr, c.description, c.description_rw, c.description_fr, c.image_path, COUNT(p.id) AS product_count,
-        (SELECT pi.image_path FROM product_images pi
-         JOIN products pp ON pp.id = pi.product_id
-         WHERE pp.category_id = c.id
-         ORDER BY pi.is_primary DESC, pi.created_at ASC LIMIT 1) AS representative_image
+        COALESCE(c.image_path,
+          (SELECT pi.image_path FROM product_images pi
+           JOIN products pp ON pp.id = pi.product_id
+           WHERE pp.category_id = c.id
+           ORDER BY pi.is_primary DESC, pi.created_at ASC LIMIT 1)
+        ) AS representative_image
        FROM categories c LEFT JOIN products p ON p.category_id=c.id
        GROUP BY c.id ORDER BY c.name ASC`
     );
@@ -64,16 +66,20 @@ router.get('/categories', async (req, res) => {
     const [cats] = await pool.query(
       `SELECT c.id, c.name, c.name_rw, c.name_fr, c.description, c.description_rw, c.description_fr, c.image_path,
         COUNT(DISTINCT p.id) AS product_count,
-        (SELECT pi.image_path FROM product_images pi JOIN products pp ON pp.id = pi.product_id
-         WHERE pp.category_id = c.id ORDER BY pi.is_primary DESC, pi.created_at ASC LIMIT 1) AS representative_image
+        COALESCE(c.image_path,
+          (SELECT pi.image_path FROM product_images pi JOIN products pp ON pp.id = pi.product_id
+           WHERE pp.category_id = c.id ORDER BY pi.is_primary DESC, pi.created_at ASC LIMIT 1)
+        ) AS representative_image
        FROM categories c LEFT JOIN products p ON p.category_id=c.id
        GROUP BY c.id ORDER BY c.name ASC`
     );
     const [subs] = await pool.query(
-      `SELECT s.id, s.category_id, s.name, s.name_rw, s.name_fr, s.image_path,
+      `SELECT s.id, s.category_id, s.name, s.name_rw, s.name_fr, s.description, s.description_rw, s.description_fr, s.image_path,
         COUNT(p.id) AS product_count,
-        (SELECT pi.image_path FROM product_images pi JOIN products pp ON pp.id = pi.product_id
-         WHERE pp.subcategory_id = s.id ORDER BY pi.is_primary DESC LIMIT 1) AS representative_image
+        COALESCE(s.image_path,
+          (SELECT pi.image_path FROM product_images pi JOIN products pp ON pp.id = pi.product_id
+           WHERE pp.subcategory_id = s.id ORDER BY pi.is_primary DESC LIMIT 1)
+        ) AS representative_image
        FROM subcategories s LEFT JOIN products p ON p.subcategory_id = s.id
        GROUP BY s.id ORDER BY s.category_id, s.name ASC`
     );
@@ -93,8 +99,10 @@ router.get('/subcategories', async (req, res) => {
     let sql = `SELECT s.id, s.category_id, s.name, s.name_rw, s.name_fr, s.description, s.description_rw, s.description_fr, s.image_path,
       c.name AS category_name,
       COUNT(p.id) AS product_count,
-      (SELECT pi.image_path FROM product_images pi JOIN products pp ON pp.id = pi.product_id
-       WHERE pp.subcategory_id = s.id ORDER BY pi.is_primary DESC LIMIT 1) AS representative_image
+      COALESCE(s.image_path,
+        (SELECT pi.image_path FROM product_images pi JOIN products pp ON pp.id = pi.product_id
+         WHERE pp.subcategory_id = s.id ORDER BY pi.is_primary DESC LIMIT 1)
+      ) AS representative_image
      FROM subcategories s LEFT JOIN categories c ON s.category_id = c.id
      LEFT JOIN products p ON p.subcategory_id = s.id WHERE 1=1`;
     const params = [];
@@ -108,7 +116,7 @@ router.get('/subcategories', async (req, res) => {
 router.get('/products', async (req, res) => {
   const { q, category, subcategory_id } = req.query;
   const filters = [], params = [];
-  let sql = `SELECT p.id, p.name, p.sku, p.description, p.selling_price, p.stock_quantity, p.minimum_stock,
+  let sql = `SELECT p.id, p.name, p.sku, p.description, p.description_rw, p.description_fr, p.selling_price, p.stock_quantity, p.minimum_stock,
     CASE
       WHEN (SELECT COUNT(*) FROM product_variants pv WHERE pv.product_id = p.id) > 0
       THEN CASE WHEN (SELECT SUM(pv2.stock_quantity) FROM product_variants pv2 WHERE pv2.product_id = p.id) > 0 THEN 'In Stock' ELSE 'Out of Stock' END
@@ -170,6 +178,13 @@ router.get('/products/:id', async (req, res) => {
     }
     res.json(product);
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch product' }); }
+});
+
+router.get('/hero/:page', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM page_heroes WHERE page_key = ? LIMIT 1', [req.params.page]);
+    res.json(rows[0] || null);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch hero' }); }
 });
 
 router.get('/gallery', async (req, res) => {

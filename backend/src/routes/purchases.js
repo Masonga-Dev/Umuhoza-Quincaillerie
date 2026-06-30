@@ -28,7 +28,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [pRows] = await pool.query(
-      `SELECT p.*, s.name AS supplier_name, u.name AS created_by_name
+      `SELECT p.*, s.name AS supplier_name, u.name AS created_by_name,
+              COALESCE((SELECT SUM(pr2.total_returned_cost) FROM purchase_returns pr2 WHERE pr2.purchase_id = p.id), 0) AS total_returned_cost
        FROM purchases p
        LEFT JOIN suppliers s ON s.id = p.supplier_id
        LEFT JOIN users u ON u.id = p.created_by
@@ -38,10 +39,19 @@ router.get('/:id', async (req, res) => {
     if (!pRows.length) return res.status(404).json({ message: 'Purchase not found' });
     const purchase = pRows[0];
     const [items] = await pool.query(
-      `SELECT pi.*, pr.name AS product_name, pr.sku AS product_sku,
-              pv.color AS variant_color, pv.size AS variant_size, pv.sku AS variant_sku
+      `SELECT pi.*,
+              prod.name AS product_name, prod.sku AS product_sku,
+              pv.color AS variant_color, pv.size AS variant_size, pv.sku AS variant_sku,
+              COALESCE((
+                SELECT SUM(pri.quantity)
+                FROM purchase_return_items pri
+                JOIN purchase_returns pret ON pret.id = pri.return_id
+                WHERE pret.purchase_id = pi.purchase_id
+                  AND pri.product_id = pi.product_id
+                  AND (pri.product_variant_id <=> pi.product_variant_id)
+              ), 0) AS returned_quantity
        FROM purchase_items pi
-       JOIN products pr ON pr.id = pi.product_id
+       JOIN products prod ON prod.id = pi.product_id
        LEFT JOIN product_variants pv ON pv.id = pi.product_variant_id
        WHERE pi.purchase_id=?`,
       [req.params.id]

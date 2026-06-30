@@ -23,7 +23,13 @@ const upload = multer({ storage });
 
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM categories ORDER BY name ASC');
+    const [rows] = await pool.query(
+      `SELECT c.*, COUNT(DISTINCT p.id) AS product_count
+       FROM categories c
+       LEFT JOIN products p ON p.category_id = c.id
+       GROUP BY c.id
+       ORDER BY c.name ASC`
+    );
     res.json(rows);
   } catch (error) {
     console.error(error);

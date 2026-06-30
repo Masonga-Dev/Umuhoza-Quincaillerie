@@ -123,6 +123,32 @@ export async function initDb() {
 
     // Default settings
     await connection.query(`INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('show_prices', 'true')`);
+
+    // Announcements multilingual fields
+    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS title_rw VARCHAR(255) DEFAULT NULL`);
+    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS title_fr VARCHAR(255) DEFAULT NULL`);
+    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS content_rw TEXT DEFAULT NULL`);
+    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS content_fr TEXT DEFAULT NULL`);
+
+    // Page hero sections
+    await connection.query(`CREATE TABLE IF NOT EXISTS page_heroes (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      page_key VARCHAR(50) NOT NULL UNIQUE,
+      title_en VARCHAR(255) DEFAULT NULL,
+      title_rw VARCHAR(255) DEFAULT NULL,
+      title_fr VARCHAR(255) DEFAULT NULL,
+      subtitle_en TEXT DEFAULT NULL,
+      subtitle_rw TEXT DEFAULT NULL,
+      subtitle_fr TEXT DEFAULT NULL,
+      image_path VARCHAR(255) DEFAULT NULL,
+      is_active TINYINT(1) DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`);
+    await connection.query(`INSERT IGNORE INTO page_heroes (page_key) VALUES ('products'), ('gallery'), ('about'), ('contact')`);
+
+    // User profile extensions
+    await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL`);
+    await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_path VARCHAR(255) DEFAULT NULL`);
   } catch (e) {
     console.error('Migration warning:', e.message);
   } finally {
