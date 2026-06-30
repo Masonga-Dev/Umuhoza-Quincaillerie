@@ -3,6 +3,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
 import { emitDataChanged, useDataRefresh } from '../utils/dataEvents';
+import ExportDropdown, { getPeriodStart, getPeriodEnd, getPeriodLabel } from '../components/ExportDropdown';
 
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = (v) => Number(v || 0).toLocaleString('en-RW');
@@ -248,8 +249,8 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
               </div>
             </div>
 
-            <div className="max-h-72 overflow-y-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto max-h-72 overflow-y-auto">
+              <table className="w-full min-w-[480px] text-sm">
                 <thead className="sticky top-0 bg-slate-50">
                   <tr className="border-b border-slate-200">
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Product</th>
@@ -573,6 +574,29 @@ export default function AdminSales() {
   const cashRevenue = filtered.filter(s => s.payment_method === 'Cash' && s.status !== 'Cancelled').reduce((s, x) => s + Number(x.total_amount || 0), 0);
   const mmRevenue = filtered.filter(s => s.payment_method === 'Mobile Money' && s.status !== 'Cancelled').reduce((s, x) => s + Number(x.total_amount || 0), 0);
 
+  const handleExport = (period) => {
+    const start = getPeriodStart(period);
+    const end   = getPeriodEnd(period);
+    const rows = sales
+      .filter(s => {
+        const d = new Date(s.sale_date);
+        return (!start || d >= start) && (!end || d <= end);
+      })
+      .map(s => [
+        s.invoice_number,
+        new Date(s.sale_date).toLocaleDateString('en-RW'),
+        s.customer_name || '',
+        s.payment_method || 'Cash',
+        s.status || 'Completed',
+        s.total_amount,
+      ]);
+    exportToCSV(
+      `sales-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Invoice', 'Date', 'Customer', 'Payment Method', 'Status', 'Total (RWF)'],
+      rows
+    );
+  };
+
   const handleSuccess = invoice => {
     setShowForm(false);
     setSuccess(`Sale recorded — Invoice: ${invoice}`);
@@ -591,26 +615,7 @@ export default function AdminSales() {
             <p className="mt-1 text-sm text-slate-500">Record transactions and track sales history.</p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => exportToCSV(
-                `sales-${new Date().toISOString().slice(0, 10)}.csv`,
-                ['Invoice', 'Date', 'Customer', 'Payment Method', 'Status', 'Total (RWF)'],
-                filtered.map(s => [
-                  s.invoice_number,
-                  new Date(s.sale_date).toLocaleDateString('en-RW'),
-                  s.customer_name || '',
-                  s.payment_method || 'Cash',
-                  s.status || 'Completed',
-                  s.total_amount,
-                ])
-              )}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-              Export CSV
-            </button>
+            <ExportDropdown onExport={handleExport} />
             <button onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
               <span className="text-lg leading-none">+</span> Record New Sale
@@ -651,7 +656,7 @@ export default function AdminSales() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-          <div className="relative flex-1" style={{ minWidth: '180px' }}>
+          <div className="relative flex-1 min-w-0 sm:min-w-[180px]">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
             </svg>

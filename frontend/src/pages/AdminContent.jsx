@@ -3,7 +3,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
-const TABS = ['Homepage', 'Announcements', 'Gallery', 'Contact Info'];
+const TABS = ['Homepage', 'Announcements', 'Gallery', 'Contact Info', 'Heroes'];
 
 function fieldClass() {
   return 'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100';
@@ -541,6 +541,146 @@ function ContactTab({ token }) {
   );
 }
 
+// ─── Heroes Tab ───────────────────────────────────────────────────────────────
+const HERO_PAGES = [
+  { key: 'products', label: 'Products' },
+  { key: 'gallery',  label: 'Gallery' },
+  { key: 'about',    label: 'About' },
+  { key: 'contact',  label: 'Contact' },
+];
+
+function HeroCard({ pageKey, label }) {
+  const [form, setForm] = useState({ title_en: '', title_rw: '', title_fr: '', subtitle_en: '', subtitle_rw: '', subtitle_fr: '', is_active: 1 });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const loadData = () => {
+    const tok = localStorage.getItem('umuhoza_token');
+    setLoading(true); setError('');
+    API.get(`/admin/heroes/${pageKey}`, { headers: { Authorization: `Bearer ${tok}` } })
+      .then(r => {
+        if (r.data) {
+          setForm({
+            title_en: r.data.title_en || '', title_rw: r.data.title_rw || '', title_fr: r.data.title_fr || '',
+            subtitle_en: r.data.subtitle_en || '', subtitle_rw: r.data.subtitle_rw || '', subtitle_fr: r.data.subtitle_fr || '',
+            is_active: r.data.is_active ?? 1,
+          });
+          if (r.data.image_path) setImagePreview(`${BACKEND}/${r.data.image_path}`);
+          else setImagePreview(null);
+        }
+      })
+      .catch(() => setError('Could not load hero data — check that the server is running.'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadData(); }, [pageKey]);
+
+  const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const handleImageChange = (e) => {
+    const f = e.target.files?.[0];
+    if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
+  };
+
+  const handleSave = async () => {
+    setSaving(true); setSaved(false); setError('');
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => fd.append(k, String(v ?? '')));
+      if (imageFile) fd.append('image', imageFile);
+      const res = await API.put(`/admin/heroes/${pageKey}`, fd);
+      if (res.data?.image_path) setImagePreview(`${BACKEND}/${res.data.image_path}`);
+      setImageFile(null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Save failed — the server may need to be restarted for new routes to take effect.');
+    }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">{label} Page Hero</h3>
+          <p className="mt-0.5 text-xs text-slate-400">Banner shown at the top of the {label.toLowerCase()} page.</p>
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked={!!form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked ? 1 : 0 }))} className="sr-only" />
+          <div className={`relative h-5 w-9 rounded-full transition-colors ${form.is_active ? 'bg-blue-600' : 'bg-slate-300'}`}>
+            <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${form.is_active ? 'left-[18px]' : 'left-0.5'}`} />
+          </div>
+          <span className="text-sm text-slate-500">{form.is_active ? 'Visible' : 'Hidden'}</span>
+        </label>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-slate-400 py-4">Loading…</p>
+      ) : (
+        <>
+          {error && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 8v4m0 4h.01"/></svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div>
+            <label className={labelClass()}>Background Image</label>
+            <div className="mt-2 flex items-center gap-4 flex-wrap">
+              <input type="file" accept="image/*" onChange={handleImageChange} className="text-sm text-slate-700" />
+              {imagePreview && (
+                <div className="relative">
+                  <img src={imagePreview} alt="Hero preview" className="h-20 w-32 rounded-lg object-cover border border-slate-200" />
+                  {imageFile && <span className="absolute -top-1.5 -right-1.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">New</span>}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</p>
+            <div><label className="text-xs text-slate-500">English</label><input type="text" value={form.title_en} onChange={set('title_en')} placeholder="e.g. Shop Our Products" className={fieldClass()} /></div>
+            <div><label className="text-xs text-slate-500">Kinyarwanda</label><input type="text" value={form.title_rw} onChange={set('title_rw')} placeholder="Kinyarwanda" className={fieldClass()} /></div>
+            <div><label className="text-xs text-slate-500">Français</label><input type="text" value={form.title_fr} onChange={set('title_fr')} placeholder="Français" className={fieldClass()} /></div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Subtitle</p>
+            <div><label className="text-xs text-slate-500">English</label><textarea rows={2} value={form.subtitle_en} onChange={set('subtitle_en')} placeholder="Short description…" className={fieldClass()} /></div>
+            <div><label className="text-xs text-slate-500">Kinyarwanda</label><textarea rows={2} value={form.subtitle_rw} onChange={set('subtitle_rw')} placeholder="Kinyarwanda…" className={fieldClass()} /></div>
+            <div><label className="text-xs text-slate-500">Français</label><textarea rows={2} value={form.subtitle_fr} onChange={set('subtitle_fr')} placeholder="Français…" className={fieldClass()} /></div>
+          </div>
+
+          <div className="mt-5 flex items-center gap-4">
+            <button onClick={handleSave} disabled={saving}
+              className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:opacity-60">
+              {saving ? 'Saving…' : 'Save Hero'}
+            </button>
+            {saved && <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>Saved!</span>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function HeroesTab() {
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-slate-500">Configure a hero banner for each public page. Title and subtitle support all 3 languages — customers see the version that matches their selected language.</p>
+      {HERO_PAGES.map(({ key, label }) => (
+        <HeroCard key={key} pageKey={key} label={label} />
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function AdminContent() {
   const [activeTab, setActiveTab] = useState('Homepage');
@@ -555,12 +695,12 @@ function AdminContent() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-sm scrollbar-none">
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+              className={`flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap ${
                 activeTab === tab
                   ? 'bg-blue-600 text-white shadow'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -575,6 +715,7 @@ function AdminContent() {
         {activeTab === 'Announcements' && <AnnouncementsTab token={token} />}
         {activeTab === 'Gallery' && <GalleryTab token={token} />}
         {activeTab === 'Contact Info' && <ContactTab token={token} />}
+        {activeTab === 'Heroes' && <HeroesTab />}
       </div>
     </AdminLayout>
   );

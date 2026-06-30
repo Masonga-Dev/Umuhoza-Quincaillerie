@@ -4,6 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
 import { useDataRefresh } from '../utils/dataEvents';
+import ExportDropdown from '../components/ExportDropdown';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
@@ -67,17 +68,40 @@ export default function AdminStock() {
   const alerts      = filtered.filter(i => i.status !== 'In Stock');
   const displayList = view === 'alerts' ? alerts : filtered;
 
-  const handleExport = () => {
+  const handleExport = (period) => {
+    const now = new Date();
+    let start = null, end = null, label = 'all-time';
+
+    if (period && typeof period === 'object' && period.period === 'custom') {
+      start = period.from ? new Date(period.from) : null;
+      if (period.to) { end = new Date(period.to); end.setHours(23, 59, 59, 999); }
+      label = 'custom';
+    } else {
+      if (period === 'daily')   { start = new Date(now); start.setHours(0,0,0,0); label = 'daily'; }
+      if (period === 'weekly')  { start = new Date(now); start.setDate(now.getDate() - 6); start.setHours(0,0,0,0); label = 'weekly'; }
+      if (period === 'monthly') { start = new Date(now.getFullYear(), now.getMonth(), 1); label = 'monthly'; }
+      if (period === 'yearly')  { start = new Date(now.getFullYear(), 0, 1); label = 'yearly'; }
+    }
+
+    const rows = movements
+      .filter(m => {
+        const d = new Date(m.created_at);
+        return (!start || d >= start) && (!end || d <= end);
+      })
+      .map(m => {
+        let type = m.transaction_type || '';
+        if (!type) {
+          if (m.notes?.includes('Return to supplier')) type = 'RETURN_OUT';
+          else if (m.notes?.includes('Customer return')) type = 'RETURN_IN';
+          else type = Number(m.quantity) >= 0 ? 'IN' : 'OUT';
+        }
+        return [m.product_name, m.sku || '', type, m.quantity, m.notes || '', fmtDT(m.created_at), m.created_by_name || ''];
+      });
+
     exportToCSV(
-      `stock-report-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Product', 'SKU', 'Category', 'Stock Qty', 'Min Stock', 'Purchase Price (RWF)', 'Selling Price (RWF)', 'Stock Value (RWF)', 'Status'],
-      displayList.map(i => [
-        i.name, i.sku || '', i.category_name || '',
-        i.stock_quantity, i.minimum_stock || 5,
-        i.cost_price || 0, i.selling_price || 0,
-        Number(i.stock_quantity || 0) * Number(i.cost_price || 0),
-        i.status,
-      ])
+      `stock-movements-${label}-${now.toISOString().slice(0, 10)}.csv`,
+      ['Product', 'SKU', 'Type', 'Quantity', 'Notes', 'Date', 'By'],
+      rows
     );
   };
 
@@ -247,15 +271,7 @@ export default function AdminStock() {
               All ({filtered.length})
             </button>
           </div>
-          <button
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            Export CSV
-          </button>
+          <ExportDropdown onExport={handleExport}/>
         </div>
 
         {/* Inventory table */}

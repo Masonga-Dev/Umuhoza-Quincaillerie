@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
+import IndustriesSection from '../components/IndustriesSection';
 
 const CATEGORY_META = {
   construction: { emoji: '🏗️', color: 'bg-orange-50 border-orange-200', accent: 'text-orange-600' },
@@ -27,7 +28,7 @@ const STATUS_CLASS = {
 
 function Home() {
   const [data, setData] = useState(null);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,6 +44,9 @@ function Home() {
       </div>
     );
   }
+
+  const localName = obj => (lang === 'rw' && obj?.name_rw) ? obj.name_rw : (lang === 'fr' && obj?.name_fr) ? obj.name_fr : (obj?.name || '');
+  const localDesc = obj => (lang === 'rw' && obj?.description_rw) ? obj.description_rw : (lang === 'fr' && obj?.description_fr) ? obj.description_fr : (obj?.description || '');
 
   const s = data.settings || {};
   const stats = data.stats || {};
@@ -74,7 +78,7 @@ function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-slate-950/90" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
           <div className="max-w-xl space-y-6">
-            <span className="inline-flex rounded-full bg-blue-500/20 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-blue-200">
+            <span className="inline-flex rounded-full border border-amber-400/40 bg-amber-400/15 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-amber-300">
               {heroBadge}
             </span>
             <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -120,20 +124,23 @@ function Home() {
 
       {/* ── Stats Bar ──────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-4 rounded-[2rem] bg-white p-6 shadow-lg sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 rounded-[2rem] bg-white p-6 shadow-lg sm:grid-cols-4">
           {[
             { value: `${stats.products}+`, label: t('home.stats.products') },
             { value: `${stats.categories}+`, label: t('home.stats.categories') },
             { value: `${stats.customers}+`, label: t('home.stats.customers') },
             { value: `${yearsExp}+`, label: t('home.stats.experience') },
           ].map((item) => (
-            <div key={item.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-center">
-              <p className="text-3xl font-bold text-slate-900">{item.value}</p>
-              <p className="mt-2 text-sm text-slate-500">{item.label}</p>
+            <div key={item.label} className="rounded-3xl border border-amber-100 bg-amber-50 p-6 text-center">
+              <p className="text-3xl font-bold text-[#1a2d5a]">{item.value}</p>
+              <p className="mt-2 text-sm text-gray-500">{item.label}</p>
             </div>
           ))}
         </div>
       </section>
+
+      {/* ── Industries We Serve ────────────────────────────────────────────── */}
+      <IndustriesSection />
 
       {/* ── Shop by Category ───────────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -173,7 +180,7 @@ function Home() {
                         alt=""
                         className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/10" />
                     </div>
                   ) : (
                     <div className={`absolute inset-0 ${meta.color}`}>
@@ -199,13 +206,17 @@ function Home() {
                   <div className="absolute inset-x-0 bottom-0 p-5">
                     {!hasImg && <div className="mb-2 text-3xl">{meta.emoji}</div>}
                     <p className={`text-lg font-bold leading-tight ${hasImg ? 'text-white' : 'text-slate-900'}`}>
-                      {cat.name}
+                      {localName(cat)}
                     </p>
                     <div className="mt-1.5 flex items-center gap-2">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${hasImg ? 'bg-white/15 text-slate-100' : 'bg-slate-900/10 text-slate-600'}`}>
                         {cat.product_count > 0 ? `${cat.product_count} product${cat.product_count !== 1 ? 's' : ''}` : 'No products yet'}
                       </span>
                     </div>
+                    {/* Description — reserved space, fades in on hover */}
+                    <p className={`mt-2 text-sm line-clamp-2 leading-relaxed min-h-[2.5rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${hasImg ? 'text-white/80' : 'text-slate-600'}`}>
+                      {localDesc(cat)}
+                    </p>
                   </div>
                 </button>
               );
@@ -303,7 +314,7 @@ function Home() {
                 {t('home.gallery.title')}
               </h2>
             </div>
-            <Link to="/gallery" className="text-sm font-semibold text-blue-600 hover:underline">
+            <Link to="/gallery" className="text-sm font-semibold text-amber-600 hover:underline transition">
               {t('home.gallery.viewAll')}
             </Link>
           </div>

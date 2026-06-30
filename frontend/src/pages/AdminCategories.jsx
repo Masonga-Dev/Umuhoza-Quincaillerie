@@ -280,7 +280,8 @@ export default function AdminCategories() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
               <thead className="border-b border-slate-100 bg-slate-50/80">
                 <tr>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Category</th>
@@ -322,6 +323,7 @@ export default function AdminCategories() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

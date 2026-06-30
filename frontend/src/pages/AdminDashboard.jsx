@@ -57,7 +57,6 @@ function StatCard({ label, value, sub, icon, colorClass, bgClass }) {
 
 function AdminDashboard() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('umuhoza_token');
   const { refreshKey, bindRefresh } = useDataRefresh();
 
   const [daily, setDaily] = useState(null);
@@ -68,10 +67,9 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(() => {
-    const headers = { Authorization: `Bearer ${token}` };
     Promise.all([
-      API.get('/reports/daily', { headers }),
-      API.get('/reports/inventory', { headers }),
+      API.get('/reports/daily'),
+      API.get('/reports/inventory'),
       API.get('/products', { params: { pageSize: 5 } }),
       API.get('/categories'),
     ])
@@ -84,7 +82,7 @@ function AdminDashboard() {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData, refreshKey]);
   useEffect(bindRefresh, [bindRefresh]);

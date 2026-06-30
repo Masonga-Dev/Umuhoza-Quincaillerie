@@ -4,6 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
 import { useDataRefresh } from '../utils/dataEvents';
+import ExportDropdown from '../components/ExportDropdown';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
@@ -96,6 +97,7 @@ export default function AdminProducts() {
     ['SKU', 'Name', 'Category', 'Cost Price (RWF)', 'Selling Price (RWF)', 'Stock Qty', 'Min Stock', 'Status'],
     products.map(p => [p.sku || '', p.name, p.category_name || '', p.cost_price || 0, p.selling_price || 0, p.stock_quantity, p.minimum_stock || 5, p.status])
   );
+  const handleExportPeriod = (_period) => handleExport();
 
   return (
     <AdminLayout currentPage="/admin/products">
@@ -108,13 +110,7 @@ export default function AdminProducts() {
             <p className="mt-1 text-slate-500">Manage your catalogue. Set prices through variants, stock through purchases.</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleExport}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-              Export
-            </button>
+            <ExportDropdown onExport={handleExportPeriod} />
             <button onClick={() => navigate('/admin/products/add')}
               className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
               <span className="text-lg leading-none">+</span> Add Product
@@ -139,7 +135,7 @@ export default function AdminProducts() {
 
           {/* Filter bar */}
           <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50 px-6 py-4">
-            <div className="relative flex-1" style={{ minWidth: '200px' }}>
+            <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
               </svg>
