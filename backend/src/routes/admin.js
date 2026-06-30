@@ -1,50 +1,25 @@
 import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import pool from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import makeUpload from '../middleware/upload.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 router.use(authMiddleware);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const galleryDir = path.join(__dirname, '../../uploads/gallery');
-if (!fs.existsSync(galleryDir)) fs.mkdirSync(galleryDir, { recursive: true });
-
-const heroDir = path.join(__dirname, '../../uploads/hero');
-if (!fs.existsSync(heroDir)) fs.mkdirSync(heroDir, { recursive: true });
-
-function makeStorage(dir) {
-  return multer.diskStorage({
-    destination: dir,
-    filename: (req, file, cb) => {
-      const safe = file.originalname.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
-      cb(null, `${Date.now()}-${safe}`);
-    },
-  });
-}
-
-const uploadGallery = multer({ storage: makeStorage(galleryDir) });
-const uploadHero    = multer({ storage: makeStorage(heroDir) });
-
-const avatarDir = path.join(__dirname, '../../uploads/avatars');
-if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
-const uploadAvatar = multer({ storage: makeStorage(avatarDir), limits: { fileSize: 3 * 1024 * 1024 } });
-
-const pageHeroesDir = path.join(__dirname, '../../uploads/page-heroes');
-if (!fs.existsSync(pageHeroesDir)) fs.mkdirSync(pageHeroesDir, { recursive: true });
-const uploadPageHero = multer({ storage: makeStorage(pageHeroesDir) });
+const uploadGallery  = makeUpload('gallery');
+const uploadHero     = makeUpload('hero');
+const uploadAvatar   = makeUpload('avatars');
+const uploadPageHero = makeUpload('page-heroes');
 
 async function removeFile(filePath) {
   if (!filePath) return;
   try {
-    const full = path.join(__dirname, '../../', filePath);
-    if (fs.existsSync(full)) await fs.promises.unlink(full);
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      const match = filePath.match(/\/upload\/(?:v\d+\/)?(.+)\.[^.]+$/);
+      if (match) await cloudinary.uploader.destroy(match[1]);
+    }
   } catch {}
 }
 
@@ -70,7 +45,7 @@ router.put('/me', uploadAvatar.single('avatar'), async (req, res) => {
       avatar_path = null;
     } else if (req.file) {
       await removeFile(avatar_path);
-      avatar_path = `uploads/avatars/${req.file.filename}`;
+      avatar_path = req.file.path;
     }
     await pool.query(
       'UPDATE users SET name = ?, email = ?, phone = ?, avatar_path = ? WHERE id = ?',
@@ -103,7 +78,7 @@ router.put('/me/password', async (req, res) => {
 // ── Hero image upload ─────────────────────────────────────────────────────────
 router.post('/upload/hero', uploadHero.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'Upload failed' });
-  res.json({ image_path: `uploads/hero/${req.file.filename}` });
+  res.json({ image_path: req.file.path });
 });
 
 // ── Homepage Content ──────────────────────────────────────────────────────────
@@ -218,7 +193,7 @@ router.get('/gallery', async (req, res) => {
 
 router.post('/gallery/upload', uploadGallery.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'Upload failed' });
-  const image_path = `uploads/gallery/${req.file.filename}`;
+  const image_path = req.file.path;
   const { title } = req.body;
   try {
     const [result] = await pool.query(
@@ -288,7 +263,7 @@ router.put('/heroes/:page', uploadPageHero.single('image'), async (req, res) => 
     let image_path = existing[0]?.image_path || null;
     if (req.file) {
       if (image_path) await removeFile(image_path);
-      image_path = `uploads/page-heroes/${req.file.filename}`;
+      image_path = req.file.path;
     }
     await pool.query(
       `INSERT INTO page_heroes (page_key, title_en, title_rw, title_fr, subtitle_en, subtitle_rw, subtitle_fr, image_path, is_active)

@@ -1,36 +1,18 @@
 import express from 'express';
-import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import pool from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import makeUpload from '../middleware/upload.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadDirectory = path.join(__dirname, '../../uploads/products');
-if (!fs.existsSync(uploadDirectory)) fs.mkdirSync(uploadDirectory, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: uploadDirectory,
-  filename: (req, file, cb) => {
-    const safe = file.originalname.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
-const upload = multer({ storage });
-
-const variantUploadDir = path.join(__dirname, '../../uploads/variants');
-if (!fs.existsSync(variantUploadDir)) fs.mkdirSync(variantUploadDir, { recursive: true });
-const variantStorage = multer.diskStorage({
-  destination: variantUploadDir,
-  filename: (req, file, cb) => {
-    const safe = file.originalname.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
-const variantUpload = multer({ storage: variantStorage });
+const upload = makeUpload('products');
+const variantUpload = makeUpload('variants');
 
 function determineStatus(qty, min = 5) {
   const q = Number(qty ?? 0), m = Number(min ?? 5);
@@ -42,8 +24,13 @@ function determineStatus(qty, min = 5) {
 async function deleteFile(imagePath) {
   if (!imagePath) return;
   try {
-    const full = path.join(__dirname, '../../', imagePath);
-    if (fs.existsSync(full)) await fs.promises.unlink(full);
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      const match = imagePath.match(/\/upload\/(?:v\d+\/)?(.+)\.[^.]+$/);
+      if (match) await cloudinary.uploader.destroy(match[1]);
+    } else {
+      const full = path.join(__dirname, '../../', imagePath);
+      if (fs.existsSync(full)) await fs.promises.unlink(full);
+    }
   } catch {}
 }
 
@@ -72,7 +59,7 @@ async function syncProductFromVariants(productId) {
 // ── Legacy single upload (backward compat) ────────────────────────────────────
 router.post('/upload', authMiddleware, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  res.status(201).json({ image_path: `uploads/products/${req.file.filename}` });
+  res.status(201).json({ image_path: req.file.path });
 });
 
 // ── Product list ──────────────────────────────────────────────────────────────
@@ -192,7 +179,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // ── Multi-image management ────────────────────────────────────────────────────
 router.post('/:id/images', authMiddleware, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const image_path = `uploads/products/${req.file.filename}`;
+  const image_path = req.file.path;
   const makePrimary = req.body.is_primary === 'true' || req.body.is_primary === '1';
   try {
     const [existing] = await pool.query('SELECT id FROM product_images WHERE product_id=?', [req.params.id]);
@@ -238,7 +225,7 @@ router.get('/:id/variants', authMiddleware, async (req, res) => {
 
 router.post('/:id/variants', authMiddleware, variantUpload.single('image'), async (req, res) => {
   const { color, size, unit, selling_price, cost_price, minimum_stock } = req.body;
-  const image_path = req.file ? `uploads/variants/${req.file.filename}` : null;
+  const image_path = req.file ? req.file.path : null;
   try {
     const [pRows] = await pool.query('SELECT sku FROM products WHERE id=?', [req.params.id]);
     const productSku = pRows[0]?.sku || 'VAR';
@@ -256,7 +243,7 @@ router.post('/:id/variants', authMiddleware, variantUpload.single('image'), asyn
 
 router.put('/:id/variants/:vid', authMiddleware, variantUpload.single('image'), async (req, res) => {
   const { color, size, unit, selling_price, cost_price, minimum_stock, existing_image_path } = req.body;
-  const image_path = req.file ? `uploads/variants/${req.file.filename}` : (existing_image_path || null);
+  const image_path = req.file ? req.file.path : (existing_image_path || null);
   try {
     const [existing] = await pool.query('SELECT stock_quantity FROM product_variants WHERE id=? AND product_id=?', [req.params.vid, req.params.id]);
     if (!existing.length) return res.status(404).json({ message: 'Variant not found' });
