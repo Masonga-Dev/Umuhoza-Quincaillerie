@@ -7,6 +7,7 @@ import { useDataRefresh } from '../utils/dataEvents';
 import ExportDropdown from '../components/ExportDropdown';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND_BASE}/${p}`;
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = v => Number(v || 0).toLocaleString('en-RW');
 const fmtDT = d => new Date(d).toLocaleString('en-RW', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -312,7 +313,7 @@ export default function AdminStock() {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             {item.image_path ? (
-                              <img src={`${BACKEND_BASE}/${item.image_path}`} alt={item.name}
+                              <img src={imgUrl(item.image_path)} alt={item.name}
                                 className="h-10 w-10 rounded-xl object-cover flex-shrink-0"/>
                             ) : (
                               <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-400">N/A</div>

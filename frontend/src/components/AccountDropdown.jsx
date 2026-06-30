@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import API from '../api';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 
 function getInitial(name) { return (name || 'A').charAt(0).toUpperCase(); }
@@ -10,7 +11,7 @@ function Avatar({ user, size = 36 }) {
   if (user?.avatar_path) {
     return (
       <img
-        src={`${BACKEND}/${user.avatar_path}`}
+        src={imgUrl(user.avatar_path)}
         alt={user.name}
         style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }}
       />
@@ -111,7 +112,7 @@ function SettingsPanel({ user, onClose, onSaved }) {
   const [form, setForm]       = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [avatar, setAvatar]   = useState(null);
   const [removePhoto, setRemovePhoto] = useState(false);
-  const [preview, setPreview] = useState(user?.avatar_path ? `${BACKEND}/${user.avatar_path}` : null);
+  const [preview, setPreview] = useState(user?.avatar_path ? imgUrl(user.avatar_path) : null);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState('');
   const fileRef               = useRef();

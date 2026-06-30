@@ -3,6 +3,7 @@ import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 function Gallery() {
   const [images, setImages]   = useState([]);
@@ -48,7 +49,7 @@ function Gallery() {
       {hasHero ? (
         <div className="-mx-4 sm:-mx-6 -mt-8 relative overflow-hidden" style={{ height: 380 }}>
           {hero.image_path ? (
-            <img src={`${BACKEND}/${hero.image_path}`} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={imgUrl(hero.image_path)} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
             <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a1628, #1a2d5a, #0d1b3e)' }} />
           )}
@@ -128,7 +129,7 @@ function Gallery() {
               >
                 <div className="relative overflow-hidden">
                   <img
-                    src={`${BACKEND}/${img.image_path}`}
+                    src={imgUrl(img.image_path)}
                     alt={img.title || ''}
                     className="w-full object-cover transition duration-500 group-hover:scale-105"
                     style={{ display: 'block' }}
@@ -174,7 +175,7 @@ function Gallery() {
           {/* Image */}
           <div className="relative max-w-5xl w-full mx-14" onClick={(e) => e.stopPropagation()}>
             <img
-              src={`${BACKEND}/${images[lightbox].image_path}`}
+              src={imgUrl(images[lightbox].image_path)}
               alt={images[lightbox].title || ''}
               className="mx-auto max-h-[82vh] w-auto rounded-2xl object-contain shadow-2xl"
             />

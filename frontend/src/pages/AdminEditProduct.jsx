@@ -4,6 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 const TABS = ['Details', 'Images', 'Variants'];
 const fc = 'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100';
 const lc = 'block text-sm font-medium text-slate-700';
@@ -185,7 +186,7 @@ function ImagesTab({ product }) {
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {images.map(img => (
             <div key={img.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <img src={`${BACKEND}/${img.image_path}`} alt="" className="h-36 w-full object-cover" />
+              <img src={imgUrl(img.image_path)} alt="" className="h-36 w-full object-cover" />
               {img.is_primary ? <div className="absolute top-2 left-2 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">Primary</div> : null}
               <div className="flex gap-1 p-2">
                 {!img.is_primary && <button onClick={() => handleSetPrimary(img.id)} className="flex-1 rounded-lg bg-blue-50 px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100">Set Primary</button>}
@@ -222,7 +223,7 @@ function VariantCard({ variant: v, index, onEdit, onDelete }) {
     <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       {/* Image */}
       {v.image_path ? (
-        <img src={`${BACKEND}/${v.image_path}`} alt={descriptor || 'Variant'}
+        <img src={imgUrl(v.image_path)} alt={descriptor || 'Variant'}
           className="h-36 w-full object-cover" />
       ) : (
         <div className="flex h-20 w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
@@ -362,7 +363,7 @@ function VariantsTab({ product, onVariantCountChange }) {
       cost_price: v.cost_price || '',
       minimum_stock: v.minimum_stock || 5,
     });
-    setImagePreview(v.image_path ? `${BACKEND}/${v.image_path}` : null);
+    setImagePreview(v.image_path ? imgUrl(v.image_path) : null);
     setImageFile(null);
     if (fileRef.current) fileRef.current.value = '';
     setError('');

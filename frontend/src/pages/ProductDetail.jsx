@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 function fmtPrice(v) {
   return Number(v || 0).toLocaleString('en-RW');
@@ -106,7 +107,7 @@ export default function ProductDetail() {
             {images.length > 0 ? (
               <>
                 <img
-                  src={`${BACKEND}/${images[activeImg]?.image_path}`}
+                  src={imgUrl(images[activeImg]?.image_path)}
                   alt={product.name}
                   className="h-full w-full object-cover cursor-zoom-in transition duration-300"
                   onClick={() => setZoomed(true)}
@@ -156,7 +157,7 @@ export default function ProductDetail() {
                   onClick={() => setActiveImg(i)}
                   className={`flex-shrink-0 h-16 w-16 overflow-hidden rounded-xl border-2 transition ${activeImg === i ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:border-slate-300'}`}
                 >
-                  <img src={`${BACKEND}/${img.image_path}`} alt="" className="h-full w-full object-cover"/>
+                  <img src={imgUrl(img.image_path)} alt="" className="h-full w-full object-cover"/>
                 </button>
               ))}
             </div>
@@ -327,7 +328,7 @@ export default function ProductDetail() {
 
           {/* Full image */}
           <img
-            src={`${BACKEND}/${images[activeImg]?.image_path}`}
+            src={imgUrl(images[activeImg]?.image_path)}
             alt={product.name}
             className="max-h-[90vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl"
             onClick={e => e.stopPropagation()}
@@ -342,7 +343,7 @@ export default function ProductDetail() {
                   onClick={e => { e.stopPropagation(); setActiveImg(i); }}
                   className={`h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${activeImg === i ? 'border-white' : 'border-white/20 hover:border-white/50'}`}
                 >
-                  <img src={`${BACKEND}/${img.image_path}`} alt="" className="h-full w-full object-cover"/>
+                  <img src={imgUrl(img.image_path)} alt="" className="h-full w-full object-cover"/>
                 </button>
               ))}
             </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND_BASE}/${p}`;
 
 function generateSKU() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -28,7 +29,7 @@ function ProductForm({ initialValue = {}, categories = [], onSave, submitLabel }
 
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(
-    initialValue.image_path ? `${BACKEND_BASE}/${initialValue.image_path}` : null
+    initialValue.image_path ? imgUrl(initialValue.image_path) : null
   );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

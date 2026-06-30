@@ -7,6 +7,7 @@ import { useDataRefresh } from '../utils/dataEvents';
 import ExportDropdown from '../components/ExportDropdown';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND_BASE}/${p}`;
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = v => Number(v || 0).toLocaleString('en-RW');
 
@@ -207,7 +208,7 @@ export default function AdminProducts() {
                       onClick={() => navigate(`/admin/products/${product.id}/edit`)}>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         {product.image_path ? (
-                          <img src={`${BACKEND_BASE}/${product.image_path}`} alt={product.name}
+                          <img src={imgUrl(product.image_path)} alt={product.name}
                             className="h-12 w-12 rounded-xl object-cover ring-1 ring-slate-200" />
                         ) : (
                           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">

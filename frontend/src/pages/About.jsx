@@ -5,6 +5,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import IndustriesSection from '../components/IndustriesSection';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 const WHY_ICONS = [
   <svg key="shield" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
@@ -65,7 +66,7 @@ function About() {
         /* Admin-uploaded hero banner */
         <div className="-mx-4 sm:-mx-6 -mt-8 relative overflow-hidden" style={{ height: 420 }}>
           {hero.image_path ? (
-            <img src={`${BACKEND}/${hero.image_path}`} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={imgUrl(hero.image_path)} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
             <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a1628, #1a2d5a, #0d1b3e)' }} />
           )}

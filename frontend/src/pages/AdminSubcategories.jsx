@@ -4,6 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 const EMPTY = { category_id: '', name: '', name_rw: '', name_fr: '', description: '', description_rw: '', description_fr: '' };
 
 const PALETTE = [
@@ -106,7 +107,7 @@ export default function AdminSubcategories() {
       category_id: sub.category_id, name: sub.name || '', name_rw: sub.name_rw || '', name_fr: sub.name_fr || '',
       description: sub.description || '', description_rw: sub.description_rw || '', description_fr: sub.description_fr || '',
     });
-    setImagePreview(sub.image_path ? `${BACKEND}/${sub.image_path}` : null);
+    setImagePreview(sub.image_path ? imgUrl(sub.image_path) : null);
     setImageFile(null); setError(''); setActiveLang('en'); setShowForm(true);
   };
 
@@ -237,7 +238,7 @@ export default function AdminSubcategories() {
                   {/* Image area */}
                   <div className="relative h-36 flex-shrink-0 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
                     {sub.image_path ? (
-                      <img src={`${BACKEND}/${sub.image_path}`} alt={sub.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/>
+                      <img src={imgUrl(sub.image_path)} alt={sub.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/>
                     ) : (
                       <div className="flex h-full items-center justify-center select-none opacity-10 text-7xl">📂</div>
                     )}
@@ -296,7 +297,7 @@ export default function AdminSubcategories() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         {sub.image_path ? (
-                          <img src={`${BACKEND}/${sub.image_path}`} alt={sub.name} className="h-10 w-10 flex-shrink-0 rounded-xl object-cover border border-slate-200"/>
+                          <img src={imgUrl(sub.image_path)} alt={sub.name} className="h-10 w-10 flex-shrink-0 rounded-xl object-cover border border-slate-200"/>
                         ) : (
                           <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 text-sm font-bold ${PALETTE[sub.id % PALETTE.length].bg} ${PALETTE[sub.id % PALETTE.length].text}`}>
                             {sub.name.charAt(0).toUpperCase()}

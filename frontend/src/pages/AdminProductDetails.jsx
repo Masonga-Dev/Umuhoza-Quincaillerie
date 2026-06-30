@@ -4,6 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND_BASE}/${p}`;
 
 function fmtPrice(value) {
   return Number(value).toLocaleString('en-RW');
@@ -95,7 +96,7 @@ function AdminProductDetails() {
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               {product.image_path ? (
                 <img
-                  src={`${BACKEND_BASE}/${product.image_path}`}
+                  src={imgUrl(product.image_path)}
                   alt={product.name}
                   className="h-80 w-full rounded-3xl object-cover"
                 />

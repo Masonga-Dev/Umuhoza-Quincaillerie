@@ -3,6 +3,7 @@ import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 const WhatsAppIcon = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -67,7 +68,7 @@ function Contact() {
       {hasHero ? (
         <div className="-mx-4 sm:-mx-6 -mt-8 relative overflow-hidden" style={{ height: 380 }}>
           {hero.image_path ? (
-            <img src={`${BACKEND}/${hero.image_path}`} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={imgUrl(hero.image_path)} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-[#0d1b3e] via-[#152855] to-[#1e3a8a]" />
           )}

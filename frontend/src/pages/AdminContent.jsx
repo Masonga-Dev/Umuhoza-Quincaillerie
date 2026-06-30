@@ -3,6 +3,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 const TABS = ['Homepage', 'Announcements', 'Gallery', 'Contact Info', 'Heroes'];
 
 function fieldClass() {
@@ -45,7 +46,7 @@ function HomepageTab({ token }) {
     ]).then(([sRes, hRes]) => {
       setSettings(sRes.data || {});
       setWhyItems((hRes.data || []).filter((s) => s.section_name === 'why_choose_us'));
-      if (sRes.data?.heroImage) setHeroPreview(`${BACKEND}/${sRes.data.heroImage}`);
+      if (sRes.data?.heroImage) setHeroPreview(imgUrl(sRes.data.heroImage));
     }).catch(console.error);
   }, []);
 
@@ -474,7 +475,7 @@ function GalleryTab({ token }) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {images.map((img) => (
             <div key={img.id} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <img src={`${BACKEND}/${img.image_path}`} alt={img.title || ''} className="h-48 w-full object-cover" />
+              <img src={imgUrl(img.image_path)} alt={img.title || ''} className="h-48 w-full object-cover" />
               <div className="p-3 flex items-center justify-between">
                 <p className="text-sm text-slate-700 truncate">{img.title || 'Untitled'}</p>
                 <button onClick={() => handleDelete(img)}
@@ -569,7 +570,7 @@ function HeroCard({ pageKey, label }) {
             subtitle_en: r.data.subtitle_en || '', subtitle_rw: r.data.subtitle_rw || '', subtitle_fr: r.data.subtitle_fr || '',
             is_active: r.data.is_active ?? 1,
           });
-          if (r.data.image_path) setImagePreview(`${BACKEND}/${r.data.image_path}`);
+          if (r.data.image_path) setImagePreview(imgUrl(r.data.image_path));
           else setImagePreview(null);
         }
       })
@@ -593,7 +594,7 @@ function HeroCard({ pageKey, label }) {
       Object.entries(form).forEach(([k, v]) => fd.append(k, String(v ?? '')));
       if (imageFile) fd.append('image', imageFile);
       const res = await API.put(`/admin/heroes/${pageKey}`, fd);
-      if (res.data?.image_path) setImagePreview(`${BACKEND}/${res.data.image_path}`);
+      if (res.data?.image_path) setImagePreview(imgUrl(res.data.image_path));
       setImageFile(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

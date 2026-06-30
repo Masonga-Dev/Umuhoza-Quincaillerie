@@ -4,6 +4,7 @@ import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 /* ── helpers ─────────────────────────────────────────────────────────────────── */
 const CATEGORY_EMOJI = { construction:'🏗️', tool:'🔧', paint:'🎨', electric:'⚡', plumb:'🔩', roof:'🏠', hardware:'⚙️', fastener:'🔩', screw:'🔩', nail:'🔨', bolt:'⚙️', nut:'⚙️', pipe:'🔧', valve:'🔧', wire:'⚡', switch:'⚡', door:'🚪', window:'🪟' };
@@ -108,7 +109,7 @@ export default function Products() {
       {view === 'categories' && hero?.is_active && (localHeroText(hero, 'title') || hero?.image_path) && (
         <div className="relative overflow-hidden h-[280px] sm:h-[400px]">
           {hero.image_path ? (
-            <img src={`${BACKEND}/${hero.image_path}`} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={imgUrl(hero.image_path)} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-[#0d1b3e] via-[#152855] to-[#1e3a8a]" />
           )}
@@ -220,7 +221,7 @@ export default function Products() {
                       {/* Image */}
                       <div className="relative overflow-hidden" style={{ height: 200 }}>
                         {hasImg ? (
-                          <img src={`${BACKEND}/${cat.representative_image}`} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                          <img src={imgUrl(cat.representative_image)} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                         ) : (
                           <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#0d1b3e] to-[#1e3a8a]">
                             <span className="text-[80px] opacity-20 select-none">{emoji}</span>
@@ -295,7 +296,7 @@ export default function Products() {
                       <div className="h-1 bg-amber-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative overflow-hidden" style={{ height: 150 }}>
                         {hasImg ? (
-                          <img src={`${BACKEND}/${sub.representative_image}`} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                          <img src={imgUrl(sub.representative_image)} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                         ) : (
                           <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#0d1b3e] to-[#1e3a8a]">
                             <span className="text-[60px] opacity-20 select-none">{emoji}</span>
@@ -366,7 +367,7 @@ export default function Products() {
                       {/* Image */}
                       <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '16/9' }}>
                         {product.image_path ? (
-                          <img src={`${BACKEND}/${product.image_path}`} alt={product.name} className="h-full w-full object-contain transition duration-500 group-hover:scale-105" />
+                          <img src={imgUrl(product.image_path)} alt={product.name} className="h-full w-full object-contain transition duration-500 group-hover:scale-105" />
                         ) : (
                           <div className="flex h-full items-center justify-center text-5xl opacity-20 select-none">{emoji}</div>
                         )}

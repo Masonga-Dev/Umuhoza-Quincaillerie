@@ -4,6 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 const EMPTY = { name: '', name_rw: '', name_fr: '', description: '', description_rw: '', description_fr: '' };
 
 const PALETTE = [
@@ -99,7 +100,7 @@ export default function AdminCategories() {
       name: cat.name || '', name_rw: cat.name_rw || '', name_fr: cat.name_fr || '',
       description: cat.description || '', description_rw: cat.description_rw || '', description_fr: cat.description_fr || '',
     });
-    setImagePreview(cat.image_path ? `${BACKEND}/${cat.image_path}` : null);
+    setImagePreview(cat.image_path ? imgUrl(cat.image_path) : null);
     setImageFile(null); setError(''); setActiveLang('en'); setShowForm(true);
   };
 
@@ -231,7 +232,7 @@ export default function AdminCategories() {
                   {/* Image area */}
                   <div className="relative h-44 flex-shrink-0 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
                     {cat.image_path ? (
-                      <img src={`${BACKEND}/${cat.image_path}`} alt={cat.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/>
+                      <img src={imgUrl(cat.image_path)} alt={cat.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/>
                     ) : (
                       <div className="flex h-full items-center justify-center select-none opacity-10 text-8xl">📦</div>
                     )}
@@ -296,7 +297,7 @@ export default function AdminCategories() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         {cat.image_path ? (
-                          <img src={`${BACKEND}/${cat.image_path}`} alt={cat.name} className="h-10 w-10 flex-shrink-0 rounded-xl object-cover border border-slate-200"/>
+                          <img src={imgUrl(cat.image_path)} alt={cat.name} className="h-10 w-10 flex-shrink-0 rounded-xl object-cover border border-slate-200"/>
                         ) : (
                           <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 text-sm font-bold ${PALETTE[cat.id % PALETTE.length].bg} ${PALETTE[cat.id % PALETTE.length].text}`}>
                             {cat.name.charAt(0).toUpperCase()}

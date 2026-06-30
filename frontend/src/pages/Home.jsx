@@ -19,6 +19,7 @@ function getCatMeta(name = '') {
 }
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 const STATUS_CLASS = {
   'In Stock': 'bg-emerald-100 text-emerald-700',
@@ -59,7 +60,7 @@ function Home() {
   const heroCta = s.heroCta || t('home.defaultCta');
   const heroBadge = s.heroBadge || t('home.defaultBadge');
   const heroImage = s.heroImage
-    ? `${BACKEND}/${s.heroImage}`
+    ? imgUrl(s.heroImage)
     : 'https://images.unsplash.com/photo-1581092337167-1d1fc8f7ef6f?auto=format&fit=crop&w=1600&q=80';
   const phone = s.sitePhone || '+250 788 123 456';
   const whatsapp = s.whatsapp || phone;
@@ -176,7 +177,7 @@ function Home() {
                   {hasImg ? (
                     <div className="absolute inset-0">
                       <img
-                        src={`${BACKEND}/${cat.representative_image}`}
+                        src={imgUrl(cat.representative_image)}
                         alt=""
                         className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
                       />
@@ -322,7 +323,7 @@ function Home() {
             {data.gallery.slice(0, 4).map((img) => (
               <div key={img.id} className="overflow-hidden rounded-2xl bg-slate-100 shadow-sm">
                 <img
-                  src={`${BACKEND}/${img.image_path}`}
+                  src={imgUrl(img.image_path)}
                   alt={img.title || ''}
                   className="h-48 w-full object-cover transition hover:scale-105"
                 />
