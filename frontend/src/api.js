@@ -1,7 +1,7 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:4000/api',
+  baseURL: 'https://umuhoza-backend.onrender.com/api',
 });
 
 // Auto-attach token; strip Content-Type for FormData so browser sets the multipart boundary
