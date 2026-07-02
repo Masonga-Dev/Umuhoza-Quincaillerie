@@ -67,20 +67,21 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(() => {
-    Promise.all([
+    Promise.allSettled([
       API.get('/reports/daily'),
       API.get('/reports/inventory'),
       API.get('/products', { params: { pageSize: 5 } }),
       API.get('/categories'),
     ])
       .then(([dailyRes, inventoryRes, productsRes, categoriesRes]) => {
-        setDaily(dailyRes.data);
-        setInventory(inventoryRes.data);
-        setTotalProducts(productsRes.data.total);
-        setRecentProducts(productsRes.data.data);
-        setTotalCategories(categoriesRes.data.length);
+        if (dailyRes.status === 'fulfilled') setDaily(dailyRes.value.data);
+        if (inventoryRes.status === 'fulfilled') setInventory(inventoryRes.value.data);
+        if (productsRes.status === 'fulfilled') {
+          setTotalProducts(productsRes.value.data.total);
+          setRecentProducts(productsRes.value.data.data);
+        }
+        if (categoriesRes.status === 'fulfilled') setTotalCategories(categoriesRes.value.data.length);
       })
-      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []);
 
