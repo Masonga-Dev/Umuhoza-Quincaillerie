@@ -6,4 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  define: {
+    'import.meta.env.VITE_BACKEND_URL': JSON.stringify(
+      process.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com'
+    ),
+  },
 });
