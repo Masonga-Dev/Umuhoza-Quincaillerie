@@ -244,10 +244,16 @@ function PurchaseDetailModal({ purchaseId, onClose, onReturned }) {
   );
 }
 
-function NewPurchaseForm({ products, suppliers, onSuccess, onClose }) {
+function generateRef(count) {
+  const year = new Date().getFullYear();
+  const num = String(count + 1).padStart(3, '0');
+  return `INV-UMU-${year}-${num}`;
+}
+
+function NewPurchaseForm({ products, suppliers, onSuccess, onClose, purchaseCount }) {
   const [items, setItems] = useState([{ product_id: '', product_variant_id: '', quantity: 1, unit_cost: 0 }]);
   const [supplierId, setSupplierId] = useState('');
-  const [reference, setReference] = useState('');
+  const [reference, setReference] = useState(() => generateRef(purchaseCount || 0));
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -336,6 +342,11 @@ function NewPurchaseForm({ products, suppliers, onSuccess, onClose }) {
               <label className="mb-1 block text-xs font-semibold text-slate-600">Purchase Date</label>
               <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+              {purchaseDate && (
+                <p className="mt-1 text-xs text-slate-400">
+                  {new Date(purchaseDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-600">Notes</label>
@@ -634,7 +645,7 @@ export default function AdminPurchases() {
         </div>
       </div>
 
-      {showForm && <NewPurchaseForm products={products} suppliers={suppliers} onSuccess={handleSuccess} onClose={() => setShowForm(false)} />}
+      {showForm && <NewPurchaseForm products={products} suppliers={suppliers} onSuccess={handleSuccess} onClose={() => setShowForm(false)} purchaseCount={purchases.length} />}
       {viewId && <PurchaseDetailModal purchaseId={viewId} onClose={() => setViewId(null)} onReturned={load} />}
     </AdminLayout>
   );
