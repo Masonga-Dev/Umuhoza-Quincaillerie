@@ -16,12 +16,12 @@ router.get('/daily', async (req, res) => {
        FROM sale_items si
        JOIN products p ON si.product_id = p.id
        JOIN sales s ON si.sale_id = s.id
-       WHERE s.status != 'Cancelled'
+       WHERE s.status != 'Cancelled' AND DATE(s.sale_date) = CURDATE()
        GROUP BY si.product_id ORDER BY quantity_sold DESC LIMIT 10`
     );
     const [paymentMethods] = await pool.query(
       `SELECT payment_method, COUNT(*) AS count, SUM(total_amount) AS total
-       FROM sales WHERE status != 'Cancelled'
+       FROM sales WHERE status != 'Cancelled' AND DATE(sale_date) = CURDATE()
        GROUP BY payment_method ORDER BY count DESC`
     );
     const [categoryRevenue] = await pool.query(
@@ -30,7 +30,7 @@ router.get('/daily', async (req, res) => {
        JOIN products p ON p.id = si.product_id
        LEFT JOIN categories c ON c.id = p.category_id
        JOIN sales s ON s.id = si.sale_id
-       WHERE s.status != 'Cancelled'
+       WHERE s.status != 'Cancelled' AND DATE(s.sale_date) = CURDATE()
        GROUP BY p.category_id ORDER BY revenue DESC LIMIT 8`
     );
     res.json({ summary: summary[0], best_selling: bestSelling, payment_methods: paymentMethods, category_revenue: categoryRevenue });
