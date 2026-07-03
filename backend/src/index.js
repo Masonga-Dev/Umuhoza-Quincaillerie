@@ -23,6 +23,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Serialize BigInt values from mysql2 v3 as numbers in all JSON responses
+app.set('json replacer', (_, v) => (typeof v === 'bigint' ? Number(v) : v));
+
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
