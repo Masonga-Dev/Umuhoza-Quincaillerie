@@ -27,6 +27,43 @@ router.get('/', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch purchases' }); }
 });
 
+router.get('/export', async (req, res) => {
+  const { period } = req.query;
+  let dateFilter = '';
+  if (period === 'week')  dateFilter = 'AND p.purchase_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+  if (period === 'month') dateFilter = 'AND p.purchase_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+  if (period === 'year')  dateFilter = 'AND YEAR(p.purchase_date) = YEAR(CURDATE())';
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         p.id                                       AS purchase_id,
+         p.reference_number,
+         p.purchase_date,
+         s.name                                     AS supplier_name,
+         COALESCE(s.phone, s.email, '')             AS supplier_contact,
+         prod.name                                  AS product_name,
+         prod.sku                                   AS product_sku,
+         NULLIF(CONCAT_WS(' / ',
+           NULLIF(pv.color,''), NULLIF(pv.size,'')), '') AS variant,
+         pi.quantity,
+         pi.unit_cost,
+         pi.subtotal,
+         p.payment_status,
+         p.payment_method,
+         u.name                                     AS recorded_by
+       FROM purchase_items pi
+       JOIN purchases p    ON p.id  = pi.purchase_id
+       LEFT JOIN suppliers s    ON s.id  = p.supplier_id
+       JOIN products prod  ON prod.id = pi.product_id
+       LEFT JOIN product_variants pv ON pv.id = pi.product_variant_id
+       LEFT JOIN users u   ON u.id  = p.created_by
+       WHERE 1=1 ${dateFilter}
+       ORDER BY p.purchase_date DESC, p.id, pi.id`
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not generate export' }); }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const [pRows] = await pool.query(

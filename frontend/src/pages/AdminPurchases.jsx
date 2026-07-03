@@ -465,32 +465,39 @@ export default function AdminPurchases() {
     }).catch(console.error);
   }, []);
 
-  const handleExport = (period) => {
-    const start = getPeriodStart(period);
-    const end   = getPeriodEnd(period);
-    const rows = purchases
-      .filter(p => {
-        const d = new Date(p.purchase_date);
-        return (!start || d >= start) && (!end || d <= end);
-      })
-      .map(p => [
-        p.id,
-        p.reference_number || '',
-        new Date(p.purchase_date).toLocaleDateString('en-RW'),
-        p.supplier_name || '',
-        p.supplier_contact || '',
-        p.created_by_name || '',
-        p.status || '',
-        p.payment_status || '',
-        p.payment_method || '',
-        'RWF',
-        p.notes || '',
+  const handleExport = async (period) => {
+    try {
+      const res = await API.get('/purchases/export', {
+        headers: HEADERS(),
+        params: period && period !== 'all' ? { period } : {},
+      });
+      const data = res.data || [];
+      const rows = data.map(r => [
+        r.purchase_id,
+        r.reference_number || '',
+        new Date(r.purchase_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        r.supplier_name || '',
+        r.supplier_contact || '',
+        r.product_name || '',
+        r.product_sku || '',
+        r.variant || '',
+        r.quantity,
+        r.unit_cost,
+        r.subtotal,
+        r.payment_status || '',
+        r.payment_method || '',
+        r.recorded_by || '',
       ]);
-    exportToCSV(
-      `purchases-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Purchase ID', 'Reference Number', 'Purchase Date', 'Supplier', 'Supplier Contact', 'Recorded By', 'Purchase Status', 'Payment Status', 'Payment Method', 'Currency', 'Notes'],
-      rows
-    );
+      exportToCSV(
+        `purchases-detail-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Purchase ID', 'Reference Number', 'Purchase Date', 'Supplier', 'Supplier Contact',
+         'Product', 'SKU', 'Variant', 'Quantity', 'Unit Cost (RWF)', 'Subtotal (RWF)',
+         'Payment Status', 'Payment Method', 'Recorded By'],
+        rows
+      );
+    } catch (e) {
+      console.error('Export failed', e);
+    }
   };
 
   const handleSuccess = () => {
