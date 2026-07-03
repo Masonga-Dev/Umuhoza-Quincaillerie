@@ -464,14 +464,20 @@ export default function AdminPurchases() {
       })
       .map(p => [
         p.id,
+        p.reference_number || '',
         new Date(p.purchase_date).toLocaleDateString('en-RW'),
         p.supplier_name || '',
-        p.reference_number || '',
-        p.total_cost,
+        p.supplier_contact || '',
+        p.created_by_name || '',
+        p.status || '',
+        p.payment_status || '',
+        p.payment_method || '',
+        'RWF',
+        p.notes || '',
       ]);
     exportToCSV(
       `purchases-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['#', 'Date', 'Supplier', 'Reference', 'Total Cost (RWF)'],
+      ['Purchase ID', 'Reference Number', 'Purchase Date', 'Supplier', 'Supplier Contact', 'Recorded By', 'Purchase Status', 'Payment Status', 'Payment Method', 'Currency', 'Notes'],
       rows
     );
   };

@@ -15,7 +15,9 @@ function determineStatus(qty, min = 5) {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT p.*, s.name AS supplier_name, u.name AS created_by_name
+      `SELECT p.*, s.name AS supplier_name,
+              COALESCE(s.phone, s.email, '') AS supplier_contact,
+              u.name AS created_by_name
        FROM purchases p
        LEFT JOIN suppliers s ON s.id = p.supplier_id
        LEFT JOIN users u ON u.id = p.created_by
