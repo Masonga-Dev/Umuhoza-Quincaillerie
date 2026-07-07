@@ -180,7 +180,7 @@ export default function ProductDetail() {
         {/* Product info */}
         <div className="space-y-5">
           {product.category_name && (
-            <span className="text-xs font-semibold uppercase tracking-widest text-amber-500">{product.category_name}</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-orange-500">{product.category_name}</span>
           )}
           <h1 className="text-3xl font-bold text-slate-900 leading-snug">{product.name}</h1>
 

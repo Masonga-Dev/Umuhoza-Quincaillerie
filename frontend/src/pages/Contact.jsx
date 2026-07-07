@@ -60,7 +60,7 @@ function Contact() {
     setTimeout(() => setSent(false), 4000);
   };
 
-  const inputCls = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-slate-900 placeholder:text-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20';
+  const inputCls = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-slate-900 placeholder:text-gray-400 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20';
 
   return (
     <div>
@@ -75,8 +75,8 @@ function Contact() {
           <div className="absolute inset-0 bg-[#0d1b3e]/55" />
           <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-gray-50 via-[#0a1628]/80 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 sm:px-12 pb-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/40 bg-orange-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-orange-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
               Umuhoza Quincaillerie
             </span>
             {localHeroText(hero, 'title') && (
@@ -95,11 +95,11 @@ function Contact() {
         <section className="-mx-4 sm:-mx-6 -mt-8 overflow-hidden bg-[#1a2d5a] px-8 py-10 text-white">
           <div className="mx-auto max-w-7xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-400">Get in Touch</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-400">Get in Touch</p>
               <h1 className="mt-2 text-3xl font-extrabold">{t('contact.title')}</h1>
               <p className="mt-2 max-w-xl text-slate-300 text-sm">{t('contact.subtitle')} {siteName} {t('contact.subtitleEnd')}</p>
             </div>
-            <a href={`tel:${phone}`} className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-slate-900 shadow-lg transition hover:bg-amber-300">
+            <a href={`tel:${phone}`} className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-bold text-slate-900 shadow-lg transition hover:bg-orange-400">
               <PhoneIcon className="h-4 w-4" /> {t('contact.callNow')}
             </a>
           </div>
@@ -115,7 +115,7 @@ function Contact() {
           {/* LEFT — Contact Form */}
           <div className="flex flex-col gap-5">
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">Send Us a Message</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">Send Us a Message</p>
               <h2 className="mt-1 text-xl font-extrabold text-slate-900">{t('contact.title') || 'Contact Us'}</h2>
               <p className="mt-1 text-sm text-gray-500">Fill the form and we'll respond via WhatsApp or email.</p>
 
@@ -154,7 +154,7 @@ function Contact() {
                 </button>
                 <a
                   href={`mailto:${email}?subject=Inquiry from ${form.name || 'Customer'}&body=${encodeURIComponent(`Name: ${form.name}\nPhone: ${form.phone}\n\n${form.message}`)}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:bg-amber-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-orange-400 hover:bg-orange-50"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -167,7 +167,7 @@ function Contact() {
             {/* Hours + CTAs */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#1a2d5a] text-amber-400">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#1a2d5a] text-orange-400">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <div>
@@ -177,7 +177,7 @@ function Contact() {
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <a href={`tel:${phone}`} className="flex items-center gap-2 rounded-xl bg-[#1a2d5a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f1f4a]">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-slate-900"><PhoneIcon className="h-3 w-3" /></span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-slate-900"><PhoneIcon className="h-3 w-3" /></span>
                   {t('contact.callNow')}
                 </a>
                 <a href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
@@ -194,14 +194,14 @@ function Contact() {
 
             {/* Map header bar */}
             <div className="flex flex-shrink-0 items-center gap-3 bg-[#1a2d5a] px-5 py-3.5">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-400 text-slate-900">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500 text-slate-900">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Our Location</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400">Our Location</p>
                 <p className="truncate text-sm font-semibold text-white">{siteName}</p>
                 <p className="truncate text-xs text-slate-300">{address}</p>
               </div>
@@ -227,7 +227,7 @@ function Contact() {
 
               {/* Address + directions */}
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -263,7 +263,7 @@ function Contact() {
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${siteName}, ${address}`)}`}
                   target="_blank" rel="noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:border-amber-300 hover:bg-amber-50">
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:border-orange-400 hover:bg-orange-50">
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                   </svg>

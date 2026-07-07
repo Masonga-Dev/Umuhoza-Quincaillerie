@@ -56,8 +56,8 @@ function Gallery() {
           <div className="absolute inset-0 bg-[#0d1b3e]/55" />
           <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-gray-50 via-[#0a1628]/80 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 sm:px-12 pb-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-orange-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-orange-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
               {t('gallery.title')}
             </span>
             {localHeroText(hero, 'title') && (
@@ -80,11 +80,11 @@ function Gallery() {
           <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full"
             style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 65%)' }} />
           <div className="relative mx-auto max-w-3xl px-6 text-center">
-            <span className="inline-block rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-amber-400">
+            <span className="inline-block rounded-full border border-amber-400/30 bg-orange-500/10 px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-orange-400">
               {t('gallery.title')}
             </span>
             <h1 className="mt-4 text-4xl font-extrabold sm:text-5xl">
-              Our <span className="text-amber-400">Project Gallery</span>
+              Our <span className="text-orange-400">Project Gallery</span>
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-slate-300">{t('gallery.subtitle')}</p>
           </div>
@@ -140,7 +140,7 @@ function Gallery() {
                       {img.title && (
                         <p className="text-sm font-semibold text-white">{img.title}</p>
                       )}
-                      <span className="mt-1 inline-flex items-center gap-1 text-xs text-amber-400">
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs text-orange-400">
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                         </svg>

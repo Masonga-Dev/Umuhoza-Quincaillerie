@@ -181,9 +181,9 @@ export default function IndustriesSection() {
       {/* Header */}
       <div className="mb-10 text-center">
         <div className="inline-flex items-center gap-2">
-          <span className="h-px w-8 bg-amber-400" />
-          <span className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-500">What We Support</span>
-          <span className="h-px w-8 bg-amber-400" />
+          <span className="h-px w-8 bg-orange-500" />
+          <span className="text-xs font-semibold uppercase tracking-[0.25em] text-orange-500">What We Support</span>
+          <span className="h-px w-8 bg-orange-500" />
         </div>
         <h2 className="mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">Industries We Serve</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-slate-500">
@@ -202,7 +202,7 @@ export default function IndustriesSection() {
                 ? { animation: `cardBounceIn 0.65s cubic-bezier(0.34,1.56,0.64,1) ${i * 110}ms both` }
                 : { opacity: 0 }
             }
-            className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white px-3 py-6 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-lg"
+            className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white px-3 py-6 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg"
           >
             <div className="h-16 w-16 sm:h-20 sm:w-20">
               {ind.icon}

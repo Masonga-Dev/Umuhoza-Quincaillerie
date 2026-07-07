@@ -73,8 +73,8 @@ function About() {
           <div className="absolute inset-0 bg-[#0d1b3e]/55" />
           <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-gray-50 via-[#0a1628]/80 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 sm:px-12 pb-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/40 bg-orange-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-orange-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
               {t('about.label')}
             </span>
             {localHeroText(hero, 'title') && (
@@ -100,12 +100,12 @@ function About() {
           <div className="pointer-events-none absolute -bottom-20 left-0 h-80 w-80 rounded-full"
             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 65%)' }} />
           <div className="relative mx-auto max-w-3xl px-6 text-center">
-            <span className="inline-block rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-amber-400">
+            <span className="inline-block rounded-full border border-orange-400/30 bg-orange-500/10 px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-orange-400">
               {t('about.label')}
             </span>
             <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
               {t('about.title')}{' '}
-              <span className="text-amber-400">{siteName}</span>
+              <span className="text-orange-400">{siteName}</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-slate-300">
               {siteName} {t('about.descSuffix')}
@@ -114,7 +114,7 @@ function About() {
               <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-slate-400">{footerText}</p>
             )}
             <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Link to="/contact" className="rounded-full bg-amber-500 px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-amber-400">
+              <Link to="/contact" className="rounded-full bg-orange-500 px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-orange-500">
                 {t('about.cta.contact')}
               </Link>
               <Link to="/products" className="rounded-full border border-white/25 bg-white/10 px-8 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20">
@@ -137,8 +137,8 @@ function About() {
             { value: `${stats.customers || 0}+`, label: t('about.stats.customers'), icon: <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
             { value: `${yearsExp}+`, label: t('about.stats.experience'), icon: <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
           ].map((item) => (
-            <div key={item.label} className="group rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:border-amber-200 hover:shadow-lg">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 transition group-hover:bg-amber-500 group-hover:text-white">
+            <div key={item.label} className="group rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-500 transition group-hover:bg-orange-500 group-hover:text-white">
                 {item.icon}
               </div>
               <p className="mt-4 text-3xl font-extrabold" style={{ color: '#1a2d5a' }}>{item.value}</p>
@@ -155,9 +155,9 @@ function About() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 text-center">
             <div className="inline-flex items-center gap-2">
-              <span className="h-px w-8 bg-amber-400" />
-              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-500">Our Purpose</span>
-              <span className="h-px w-8 bg-amber-400" />
+              <span className="h-px w-8 bg-orange-500" />
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-orange-500">Our Purpose</span>
+              <span className="h-px w-8 bg-orange-500" />
             </div>
             <h2 className="mt-2 text-3xl font-extrabold" style={{ color: '#1a2d5a' }}>Driven by Quality &amp; Trust</h2>
           </div>
@@ -168,29 +168,29 @@ function About() {
               <div className="pointer-events-none absolute -bottom-12 -right-12 h-48 w-48 rounded-full"
                 style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.15), transparent 70%)' }} />
               <div className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400/20 text-amber-400">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-400">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <h3 className="mt-5 text-2xl font-bold">{t('about.mission.title')}</h3>
-                <div className="mt-2 h-1 w-12 rounded-full bg-amber-400" />
+                <div className="mt-2 h-1 w-12 rounded-full bg-orange-500" />
                 <p className="mt-4 leading-relaxed text-slate-300">{t('about.mission.text')}</p>
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-3xl border border-amber-100 bg-white p-8 shadow-sm">
+            <div className="relative overflow-hidden rounded-3xl border border-orange-100 bg-white p-8 shadow-sm">
               <div className="pointer-events-none absolute -bottom-12 -right-12 h-48 w-48 rounded-full opacity-[0.05]"
                 style={{ background: '#1a2d5a' }} />
               <div className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </div>
                 <h3 className="mt-5 text-2xl font-bold" style={{ color: '#1a2d5a' }}>Our Vision</h3>
-                <div className="mt-2 h-1 w-12 rounded-full bg-amber-400" />
+                <div className="mt-2 h-1 w-12 rounded-full bg-orange-500" />
                 <p className="mt-4 leading-relaxed text-slate-600">
                   To be Rwanda&apos;s most trusted hardware and construction materials supplier — empowering builders,
                   contractors, and homeowners with quality products, fair prices, and expert guidance.
@@ -208,17 +208,17 @@ function About() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 text-center">
             <div className="inline-flex items-center gap-2">
-              <span className="h-px w-8 bg-amber-400" />
-              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-500">{t('about.why.title')}</span>
-              <span className="h-px w-8 bg-amber-400" />
+              <span className="h-px w-8 bg-orange-500" />
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-orange-500">{t('about.why.title')}</span>
+              <span className="h-px w-8 bg-orange-500" />
             </div>
             <h2 className="mt-2 text-3xl font-extrabold" style={{ color: '#1a2d5a' }}>Why Customers Choose Us</h2>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {displayWhy.map((item, i) => (
               <div key={item.title || i}
-                className="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-amber-200 hover:shadow-lg">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 transition group-hover:bg-amber-500 group-hover:text-white">
+                className="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-500 transition group-hover:bg-orange-500 group-hover:text-white">
                   {WHY_ICONS[i % WHY_ICONS.length]}
                 </div>
                 <div>
@@ -249,13 +249,13 @@ function About() {
         </svg>
 
         <div className="px-4 pb-16 pt-10 sm:px-8 sm:pb-24">
-          <span className="inline-block rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-amber-400">
+          <span className="inline-block rounded-full border border-orange-400/30 bg-orange-500/10 px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-orange-400">
             Get Started
           </span>
           <h2 className="mt-5 text-3xl font-extrabold sm:text-4xl">{t('about.cta.title')}</h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">{t('about.cta.text')}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link to="/contact" className="rounded-full bg-amber-500 px-9 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-amber-400">
+            <Link to="/contact" className="rounded-full bg-orange-500 px-9 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-orange-500">
               {t('about.cta.contact')}
             </Link>
             <Link to="/products" className="rounded-full border border-white/25 px-9 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10">

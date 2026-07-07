@@ -116,8 +116,8 @@ export default function Products() {
           <div className="absolute inset-0 bg-[#0d1b3e]/55" />
           <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-gray-50 via-[#0a1628]/80 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 sm:px-12 pb-10">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-orange-400/40 bg-orange-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-orange-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
               Umuhoza Quincaillerie
             </span>
             {localHeroText(hero, 'title') && (
@@ -133,7 +133,7 @@ export default function Products() {
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 onClick={() => document.getElementById('products-grid')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-2.5 text-sm font-bold text-slate-900 shadow-lg transition hover:bg-amber-300"
+                className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-2.5 text-sm font-bold text-slate-900 shadow-lg transition hover:bg-orange-400"
               >
                 Explore Products
               </button>
@@ -157,12 +157,12 @@ export default function Products() {
                 value={search}
                 onChange={e => handleSearch(e.target.value)}
                 placeholder={t('products.search') || 'Search products by name…'}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 py-3 text-sm text-slate-900 placeholder:text-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 py-3 text-sm text-slate-900 placeholder:text-gray-400 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
               />
               {search && <button onClick={() => handleSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none transition">×</button>}
             </div>
             {(view !== 'categories' || search) && (
-              <button onClick={handleBack} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-amber-400 hover:text-amber-700">
+              <button onClick={handleBack} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-orange-500 hover:text-orange-600">
                 ← {subcategoryId ? (selectedSubcategory ? localName(selectedSubcategory.parentCategory) : 'Back') : 'All Categories'}
               </button>
             )}
@@ -170,10 +170,10 @@ export default function Products() {
 
           {/* Breadcrumb */}
           <div className="mt-2.5 flex items-center gap-2 text-sm text-gray-400">
-            <button onClick={() => { setSearch(''); setSearchParams({}); }} className="transition hover:text-amber-600">Products</button>
+            <button onClick={() => { setSearch(''); setSearchParams({}); }} className="transition hover:text-orange-500">Products</button>
             {selectedCategory && (
               <><span className="text-gray-300">›</span>
-              <button onClick={() => { setSearch(''); setSearchParams({ category: selectedCategory.id }); }} className="transition hover:text-amber-600">{localName(selectedCategory)}</button></>
+              <button onClick={() => { setSearch(''); setSearchParams({ category: selectedCategory.id }); }} className="transition hover:text-orange-500">{localName(selectedCategory)}</button></>
             )}
             {selectedSubcategory && (
               <><span className="text-gray-300">›</span>
@@ -181,7 +181,7 @@ export default function Products() {
             )}
             {search && (
               <><span className="text-gray-300">›</span>
-              <span className="text-slate-700">Results for <span className="text-amber-600">"{search}"</span></span></>
+              <span className="text-slate-700">Results for <span className="text-orange-500">"{search}"</span></span></>
             )}
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function Products() {
           <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">Our Products</p>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">Our Products</p>
                 <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">{t('products.title') || 'Shop by Category'}</h2>
                 <p className="mt-2 text-sm text-gray-500">Select a category to explore our products</p>
               </div>
@@ -213,10 +213,10 @@ export default function Products() {
                     <div
                       key={cat.id}
                       onClick={() => handleCategoryClick(cat)}
-                      className="group cursor-pointer overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-amber-300"
+                      className="group cursor-pointer overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400"
                     >
                       {/* Amber top accent on hover */}
-                      <div className="h-1 bg-gradient-to-r from-[#1a2d5a] to-amber-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="h-1 bg-gradient-to-r from-[#1a2d5a] to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                       {/* Image */}
                       <div className="relative overflow-hidden" style={{ height: 200 }}>
@@ -229,7 +229,7 @@ export default function Products() {
                         )}
                         {hasImg && <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition" />}
                         <div className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition">
-                          <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                          <svg className="h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                         </div>
                       </div>
 
@@ -237,11 +237,11 @@ export default function Products() {
                       <div className="p-5">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-[#1a2d5a] transition">{localName(cat)}</h3>
-                          <span className="inline-flex flex-shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+                          <span className="inline-flex flex-shrink-0 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-600">
                             {cat.product_count > 0 ? cat.product_count : 0}
                           </span>
                         </div>
-                        <p className="mt-2 text-sm text-gray-400 line-clamp-2 leading-relaxed min-h-[2.5rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                        <p className="mt-2 text-sm text-gray-400 line-clamp-2 leading-relaxed min-h-[2.5rem] transition-opacity duration-300">
                           {localDesc(cat)}
                         </p>
                         {subs.length > 0 && (
@@ -250,7 +250,7 @@ export default function Products() {
                               <button
                                 key={sub.id}
                                 onClick={e => handleSubcategoryClick(sub, e)}
-                                className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                                className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition hover:border-orange-400 hover:bg-orange-50 hover:text-orange-600"
                               >
                                 {localName(sub)}
                               </button>
@@ -259,7 +259,7 @@ export default function Products() {
                           </div>
                         )}
                         <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
-                          <p className="text-xs font-semibold text-amber-600 group-hover:text-amber-500 transition">
+                          <p className="text-xs font-semibold text-orange-500 group-hover:text-orange-500 transition">
                             {subs.length > 0 ? `See ${subs.length} subcategor${subs.length === 1 ? 'y' : 'ies'}` : 'Browse products'} →
                           </p>
                         </div>
@@ -276,7 +276,7 @@ export default function Products() {
         {view === 'subcategories' && selectedCategory && (
           <div className="space-y-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">{localName(selectedCategory)}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">{localName(selectedCategory)}</p>
               <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">All Subcategories</h2>
             </div>
 
@@ -291,9 +291,9 @@ export default function Products() {
                     <button
                       key={sub.id}
                       onClick={e => handleSubcategoryClick(sub, e)}
-                      className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-amber-300"
+                      className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400"
                     >
-                      <div className="h-1 bg-amber-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="h-1 bg-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative overflow-hidden" style={{ height: 150 }}>
                         {hasImg ? (
                           <img src={imgUrl(sub.representative_image)} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
@@ -303,15 +303,15 @@ export default function Products() {
                           </div>
                         )}
                         <div className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white shadow opacity-0 group-hover:opacity-100 transition">
-                          <svg className="h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                          <svg className="h-3.5 w-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                         </div>
                       </div>
                       <div className="p-4">
                         <p className="font-bold text-slate-900 leading-snug group-hover:text-[#1a2d5a] transition">{localName(sub)}</p>
                         {sub.product_count > 0 && (
-                          <p className="mt-0.5 text-xs font-semibold text-amber-600">{sub.product_count} product{sub.product_count !== 1 ? 's' : ''}</p>
+                          <p className="mt-0.5 text-xs font-semibold text-orange-500">{sub.product_count} product{sub.product_count !== 1 ? 's' : ''}</p>
                         )}
-                        <p className="mt-1.5 text-xs text-gray-400 line-clamp-2 leading-relaxed min-h-[2rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                        <p className="mt-1.5 text-xs text-gray-400 line-clamp-2 leading-relaxed min-h-[2rem] transition-opacity duration-300">
                           {localDesc(sub)}
                         </p>
                       </div>
@@ -328,11 +328,11 @@ export default function Products() {
           <div className="space-y-6">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">
                   {selectedSubcategory ? localName(selectedSubcategory.parentCategory) : (selectedCategory ? localName(selectedCategory) : 'Search Results')}
                 </p>
                 <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
-                  {search ? <>Results for <span className="text-amber-600">"{search}"</span></>
+                  {search ? <>Results for <span className="text-orange-500">"{search}"</span></>
                          : selectedSubcategory ? localName(selectedSubcategory)
                          : selectedCategory ? localName(selectedCategory)
                          : 'All Products'}
@@ -343,7 +343,7 @@ export default function Products() {
 
             {loading ? (
               <div className="flex h-64 items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-amber-500" />
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-orange-500" />
               </div>
             ) : products.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gray-300 p-16 text-center">
@@ -360,9 +360,9 @@ export default function Products() {
                     <div
                       key={product.id}
                       onClick={() => navigate(`/products/${product.id}`)}
-                      className="group cursor-pointer rounded-2xl border border-gray-200 bg-white overflow-hidden flex flex-col shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-amber-300"
+                      className="group cursor-pointer rounded-2xl border border-gray-200 bg-white overflow-hidden flex flex-col shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400"
                     >
-                      <div className="h-1 bg-gradient-to-r from-[#1a2d5a] to-amber-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="h-1 bg-gradient-to-r from-[#1a2d5a] to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                       {/* Image */}
                       <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '16/9' }}>
@@ -381,16 +381,16 @@ export default function Products() {
                       <div className="flex flex-1 flex-col p-5">
                         <div className="flex items-center gap-2 mb-3 flex-wrap">
                           {product.subcategory_name && (
-                            <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">{product.subcategory_name}</span>
+                            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-orange-600">{product.subcategory_name}</span>
                           )}
                           {!product.subcategory_name && product.category_name && (
-                            <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">{product.category_name}</span>
+                            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-orange-600">{product.category_name}</span>
                           )}
                         </div>
 
                         <h3 className="font-bold text-slate-900 leading-snug line-clamp-2 text-base group-hover:text-[#1a2d5a] transition">{product.name}</h3>
 
-                        <p className="mt-2 text-sm text-gray-400 line-clamp-2 leading-relaxed min-h-[2.5rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                        <p className="mt-2 text-sm text-gray-400 line-clamp-2 leading-relaxed min-h-[2.5rem] transition-opacity duration-300">
                           {localDesc(product)}
                         </p>
 
@@ -419,7 +419,7 @@ export default function Products() {
                         )}
 
                         <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
-                          <span className="text-xs font-semibold text-amber-600 group-hover:text-amber-500 transition">View Details →</span>
+                          <span className="text-xs font-semibold text-orange-500 group-hover:text-orange-500 transition">View Details →</span>
                           {showPrices && (product.min_variant_price > 0 || product.selling_price > 0) && (
                             <span className="text-sm font-bold text-slate-900">
                               {product.min_variant_price > 0 ? <span className="text-xs font-normal text-gray-400 mr-0.5">From </span> : null}
