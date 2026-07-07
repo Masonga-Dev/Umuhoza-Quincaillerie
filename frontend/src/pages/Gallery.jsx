@@ -134,11 +134,11 @@ function Gallery() {
                     className="w-full object-cover transition duration-500 group-hover:scale-105"
                     style={{ display: 'block' }}
                   />
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 flex items-end bg-gradient-to-t from-[#0d1b3e]/80 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  {/* Always-visible overlay */}
+                  <div className="absolute inset-0 flex items-end bg-gradient-to-t from-[#0d1b3e]/75 via-transparent to-transparent">
                     <div className="w-full px-4 pb-4">
                       {img.title && (
-                        <p className="text-sm font-semibold text-white">{img.title}</p>
+                        <p className="text-sm font-semibold text-white leading-snug">{img.title}</p>
                       )}
                       <span className="mt-1 inline-flex items-center gap-1 text-xs text-orange-400">
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

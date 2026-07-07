@@ -102,9 +102,9 @@ function Home() {
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden rounded-[2.5rem] bg-slate-950 text-white shadow-2xl">
         <div className="absolute inset-0">
-          <img src={heroImage} alt="Hero" className="h-full w-full object-cover opacity-40" />
+          <img src={heroImage} alt="Hero" className="h-full w-full object-cover opacity-65" />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-slate-950/90" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/35 to-slate-950/65" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
           <div className="max-w-xl space-y-6">
             <span className="inline-flex rounded-full border border-orange-400/40 bg-orange-400/15 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-orange-300">

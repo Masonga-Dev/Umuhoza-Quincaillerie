@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import API from './api';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import Home from './pages/Home';
@@ -39,9 +39,20 @@ function ProtectedRoute({ element }) {
 function LanguageSwitcher() {
   const { lang, setLang } = useLanguage();
   const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
   const current = LANGS.find((l) => l.code === lang) || LANGS[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-orange-500 hover:text-orange-500"
@@ -53,19 +64,16 @@ function LanguageSwitcher() {
         </svg>
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 w-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-            {LANGS.map((l) => (
-              <button key={l.code} onClick={() => { setLang(l.code); setOpen(false); }}
-                className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition hover:bg-orange-50 hover:text-orange-500 ${lang === l.code ? 'bg-orange-50 font-semibold text-orange-600' : 'text-slate-700'}`}>
-                <img src={l.flag} alt={l.label} className="h-3.5 w-5 rounded-sm object-cover flex-shrink-0" />
-                <span>{l.label}</span>
-                {lang === l.code && <span className="ml-auto text-orange-500">✓</span>}
-              </button>
-            ))}
-          </div>
-        </>
+        <div className="absolute right-0 z-50 mt-2 w-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+          {LANGS.map((l) => (
+            <button key={l.code} onClick={() => { setLang(l.code); setOpen(false); }}
+              className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition hover:bg-orange-50 hover:text-orange-500 ${lang === l.code ? 'bg-orange-50 font-semibold text-orange-600' : 'text-slate-700'}`}>
+              <img src={l.flag} alt={l.label} className="h-3.5 w-5 rounded-sm object-cover flex-shrink-0" />
+              <span>{l.label}</span>
+              {lang === l.code && <span className="ml-auto text-orange-500">✓</span>}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
