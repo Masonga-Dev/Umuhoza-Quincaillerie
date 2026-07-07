@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
+import ScrollReveal from '../components/ScrollReveal';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
@@ -113,6 +114,7 @@ function Contact() {
         <section className="grid gap-6 lg:grid-cols-2 lg:items-start">
 
           {/* LEFT — Contact Form */}
+          <ScrollReveal>
           <div className="flex flex-col gap-5">
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">Send Us a Message</p>
@@ -188,6 +190,7 @@ function Contact() {
               </div>
             </div>
           </div>
+          </ScrollReveal>
 
           {/* RIGHT — Google Maps */}
           <div className="flex flex-col overflow-hidden rounded-3xl border border-gray-200 shadow-sm">

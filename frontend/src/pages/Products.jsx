@@ -2,6 +2,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
+import ScrollReveal from '../components/ScrollReveal';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
@@ -205,13 +206,13 @@ export default function Products() {
               <div className="rounded-2xl border border-dashed border-gray-300 p-16 text-center text-gray-400">No categories yet.</div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {categories.map(cat => {
+                {categories.map((cat, idx) => {
                   const hasImg = !!cat.representative_image;
                   const emoji  = getEmoji(cat.name);
                   const subs   = cat.subcategories || [];
                   return (
+                    <ScrollReveal key={cat.id} delay={Math.min(idx, 5) * 80}>
                     <div
-                      key={cat.id}
                       onClick={() => handleCategoryClick(cat)}
                       className="group cursor-pointer overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400"
                     >
@@ -265,6 +266,7 @@ export default function Products() {
                         </div>
                       </div>
                     </div>
+                    </ScrollReveal>
                   );
                 })}
               </div>
@@ -284,12 +286,12 @@ export default function Products() {
               <div className="rounded-2xl border border-dashed border-gray-300 p-16 text-center text-gray-400">No subcategories in this category yet.</div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {selectedCategory.subcategories.map(sub => {
+                {selectedCategory.subcategories.map((sub, idx) => {
                   const emoji  = getEmoji(sub.name);
                   const hasImg = !!sub.representative_image;
                   return (
+                    <ScrollReveal key={sub.id} delay={Math.min(idx, 5) * 80}>
                     <button
-                      key={sub.id}
                       onClick={e => handleSubcategoryClick(sub, e)}
                       className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400"
                     >
@@ -316,6 +318,7 @@ export default function Products() {
                         </p>
                       </div>
                     </button>
+                    </ScrollReveal>
                   );
                 })}
               </div>
@@ -352,13 +355,13 @@ export default function Products() {
               </div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {products.map(product => {
+                {products.map((product, idx) => {
                   const variantDisplay = getVariantDisplay(product);
                   const emoji = getEmoji(product.category_name || '');
                   const isAvailable = product.status !== 'Out of Stock';
                   return (
+                    <ScrollReveal key={product.id} delay={Math.min(idx, 5) * 70}>
                     <div
-                      key={product.id}
                       onClick={() => navigate(`/products/${product.id}`)}
                       className="group cursor-pointer rounded-2xl border border-gray-200 bg-white overflow-hidden flex flex-col shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400"
                     >
@@ -430,6 +433,7 @@ export default function Products() {
                         </div>
                       </div>
                     </div>
+                    </ScrollReveal>
                   );
                 })}
               </div>

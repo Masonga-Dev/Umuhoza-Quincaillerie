@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 import IndustriesSection from '../components/IndustriesSection';
+import ScrollReveal from '../components/ScrollReveal';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
@@ -136,14 +137,16 @@ function About() {
             { value: `${stats.categories || 0}+`, label: t('about.stats.categories'), icon: <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg> },
             { value: `${stats.customers || 0}+`, label: t('about.stats.customers'), icon: <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
             { value: `${yearsExp}+`, label: t('about.stats.experience'), icon: <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
-          ].map((item) => (
-            <div key={item.label} className="group rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg">
+          ].map((item, idx) => (
+            <ScrollReveal key={item.label} delay={idx * 100}>
+            <div className="group rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-500 transition group-hover:bg-orange-500 group-hover:text-white">
                 {item.icon}
               </div>
               <p className="mt-4 text-3xl font-extrabold" style={{ color: '#1a2d5a' }}>{item.value}</p>
               <p className="mt-1.5 text-sm font-medium text-slate-500">{item.label}</p>
             </div>
+            </ScrollReveal>
           ))}
         </div>
       </section>
@@ -162,6 +165,7 @@ function About() {
             <h2 className="mt-2 text-3xl font-extrabold" style={{ color: '#1a2d5a' }}>Driven by Quality &amp; Trust</h2>
           </div>
 
+          <ScrollReveal>
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="relative overflow-hidden rounded-3xl p-8 text-white shadow-xl"
               style={{ background: 'linear-gradient(135deg, #1a2d5a 0%, #0d1b3e 100%)' }}>
@@ -198,6 +202,7 @@ function About() {
               </div>
             </div>
           </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -216,7 +221,8 @@ function About() {
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {displayWhy.map((item, i) => (
-              <div key={item.title || i}
+              <ScrollReveal key={item.title || i} delay={Math.min(i, 5) * 80}>
+              <div
                 className="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-500 transition group-hover:bg-orange-500 group-hover:text-white">
                   {WHY_ICONS[i % WHY_ICONS.length]}
@@ -228,6 +234,7 @@ function About() {
                   )}
                 </div>
               </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
+import ScrollReveal from '../components/ScrollReveal';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
@@ -122,10 +123,10 @@ function Gallery() {
         ) : (
           <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
             {images.map((img, idx) => (
+              <ScrollReveal key={img.id} delay={Math.min(idx, 5) * 70} className="mb-4 block">
               <button
-                key={img.id}
                 onClick={() => setLightbox(idx)}
-                className="group mb-4 block w-full overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:shadow-xl focus:outline-none"
+                className="group block w-full overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:shadow-xl focus:outline-none"
               >
                 <div className="relative overflow-hidden">
                   <img
@@ -150,6 +151,7 @@ function Gallery() {
                   </div>
                 </div>
               </button>
+              </ScrollReveal>
             ))}
           </div>
         )}
