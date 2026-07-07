@@ -11,8 +11,8 @@ function ScrollReveal({ children, delay = 0, className = '' }) {
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.1 }
+      ([entry]) => { setVisible(entry.isIntersecting); },
+      { threshold: 0.12 }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -23,8 +23,8 @@ function ScrollReveal({ children, delay = 0, className = '' }) {
       className={className}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(28px)',
-        transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
+        transform: visible ? 'translateY(0)' : 'translateY(36px)',
+        transition: `opacity 0.85s cubic-bezier(0.22,1,0.36,1) ${delay}ms, transform 0.85s cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
       }}
     >
       {children}
@@ -51,7 +51,7 @@ const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 const STATUS_CLASS = {
   'In Stock': 'bg-emerald-100 text-emerald-700',
-  'Low Stock': 'bg-amber-100 text-amber-700',
+  'Low Stock': 'bg-orange-100 text-orange-700',
   'Out of Stock': 'bg-red-100 text-red-700',
 };
 
@@ -107,7 +107,7 @@ function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-slate-950/90" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
           <div className="max-w-xl space-y-6">
-            <span className="inline-flex rounded-full border border-amber-400/40 bg-amber-400/15 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-amber-300">
+            <span className="inline-flex rounded-full border border-orange-400/40 bg-orange-400/15 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-orange-300">
               {heroBadge}
             </span>
             <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -117,7 +117,7 @@ function Home() {
             <div className="flex flex-col gap-4 sm:flex-row">
               <Link
                 to="/products"
-                className="inline-flex items-center justify-center rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/30 transition hover:bg-amber-300"
+                className="inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-400"
               >
                 {heroCta}
               </Link>
@@ -161,7 +161,7 @@ function Home() {
             { value: `${yearsExp}+`, label: t('home.stats.experience') },
           ].map((item, idx) => (
             <ScrollReveal key={item.label} delay={idx * 100}>
-              <div className="rounded-3xl border border-amber-100 bg-amber-50 p-6 text-center">
+              <div className="rounded-3xl border border-orange-100 bg-orange-50 p-6 text-center">
                 <p className="text-3xl font-bold text-[#1a2d5a]">{item.value}</p>
                 <p className="mt-2 text-sm text-gray-500">{item.label}</p>
               </div>
@@ -178,7 +178,7 @@ function Home() {
         {/* Section header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-500">Our Products</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.32em] text-orange-500">Our Products</p>
             <h2 className="mt-3 text-3xl font-extrabold text-slate-900 sm:text-4xl">Shop by Category</h2>
             <p className="mt-3 max-w-lg text-slate-500">Browse our wide selection of quality hardware and construction materials.</p>
           </div>
@@ -268,13 +268,13 @@ function Home() {
           <div className="grid gap-0 lg:grid-cols-2">
             {/* Left: why items */}
             <div className="p-10 lg:p-14">
-              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-400">Why Us</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-orange-400">Why Us</p>
               <h3 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">{t('home.why.title')}</h3>
               <div className="mt-8 space-y-4">
                 {whyItems.length > 0
                   ? whyItems.map((item) => (
                       <div key={item.id} className="flex gap-4 rounded-2xl bg-white/5 p-5">
-                        <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-amber-400" />
+                        <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-orange-500" />
                         <div>
                           <h4 className="font-semibold text-white">{item.title}</h4>
                           {item.description && <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{item.description}</p>}
@@ -283,7 +283,7 @@ function Home() {
                     ))
                   : (t('home.why.defaultItems') || []).map((item) => (
                       <div key={item.title} className="flex gap-4 rounded-2xl bg-white/5 p-5">
-                        <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-amber-400" />
+                        <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-orange-500" />
                         <div>
                           <h4 className="font-semibold text-white">{item.title}</h4>
                           <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{item.desc}</p>
@@ -294,7 +294,7 @@ function Home() {
             </div>
             {/* Right: stat highlights */}
             <div className="flex flex-col justify-center gap-6 border-t border-white/10 p-10 lg:border-l lg:border-t-0 lg:p-14">
-              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-400">By the numbers</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-orange-400">By the numbers</p>
               {[
                 { value: `${stats.products ?? 0}+`, label: 'Products in stock' },
                 { value: `${stats.categories ?? 0}+`, label: 'Product categories' },
@@ -315,7 +315,7 @@ function Home() {
       {announcements.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="rounded-[2rem] bg-white p-8 shadow-lg">
-            <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-500">
+            <p className="text-sm font-semibold uppercase tracking-[0.32em] text-orange-500">
               {t('home.announcements.label')}
             </p>
             <h2 className="mt-3 text-2xl font-extrabold text-slate-900">
@@ -342,14 +342,14 @@ function Home() {
         <section className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-500">
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-orange-500">
                 {t('home.gallery.label')}
               </p>
               <h2 className="mt-2 text-3xl font-extrabold text-slate-900">
                 {t('home.gallery.title')}
               </h2>
             </div>
-            <Link to="/gallery" className="text-sm font-semibold text-amber-600 hover:underline transition">
+            <Link to="/gallery" className="text-sm font-semibold text-orange-500 hover:underline transition">
               {t('home.gallery.viewAll')}
             </Link>
           </div>
@@ -372,7 +372,7 @@ function Home() {
         <div className="overflow-hidden rounded-[2rem] bg-slate-950 px-8 py-12 text-white shadow-2xl">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-amber-400">
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-orange-400">
                 {t('home.cta.label')}
               </p>
               <h3 className="mt-4 text-3xl font-extrabold">{t('home.cta.title')}</h3>
@@ -384,13 +384,13 @@ function Home() {
                 className="inline-flex w-full items-center justify-between rounded-full bg-white/10 px-5 py-4 text-sm font-semibold text-white ring-1 ring-white/10 transition hover:bg-white/15"
               >
                 <span>{phone}</span>
-                <span className="text-amber-400">{t('home.cta.call')}</span>
+                <span className="text-orange-400">{t('home.cta.call')}</span>
               </a>
               <a
                 href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex w-full items-center justify-between rounded-full bg-amber-400 px-5 py-4 text-sm font-semibold text-slate-950 transition hover:bg-amber-300"
+                className="inline-flex w-full items-center justify-between rounded-full bg-orange-500 px-5 py-4 text-sm font-semibold text-slate-950 transition hover:bg-orange-400"
               >
                 <span>{t('home.cta.whatsapp')}</span>
                 <span className="font-bold">{t('home.cta.whatsappBtn')}</span>
