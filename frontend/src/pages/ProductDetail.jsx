@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api';
 
@@ -7,6 +7,19 @@ const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
 
 function fmtPrice(v) {
   return Number(v || 0).toLocaleString('en-RW');
+}
+
+function colorNameToCss(name) {
+  if (!name) return '#94a3b8';
+  const map = {
+    white: '#ffffff', black: '#111111', gray: '#6b7280', grey: '#6b7280',
+    red: '#ef4444', orange: '#f97316', yellow: '#facc15', green: '#22c55e',
+    blue: '#3b82f6', purple: '#a855f7', pink: '#ec4899', brown: '#92400e',
+    silver: '#c0c0c0', gold: '#d97706', beige: '#d4b896', navy: '#1e3a5f',
+    teal: '#14b8a6', cyan: '#06b6d4', lime: '#84cc16', indigo: '#6366f1',
+    violet: '#7c3aed', maroon: '#7f1d1d', olive: '#65a30d', coral: '#f87171',
+  };
+  return map[name.toLowerCase().trim()] || '#94a3b8';
 }
 
 function StatusBadge({ status }) {
@@ -52,13 +65,12 @@ export default function ProductDetail() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [zoomed, product]);
 
-  // Reset to image 0 whenever the selected variant changes
   useEffect(() => { setActiveImg(0); }, [selectedVariant?.id]);
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center rounded-3xl bg-white border border-slate-200">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"/>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent"/>
       </div>
     );
   }
@@ -67,13 +79,12 @@ export default function ProductDetail() {
     return (
       <div className="rounded-3xl bg-white border border-slate-200 p-12 text-center">
         <p className="text-slate-500">Product not found.</p>
-        <button onClick={() => navigate('/products')} className="mt-4 text-blue-600 hover:underline text-sm">← Back to products</button>
+        <button onClick={() => navigate('/products')} className="mt-4 text-orange-500 hover:underline text-sm">← Back to products</button>
       </div>
     );
   }
 
   const productImages = product.images?.length ? product.images : (product.image_path ? [{ id: 0, image_path: product.image_path, is_primary: 1 }] : []);
-  // If selected variant has its own image, show it first
   const variantImg = selectedVariant?.image_path ? { id: `v-${selectedVariant.id}`, image_path: selectedVariant.image_path } : null;
   const images = variantImg
     ? [variantImg, ...productImages.filter(i => i.image_path !== variantImg.image_path)]
@@ -93,8 +104,8 @@ export default function ProductDetail() {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-slate-500">
-        <button onClick={() => navigate('/products')} className="hover:text-blue-600 transition">Products</button>
-        {product.category_name && (<><span>›</span><button onClick={() => navigate(`/products?category=${product.category_id}`)} className="hover:text-blue-600 transition">{product.category_name}</button></>)}
+        <button onClick={() => navigate('/products')} className="hover:text-orange-500 transition">Products</button>
+        {product.category_name && (<><span>›</span><button onClick={() => navigate(`/products?category=${product.category_id}`)} className="hover:text-orange-500 transition">{product.category_name}</button></>)}
         <span>›</span>
         <span className="text-slate-800 font-medium truncate max-w-xs">{product.name}</span>
       </nav>
@@ -155,7 +166,7 @@ export default function ProductDetail() {
                 <button
                   key={img.id || i}
                   onClick={() => setActiveImg(i)}
-                  className={`flex-shrink-0 h-16 w-16 overflow-hidden rounded-xl border-2 transition ${activeImg === i ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:border-slate-300'}`}
+                  className={`flex-shrink-0 h-16 w-16 overflow-hidden rounded-xl border-2 transition ${activeImg === i ? 'border-orange-500 ring-2 ring-orange-200' : 'border-transparent hover:border-slate-300'}`}
                 >
                   <img src={imgUrl(img.image_path)} alt="" className="h-full w-full object-cover"/>
                 </button>
@@ -170,7 +181,7 @@ export default function ProductDetail() {
                 <button
                   key={i}
                   onClick={() => setActiveImg(i)}
-                  className={`rounded-full transition-all ${activeImg === i ? 'w-5 h-2 bg-blue-600' : 'w-2 h-2 bg-slate-300 hover:bg-slate-400'}`}
+                  className={`rounded-full transition-all ${activeImg === i ? 'w-5 h-2 bg-orange-500' : 'w-2 h-2 bg-slate-300 hover:bg-slate-400'}`}
                 />
               ))}
             </div>
@@ -186,7 +197,7 @@ export default function ProductDetail() {
 
           {/* Price */}
           {showPrices && currentPrice > 0 && (
-            <div className="text-2xl font-extrabold text-blue-600">{fmtPrice(currentPrice)} RWF</div>
+            <div className="text-2xl font-extrabold text-orange-600">{fmtPrice(currentPrice)} RWF</div>
           )}
 
           {/* Stock status */}
@@ -210,13 +221,23 @@ export default function ProductDetail() {
                     {variantColors.map(color => {
                       const v = variants.find(x => x.color === color && (!selectedVariant?.size || x.size === selectedVariant.size));
                       const active = selectedVariant?.color === color;
+                      const outOfStock = !v || v.stock_quantity === 0;
                       return (
                         <button
                           key={color}
-                          onClick={() => { if (v) setSelectedVariant(v); }}
-                          className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'} ${!v || v.stock_quantity === 0 ? 'opacity-40 line-through cursor-not-allowed' : ''}`}
+                          onClick={() => { if (v && !outOfStock) setSelectedVariant(v); }}
+                          className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-sm font-semibold transition
+                            ${active
+                              ? 'border-orange-500 bg-white text-slate-800 ring-2 ring-orange-200'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-orange-300'
+                            }
+                            ${outOfStock ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
-                          {color}
+                          <span
+                            className={`h-4 w-4 flex-shrink-0 rounded-full border ${active ? 'border-orange-400' : 'border-black/10'}`}
+                            style={{ backgroundColor: colorNameToCss(color) }}
+                          />
+                          <span className={outOfStock ? 'line-through' : ''}>{color}</span>
                         </button>
                       );
                     })}
@@ -231,14 +252,19 @@ export default function ProductDetail() {
                     {variantSizes.map(sizeLabel => {
                       const v = variants.find(x => [x.size, x.unit].filter(Boolean).join(' ') === sizeLabel && (!selectedVariant?.color || x.color === selectedVariant.color));
                       const active = [selectedVariant?.size, selectedVariant?.unit].filter(Boolean).join(' ') === sizeLabel;
-                      const size = sizeLabel;
+                      const outOfStock = !v || v.stock_quantity === 0;
                       return (
                         <button
-                          key={size}
-                          onClick={() => { if (v) setSelectedVariant(v); }}
-                          className={`rounded-xl border px-4 py-1.5 text-sm font-semibold transition ${active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'} ${!v || v.stock_quantity === 0 ? 'opacity-40 line-through cursor-not-allowed' : ''}`}
+                          key={sizeLabel}
+                          onClick={() => { if (v && !outOfStock) setSelectedVariant(v); }}
+                          className={`rounded-xl border-2 px-4 py-1.5 text-sm font-semibold transition
+                            ${active
+                              ? 'border-orange-500 bg-orange-500 text-white'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-orange-300'
+                            }
+                            ${outOfStock ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
-                          {size}
+                          <span className={outOfStock ? 'line-through' : ''}>{sizeLabel}</span>
                         </button>
                       );
                     })}
@@ -258,9 +284,9 @@ export default function ProductDetail() {
                     <tbody>
                       {variants.map(v => (
                         <tr key={v.id} onClick={() => setSelectedVariant(v)}
-                          className={`cursor-pointer border-b border-slate-100 transition hover:bg-white ${selectedVariant?.id === v.id ? 'bg-blue-50' : ''}`}>
+                          className={`cursor-pointer border-b border-slate-100 transition hover:bg-white ${selectedVariant?.id === v.id ? 'bg-orange-50' : ''}`}>
                           <td className="py-2 pr-4 font-medium text-slate-800">{v.sku || `Variant ${v.id}`}</td>
-                          {showPrices && <td className="py-2 pr-4 text-right text-blue-600 font-semibold">{fmtPrice(v.selling_price)} RWF</td>}
+                          {showPrices && <td className="py-2 pr-4 text-right text-orange-600 font-semibold">{fmtPrice(v.selling_price)} RWF</td>}
                           <td className="py-2"><StatusBadge status={v.status}/></td>
                         </tr>
                       ))}
@@ -275,13 +301,13 @@ export default function ProductDetail() {
           <div className="flex flex-wrap gap-3 pt-2">
             <a
               href="tel:+250788123456"
-              className="flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
+              className="flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 font-semibold text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600"
             >
               📞 Call to Order
             </a>
             <button
               onClick={() => navigate('/contact')}
-              className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:border-blue-400 hover:text-blue-600"
+              className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:border-orange-400 hover:text-orange-600"
             >
               Get a Quote
             </button>
