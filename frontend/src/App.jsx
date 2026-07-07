@@ -94,10 +94,10 @@ function AppContent() {
   const businessHours = settings.businessHours || 'Mon - Sat · 7:30 AM - 6:00 PM';
 
   const navClass = ({ isActive }) =>
-    isActive ? 'text-amber-600 font-semibold' : 'text-slate-700 hover:text-amber-600 transition';
+    isActive ? 'text-amber-500 font-semibold' : 'text-slate-700 hover:text-amber-500 transition';
 
   const mobileNavClass = ({ isActive }) =>
-    `block rounded-xl px-4 py-2.5 text-sm font-medium transition ${isActive ? 'bg-amber-50 text-amber-600 font-semibold' : 'text-slate-700 hover:bg-slate-50'}`;
+    `block rounded-xl px-4 py-2.5 text-sm font-medium transition ${isActive ? 'bg-amber-50 text-amber-500 font-semibold' : 'text-slate-700 hover:bg-amber-50 hover:text-amber-500'}`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -135,7 +135,7 @@ function AppContent() {
                   {phone}
                 </a>
                 <LanguageSwitcher />
-                <NavLink to="/contact" className="rounded-full bg-[#1a2d5a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-500 whitespace-nowrap">
+                <NavLink to="/contact" className="rounded-full bg-[#1a2d5a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-500 hover:shadow-amber-200 whitespace-nowrap">
                   Request a Quote
                 </NavLink>
               </div>
@@ -259,7 +259,7 @@ function AppContent() {
               {/* Quick Links */}
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-amber-400">{t('footer.quickLinks')}</p>
-                <ul className="mt-2.5 divide-y divide-slate-800/40 text-xs text-slate-400">
+                <ul className="mt-2.5 space-y-1.5 text-xs text-slate-400">
                   {[
                     { to: '/',         label: t('nav.home'),     end: true },
                     { to: '/products', label: t('nav.products') },
@@ -267,9 +267,9 @@ function AppContent() {
                     { to: '/about',    label: t('nav.about')    },
                     { to: '/contact',  label: t('nav.contact')  },
                   ].map(({ to, label, end }) => (
-                    <li key={to} className="py-1.5">
-                      <NavLink to={to} end={end} className="flex items-center gap-1.5 transition hover:text-amber-400">
-                        <span className="h-px w-2.5 rounded bg-amber-600/40" />{label}
+                    <li key={to}>
+                      <NavLink to={to} end={end} className="transition hover:text-amber-400 line-clamp-1">
+                        {label}
                       </NavLink>
                     </li>
                   ))}

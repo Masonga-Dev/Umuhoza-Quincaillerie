@@ -1,8 +1,36 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 import IndustriesSection from '../components/IndustriesSection';
+
+function ScrollReveal({ children, delay = 0, className = '' }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(28px)',
+        transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 const CATEGORY_META = {
   construction: { emoji: '🏗️', color: 'bg-orange-50 border-orange-200', accent: 'text-orange-600' },
@@ -131,11 +159,13 @@ function Home() {
             { value: `${stats.categories}+`, label: t('home.stats.categories') },
             { value: `${stats.customers}+`, label: t('home.stats.customers') },
             { value: `${yearsExp}+`, label: t('home.stats.experience') },
-          ].map((item) => (
-            <div key={item.label} className="rounded-3xl border border-amber-100 bg-amber-50 p-6 text-center">
-              <p className="text-3xl font-bold text-[#1a2d5a]">{item.value}</p>
-              <p className="mt-2 text-sm text-gray-500">{item.label}</p>
-            </div>
+          ].map((item, idx) => (
+            <ScrollReveal key={item.label} delay={idx * 100}>
+              <div className="rounded-3xl border border-amber-100 bg-amber-50 p-6 text-center">
+                <p className="text-3xl font-bold text-[#1a2d5a]">{item.value}</p>
+                <p className="mt-2 text-sm text-gray-500">{item.label}</p>
+              </div>
+            </ScrollReveal>
           ))}
         </div>
       </section>
@@ -163,14 +193,14 @@ function Home() {
         {/* Category tiles grid */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.length > 0 ? (
-            categories.slice(0, 6).map(cat => {
+            categories.slice(0, 6).map((cat, idx) => {
               const meta = getCatMeta(cat.name);
               const hasImg = !!cat.representative_image;
               return (
+                <ScrollReveal key={cat.id} delay={idx * 80}>
                 <button
-                  key={cat.id}
                   onClick={() => navigate(`/products?category=${cat.id}`)}
-                  className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:shadow-xl hover:-translate-y-1 text-left"
+                  className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:shadow-xl hover:-translate-y-1 text-left w-full"
                   style={{ aspectRatio: '4/3' }}
                 >
                   {/* Background image or color */}
@@ -214,12 +244,14 @@ function Home() {
                         {cat.product_count > 0 ? `${cat.product_count} product${cat.product_count !== 1 ? 's' : ''}` : 'No products yet'}
                       </span>
                     </div>
-                    {/* Description — reserved space, fades in on hover */}
-                    <p className={`mt-2 text-sm line-clamp-2 leading-relaxed min-h-[2.5rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${hasImg ? 'text-white/80' : 'text-slate-600'}`}>
-                      {localDesc(cat)}
-                    </p>
+                    {localDesc(cat) && (
+                      <p className={`mt-2 text-sm line-clamp-2 leading-relaxed ${hasImg ? 'text-white/75' : 'text-slate-600'}`}>
+                        {localDesc(cat)}
+                      </p>
+                    )}
                   </div>
                 </button>
+                </ScrollReveal>
               );
             })
           ) : (
@@ -290,13 +322,15 @@ function Home() {
               {t('home.announcements.title')}
             </h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {announcements.slice(0, 3).map((item) => (
-                <div key={item.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                  {item.content && (
-                    <p className="mt-2 text-sm text-slate-600 line-clamp-3">{item.content}</p>
-                  )}
-                </div>
+              {announcements.slice(0, 3).map((item, idx) => (
+                <ScrollReveal key={item.id} delay={idx * 100}>
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                    <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                    {item.content && (
+                      <p className="mt-2 text-sm text-slate-600 line-clamp-3">{item.content}</p>
+                    )}
+                  </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
