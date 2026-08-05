@@ -3,7 +3,7 @@ import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
 import { emitDataChanged, useDataRefresh } from '../utils/dataEvents';
-import ExportDropdown, { getPeriodStart, getPeriodEnd, getPeriodLabel } from '../components/ExportDropdown';
+import ExportDropdown, { getPeriodLabel } from '../components/ExportDropdown';
 
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = (v) => Number(v || 0).toLocaleString('en-RW');
@@ -574,27 +574,36 @@ export default function AdminSales() {
   const cashRevenue = filtered.filter(s => s.payment_method === 'Cash' && s.status !== 'Cancelled').reduce((s, x) => s + Number(x.total_amount || 0), 0);
   const mmRevenue = filtered.filter(s => s.payment_method === 'Mobile Money' && s.status !== 'Cancelled').reduce((s, x) => s + Number(x.total_amount || 0), 0);
 
-  const handleExport = (period) => {
-    const start = getPeriodStart(period);
-    const end   = getPeriodEnd(period);
-    const rows = sales
-      .filter(s => {
-        const d = new Date(s.sale_date);
-        return (!start || d >= start) && (!end || d <= end);
-      })
-      .map(s => [
-        s.invoice_number,
-        new Date(s.sale_date).toLocaleDateString('en-RW'),
-        s.customer_name || '',
-        s.payment_method || 'Cash',
-        s.status || 'Completed',
-        s.total_amount,
+  const handleExport = async (period) => {
+    try {
+      const isCustom = typeof period === 'object' && period.period === 'custom';
+      const params = isCustom
+        ? { period: 'custom', from: period.from.toISOString().slice(0, 10), to: period.to.toISOString().slice(0, 10) }
+        : { period };
+      const res = await API.get('/sales/export', { headers: HEADERS(), params });
+      const rows = res.data.map(r => [
+        r.invoice_number,
+        new Date(r.sale_date).toLocaleDateString('en-RW'),
+        new Date(r.sale_date).toLocaleTimeString('en-RW', { hour: '2-digit', minute: '2-digit' }),
+        r.customer_name,
+        r.product_name,
+        r.sku,
+        r.variant || '',
+        r.category,
+        r.quantity,
+        r.unit_price,
+        r.subtotal,
+        r.payment_method,
+        r.status,
+        r.served_by,
+        r.invoice_total,
       ]);
-    exportToCSV(
-      `sales-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Invoice', 'Date', 'Customer', 'Payment Method', 'Status', 'Total (RWF)'],
-      rows
-    );
+      exportToCSV(
+        `sales-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Invoice', 'Date', 'Time', 'Customer', 'Product', 'SKU', 'Variant', 'Category', 'Qty', 'Unit Price (RWF)', 'Subtotal (RWF)', 'Payment Method', 'Status', 'Served By', 'Invoice Total (RWF)'],
+        rows
+      );
+    } catch (e) { console.error(e); }
   };
 
   const handleSuccess = invoice => {
