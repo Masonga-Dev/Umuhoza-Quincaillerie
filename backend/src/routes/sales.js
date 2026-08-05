@@ -24,6 +24,50 @@ router.get('/', authMiddleware, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sales' }); }
 });
 
+// ── Line-item export ─────────────────────────────────────────────────────────
+router.get('/export', authMiddleware, async (req, res) => {
+  const { period, from, to } = req.query;
+  let dateFilter = '';
+  const params = [];
+  if (period === 'daily')   dateFilter = 'AND DATE(s.sale_date) = CURDATE()';
+  if (period === 'weekly')  dateFilter = 'AND s.sale_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+  if (period === 'monthly') dateFilter = 'AND s.sale_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+  if (period === 'yearly')  dateFilter = 'AND YEAR(s.sale_date) = YEAR(CURDATE())';
+  if (period === 'custom' && from && to) {
+    dateFilter = 'AND s.sale_date >= ? AND s.sale_date <= ?';
+    params.push(from, to + ' 23:59:59');
+  }
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         s.invoice_number,
+         s.sale_date,
+         COALESCE(s.customer_name, '') AS customer_name,
+         p.name                        AS product_name,
+         COALESCE(pv.sku, p.sku, '')   AS sku,
+         NULLIF(CONCAT_WS(' / ', NULLIF(pv.color,''), NULLIF(pv.size,'')), '') AS variant,
+         COALESCE(c.name, '')          AS category,
+         si.quantity,
+         si.unit_price,
+         si.subtotal,
+         s.payment_method,
+         s.status,
+         COALESCE(u.name, '')          AS served_by,
+         s.total_amount                AS invoice_total
+       FROM sale_items si
+       JOIN sales s    ON s.id  = si.sale_id
+       JOIN products p ON p.id  = si.product_id
+       LEFT JOIN product_variants pv ON pv.id = si.product_variant_id
+       LEFT JOIN categories c        ON c.id  = p.category_id
+       LEFT JOIN users u             ON u.id  = s.sold_by
+       WHERE 1=1 ${dateFilter}
+       ORDER BY s.sale_date DESC, s.id, si.id`,
+      params
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not generate export' }); }
+});
+
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const [saleRows] = await pool.query(
