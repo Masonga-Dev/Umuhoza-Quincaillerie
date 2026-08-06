@@ -87,7 +87,27 @@ router.get('/:id', authMiddleware, async (req, res) => {
        WHERE si.sale_id = ?`,
       [req.params.id]
     );
+    const [returns] = await pool.query(
+      `SELECT sr.id, sr.notes, sr.refund_amount, sr.created_at,
+              u.name AS created_by_name
+       FROM sale_returns sr
+       LEFT JOIN users u ON u.id = sr.created_by
+       WHERE sr.sale_id = ? ORDER BY sr.created_at ASC`,
+      [req.params.id]
+    );
+    for (const ret of returns) {
+      const [ritems] = await pool.query(
+        `SELECT sri.*, p.name AS product_name, pv.color AS variant_color, pv.size AS variant_size
+         FROM sale_return_items sri
+         JOIN products p ON p.id = sri.product_id
+         LEFT JOIN product_variants pv ON pv.id = sri.product_variant_id
+         WHERE sri.return_id = ?`,
+        [ret.id]
+      );
+      ret.items = ritems;
+    }
     sale.items = items;
+    sale.returns = returns;
     res.json(sale);
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sale' }); }
 });

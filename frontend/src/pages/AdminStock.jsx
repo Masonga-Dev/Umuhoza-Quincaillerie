@@ -49,7 +49,7 @@ export default function AdminStock() {
       .finally(() => setLoading(false));
 
     setMovLoading(true);
-    API.get('/reports/stock-movements', { headers: HEADERS(), params: { limit: 15 } })
+    API.get('/reports/stock-movements', { headers: HEADERS(), params: { limit: 50 } })
       .then(r => setMovements(Array.isArray(r.data) ? r.data : []))
       .catch(() => setMovements([]))
       .finally(() => setMovLoading(false));
@@ -166,7 +166,7 @@ export default function AdminStock() {
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
             <div>
               <h3 className="font-semibold text-slate-900">Recent Stock Movements</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Last 15 transactions — purchases, sales, and returns</p>
+              <p className="text-xs text-slate-400 mt-0.5">Last 50 transactions — purchases, sales, and returns</p>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
               <span className="flex items-center gap-1.5 text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500 inline-block"/>IN</span>
@@ -198,7 +198,6 @@ export default function AdminStock() {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {movements.map(m => {
-                    // Infer type from notes when transaction_type is empty (old records before ENUM fix)
                     let type = m.transaction_type || '';
                     if (!type) {
                       if (m.notes?.includes('Return to supplier')) type = 'RETURN_OUT';
@@ -206,6 +205,7 @@ export default function AdminStock() {
                       else type = Number(m.quantity) >= 0 ? 'IN' : 'OUT';
                     }
                     const isIn = type === 'IN' || type === 'RETURN_IN';
+                    const isReturnIn = type === 'RETURN_IN';
                     const badgeCls = type === 'IN'
                       ? 'bg-emerald-100 text-emerald-700'
                       : type === 'RETURN_IN'
@@ -213,10 +213,14 @@ export default function AdminStock() {
                       : type === 'RETURN_OUT'
                       ? 'bg-orange-100 text-orange-700'
                       : 'bg-red-100 text-red-600';
-                    const arrow = isIn ? '↑' : '↓';
+                    const arrow = isIn ? '\u2191' : '\u2193';
                     const label = type === 'RETURN_IN' ? 'RETURN IN' : type === 'RETURN_OUT' ? 'RETURN OUT' : type;
                     return (
-                    <tr key={m.id} className="hover:bg-slate-50 transition">
+                    <tr key={m.id} className={`transition ${
+                      isReturnIn
+                        ? 'bg-blue-50/60 hover:bg-blue-50'
+                        : 'hover:bg-slate-50'
+                    }`}>
                       <td className="py-2.5 px-4">
                         <p className="font-medium text-slate-800">{m.product_name}</p>
                         {m.sku && <p className="font-mono text-xs text-slate-400">{m.sku}</p>}

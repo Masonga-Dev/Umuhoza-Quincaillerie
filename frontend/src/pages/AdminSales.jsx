@@ -70,13 +70,14 @@ function printReceipt(sale) {
 }
 
 function SaleReturnModal({ sale, onClose, onSuccess }) {
-  const [returnQtys, setReturnQtys] = useState((sale.items || []).map(() => 0));
+  const items = sale.items || [];
+  const [returnQtys, setReturnQtys] = useState(items.map(() => 0));
   const [refundAmount, setRefundAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const items = sale.items || [];
+  const maxReturnable = (item) => Number(item.quantity) - Number(item.already_returned || 0);
   const suggestedRefund = items.reduce((s, item, i) => s + returnQtys[i] * Number(item.unit_price || 0), 0);
   const hasItems = returnQtys.some(q => q > 0);
 
@@ -115,22 +116,39 @@ function SaleReturnModal({ sale, onClose, onSuccess }) {
         <div className="max-h-[45vh] overflow-y-auto p-4 space-y-3">
           {items.map((item, i) => {
             const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+            const max = maxReturnable(item);
+            const fullyReturned = max <= 0;
             return (
-              <div key={i} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div key={i} className={`flex items-center gap-3 rounded-xl border p-3 ${
+                fullyReturned ? 'border-slate-100 bg-slate-50 opacity-60' : 'border-slate-200 bg-white'
+              }`}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{item.product_name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{item.product_name}</p>
+                    {fullyReturned && (
+                      <span className="flex-shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-500">Fully Returned</span>
+                    )}
+                    {!fullyReturned && Number(item.already_returned) > 0 && (
+                      <span className="flex-shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">{item.already_returned} already returned</span>
+                    )}
+                  </div>
                   {variant && <p className="text-xs text-slate-400">{variant}</p>}
-                  <p className="text-xs text-slate-400">Sold: {item.quantity} × {fmt(item.unit_price)} RWF</p>
+                  <p className="text-xs text-slate-400">Sold: {item.quantity} × {fmt(item.unit_price)} RWF{Number(item.already_returned) > 0 ? ` · Returnable: ${max}` : ''}</p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-xs text-slate-500">Return:</span>
                   <input
-                    type="number" min="0" max={item.quantity}
+                    type="number" min="0" max={max}
                     value={returnQtys[i]}
-                    onChange={e => { const next = [...returnQtys]; next[i] = Math.min(Math.max(0, parseInt(e.target.value) || 0), item.quantity); setReturnQtys(next); }}
-                    className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-center font-bold outline-none focus:border-emerald-400"
+                    disabled={fullyReturned}
+                    onChange={e => {
+                      const next = [...returnQtys];
+                      next[i] = Math.min(Math.max(0, parseInt(e.target.value) || 0), max);
+                      setReturnQtys(next);
+                    }}
+                    className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-center font-bold outline-none focus:border-emerald-400 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   />
-                  <span className="text-xs text-slate-400">/{item.quantity}</span>
+                  <span className="text-xs text-slate-400">/{max}</span>
                 </div>
               </div>
             );
@@ -282,6 +300,34 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
             {returnBanner && (
               <div className="border-t border-emerald-100 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-700">
                 ✓ {returnBanner}
+              </div>
+            )}
+
+            {/* Returns history */}
+            {sale.returns?.length > 0 && (
+              <div className="border-t border-amber-100 bg-amber-50 px-6 py-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-amber-700">↩ Customer Returns</p>
+                <div className="space-y-3">
+                  {sale.returns.map((ret) => (
+                    <div key={ret.id} className="rounded-xl border border-amber-200 bg-white p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-slate-500">{new Date(ret.created_at).toLocaleString('en-RW', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-xs font-bold text-amber-700">Refund: {fmt(ret.refund_amount)} RWF</span>
+                      </div>
+                      {ret.items?.map((item, i) => {
+                        const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+                        return (
+                          <div key={i} className="flex items-center justify-between text-xs text-slate-600 py-0.5">
+                            <span>{item.product_name}{variant ? ` — ${variant}` : ''}</span>
+                            <span className="font-semibold">× {item.quantity} returned</span>
+                          </div>
+                        );
+                      })}
+                      {ret.notes && <p className="mt-1.5 text-xs text-slate-400 italic">{ret.notes}</p>}
+                      {ret.created_by_name && <p className="mt-1 text-xs text-slate-400">By: {ret.created_by_name}</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
