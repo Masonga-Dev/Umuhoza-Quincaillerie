@@ -80,7 +80,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const sale = saleRows[0];
     const [items] = await pool.query(
       `SELECT si.*, p.name AS product_name, p.sku AS product_sku,
-              pv.color AS variant_color, pv.size AS variant_size, pv.sku AS variant_sku
+              pv.color AS variant_color, pv.size AS variant_size, pv.sku AS variant_sku,
+              COALESCE((
+                SELECT SUM(sri.quantity)
+                FROM sale_return_items sri
+                JOIN sale_returns sr ON sr.id = sri.return_id
+                WHERE sr.sale_id = si.sale_id
+                  AND sri.product_id = si.product_id
+                  AND (sri.product_variant_id <=> si.product_variant_id)
+              ), 0) AS already_returned
        FROM sale_items si
        JOIN products p ON p.id = si.product_id
        LEFT JOIN product_variants pv ON pv.id = si.product_variant_id
@@ -209,6 +217,25 @@ router.post('/:id/return', authMiddleware, async (req, res) => {
       const qty = Number(quantity);
       if (!qty || !product_id) continue;
 
+      // Enforce max returnable = sold qty - already returned
+      const [[soldRow]] = await conn.query(
+        `SELECT si.quantity AS sold_qty,
+                COALESCE((
+                  SELECT SUM(sri.quantity)
+                  FROM sale_return_items sri
+                  JOIN sale_returns sr ON sr.id = sri.return_id
+                  WHERE sr.sale_id = ? AND sri.product_id = ?
+                    AND (sri.product_variant_id <=> ?)
+                ), 0) AS already_returned
+         FROM sale_items si
+         WHERE si.sale_id = ? AND si.product_id = ?
+           AND (si.product_variant_id <=> ?)`,
+        [req.params.id, product_id, product_variant_id || null,
+         req.params.id, product_id, product_variant_id || null]
+      );
+      if (!soldRow) throw new Error(`Item not found in original sale`);
+      const maxReturnable = Number(soldRow.sold_qty) - Number(soldRow.already_returned);
+      if (qty > maxReturnable) throw new Error(`Cannot return ${qty} — only ${maxReturnable} returnable for "${product_id}"`);
       await conn.query(
         'INSERT INTO sale_return_items (return_id,product_id,product_variant_id,quantity,unit_price,subtotal) VALUES (?,?,?,?,?,?)',
         [returnId, product_id, product_variant_id || null, qty, Number(unit_price || 0), qty * Number(unit_price || 0)]
