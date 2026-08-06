@@ -27,6 +27,9 @@ export async function initDb() {
       await connection.query(`ALTER TABLE stock_transactions MODIFY COLUMN transaction_type ENUM('IN','OUT','ADJUSTMENT','RETURN_IN','RETURN_OUT') NOT NULL`);
     } catch (_) { /* already extended or column name differs */ }
 
+    // Ensure cost_price snapshot column exists on sale_items
+    await connection.query(`ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS cost_price DECIMAL(12,2) NOT NULL DEFAULT 0.00`);
+
     // Ensure notes column exists on stock_transactions
     await connection.query(`ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL`);
 

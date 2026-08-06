@@ -50,8 +50,8 @@ router.get('/export', authMiddleware, async (req, res) => {
          si.quantity,
          si.unit_price,
          si.subtotal,
-         COALESCE(pv.cost_price, p.cost_price, 0)                              AS cost_price,
-         (si.unit_price - COALESCE(pv.cost_price, p.cost_price, 0)) * si.quantity AS profit,
+         si.cost_price,
+         (si.unit_price - si.cost_price) * si.quantity AS profit,
          s.payment_method,
          s.status,
          COALESCE(u.name, '')          AS served_by,
@@ -116,15 +116,15 @@ router.post('/', authMiddleware, async (req, res) => {
       const subtotal = Number(quantity) * Number(unit_price);
 
       if (variant_id) {
-        const [vRows] = await conn.query('SELECT stock_quantity,minimum_stock FROM product_variants WHERE id=? AND product_id=?', [variant_id, product_id]);
+        const [vRows] = await conn.query('SELECT stock_quantity,minimum_stock,cost_price FROM product_variants WHERE id=? AND product_id=?', [variant_id, product_id]);
         if (!vRows.length) throw new Error(`Variant not found: ${variant_id}`);
         const newStock = vRows[0].stock_quantity - Number(quantity);
         if (newStock < 0) throw new Error(`Insufficient stock for variant ${variant_id}`);
         const status = determineStatus(newStock, vRows[0].minimum_stock);
         await conn.query('UPDATE product_variants SET stock_quantity=?,status=? WHERE id=?', [newStock, status, variant_id]);
         await conn.query(
-          'INSERT INTO sale_items (sale_id,product_id,product_variant_id,quantity,unit_price,subtotal) VALUES (?,?,?,?,?,?)',
-          [sale.insertId, product_id, variant_id, quantity, unit_price, subtotal]
+          'INSERT INTO sale_items (sale_id,product_id,product_variant_id,quantity,unit_price,subtotal,cost_price) VALUES (?,?,?,?,?,?,?)',
+          [sale.insertId, product_id, variant_id, quantity, unit_price, subtotal, Number(vRows[0].cost_price || 0)]
         );
         // Aggregate variant stock back to product row so all admin modules stay in sync
         const [agg] = await conn.query(
@@ -134,15 +134,15 @@ router.post('/', authMiddleware, async (req, res) => {
         await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?',
           [agg[0].total, determineStatus(agg[0].total, agg[0].min_stk), product_id]);
       } else {
-        const [pRows] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [product_id]);
+        const [pRows] = await conn.query('SELECT stock_quantity,minimum_stock,cost_price FROM products WHERE id=?', [product_id]);
         if (!pRows.length) throw new Error(`Product not found: ${product_id}`);
         const newStock = pRows[0].stock_quantity - Number(quantity);
         if (newStock < 0) throw new Error(`Insufficient stock for product ${product_id}`);
         const status = determineStatus(newStock, pRows[0].minimum_stock);
         await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?', [newStock, status, product_id]);
         await conn.query(
-          'INSERT INTO sale_items (sale_id,product_id,quantity,unit_price,subtotal) VALUES (?,?,?,?,?)',
-          [sale.insertId, product_id, quantity, unit_price, subtotal]
+          'INSERT INTO sale_items (sale_id,product_id,quantity,unit_price,subtotal,cost_price) VALUES (?,?,?,?,?,?)',
+          [sale.insertId, product_id, quantity, unit_price, subtotal, Number(pRows[0].cost_price || 0)]
         );
       }
 

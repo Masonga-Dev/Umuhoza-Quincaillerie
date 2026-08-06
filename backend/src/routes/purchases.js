@@ -124,7 +124,7 @@ router.post('/', async (req, res) => {
       );
 
       if (product_variant_id) {
-        await conn.query('UPDATE product_variants SET stock_quantity=stock_quantity+? WHERE id=?', [quantity, product_variant_id]);
+        await conn.query('UPDATE product_variants SET stock_quantity=stock_quantity+?, cost_price=? WHERE id=?', [quantity, unit_cost, product_variant_id]);
         const [v] = await conn.query('SELECT stock_quantity,minimum_stock FROM product_variants WHERE id=?', [product_variant_id]);
         if (v.length) await conn.query('UPDATE product_variants SET status=? WHERE id=?', [determineStatus(v[0].stock_quantity, v[0].minimum_stock), product_variant_id]);
         // Aggregate variant stock back to the product row so all admin modules stay in sync
@@ -135,7 +135,7 @@ router.post('/', async (req, res) => {
         await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?',
           [agg[0].total, determineStatus(agg[0].total, agg[0].min_stk), product_id]);
       } else {
-        await conn.query('UPDATE products SET stock_quantity=stock_quantity+? WHERE id=?', [quantity, product_id]);
+        await conn.query('UPDATE products SET stock_quantity=stock_quantity+?, cost_price=? WHERE id=?', [quantity, unit_cost, product_id]);
         const [p] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [product_id]);
         if (p.length) await conn.query('UPDATE products SET status=? WHERE id=?', [determineStatus(p[0].stock_quantity, p[0].minimum_stock), product_id]);
       }
