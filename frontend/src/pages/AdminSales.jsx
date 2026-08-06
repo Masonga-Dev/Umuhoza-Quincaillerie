@@ -592,7 +592,9 @@ export default function AdminSales() {
         r.category,
         r.quantity,
         r.unit_price,
+        r.cost_price,
         r.subtotal,
+        r.profit,
         r.payment_method,
         r.status,
         r.served_by,
@@ -600,7 +602,7 @@ export default function AdminSales() {
       ]);
       exportToCSV(
         `sales-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
-        ['Invoice', 'Date', 'Time', 'Customer', 'Product', 'SKU', 'Variant', 'Category', 'Qty', 'Unit Price (RWF)', 'Subtotal (RWF)', 'Payment Method', 'Status', 'Served By', 'Invoice Total (RWF)'],
+        ['Invoice', 'Date', 'Time', 'Customer', 'Product', 'SKU', 'Variant', 'Category', 'Qty', 'Unit Price (RWF)', 'Cost Price (RWF)', 'Subtotal (RWF)', 'Profit (RWF)', 'Payment Method', 'Status', 'Served By', 'Invoice Total (RWF)'],
         rows
       );
     } catch (e) { console.error(e); }
