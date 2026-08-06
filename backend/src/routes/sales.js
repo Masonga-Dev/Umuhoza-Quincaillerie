@@ -50,6 +50,8 @@ router.get('/export', authMiddleware, async (req, res) => {
          si.quantity,
          si.unit_price,
          si.subtotal,
+         COALESCE(pv.cost_price, p.cost_price, 0)                              AS cost_price,
+         (si.unit_price - COALESCE(pv.cost_price, p.cost_price, 0)) * si.quantity AS profit,
          s.payment_method,
          s.status,
          COALESCE(u.name, '')          AS served_by,
