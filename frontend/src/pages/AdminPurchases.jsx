@@ -486,13 +486,12 @@ export default function AdminPurchases() {
         r.quantity,
         r.unit_cost,
         r.subtotal,
-        r.payment_status || '',
-        r.payment_method || '',
+        r.notes || '',
         r.recorded_by || '',
       ]);
       exportToCSV(
         `purchases-${getPeriodLabel(period)}-${new Date().toISOString().slice(0, 10)}.csv`,
-        ['Purchase ID', 'Reference Number', 'Purchase Date', 'Supplier', 'Supplier Contact', 'Product', 'SKU', 'Variant', 'Quantity', 'Unit Cost (RWF)', 'Subtotal (RWF)', 'Payment Status', 'Payment Method', 'Recorded By'],
+        ['Purchase ID', 'Reference Number', 'Purchase Date', 'Supplier', 'Supplier Contact', 'Product', 'SKU', 'Variant', 'Quantity', 'Unit Cost (RWF)', 'Subtotal (RWF)', 'Notes', 'Recorded By'],
         rows
       );
     } catch (e) { console.error('Export failed', e); }
