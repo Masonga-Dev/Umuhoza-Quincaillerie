@@ -53,9 +53,31 @@ router.get('/export', async (req, res) => {
          prod.sku                                   AS product_sku,
          NULLIF(CONCAT_WS(' / ',
            NULLIF(pv.color,''), NULLIF(pv.size,'')), '') AS variant,
-         pi.quantity,
+         COALESCE((
+           SELECT SUM(pri.quantity)
+           FROM purchase_return_items pri
+           JOIN purchase_returns pret ON pret.id = pri.return_id
+           WHERE pret.purchase_id = pi.purchase_id
+             AND pri.product_id = pi.product_id
+             AND (pri.product_variant_id <=> pi.product_variant_id)
+         ), 0)                                      AS returned_quantity,
+         pi.quantity - COALESCE((
+           SELECT SUM(pri.quantity)
+           FROM purchase_return_items pri
+           JOIN purchase_returns pret ON pret.id = pri.return_id
+           WHERE pret.purchase_id = pi.purchase_id
+             AND pri.product_id = pi.product_id
+             AND (pri.product_variant_id <=> pi.product_variant_id)
+         ), 0)                                      AS net_quantity,
          pi.unit_cost,
-         pi.subtotal,
+         (pi.quantity - COALESCE((
+           SELECT SUM(pri.quantity)
+           FROM purchase_return_items pri
+           JOIN purchase_returns pret ON pret.id = pri.return_id
+           WHERE pret.purchase_id = pi.purchase_id
+             AND pri.product_id = pi.product_id
+             AND (pri.product_variant_id <=> pi.product_variant_id)
+         ), 0)) * pi.unit_cost                      AS net_subtotal,
          p.notes,
          u.name                                     AS recorded_by
        FROM purchase_items pi
@@ -65,6 +87,14 @@ router.get('/export', async (req, res) => {
        LEFT JOIN product_variants pv ON pv.id = pi.product_variant_id
        LEFT JOIN users u   ON u.id  = p.created_by
        WHERE 1=1 ${dateFilter}
+         AND (pi.quantity - COALESCE((
+           SELECT SUM(pri2.quantity)
+           FROM purchase_return_items pri2
+           JOIN purchase_returns pret2 ON pret2.id = pri2.return_id
+           WHERE pret2.purchase_id = pi.purchase_id
+             AND pri2.product_id = pi.product_id
+             AND (pri2.product_variant_id <=> pi.product_variant_id)
+         ), 0)) > 0
        ORDER BY p.purchase_date DESC, p.id, pi.id`,
       params
     );
