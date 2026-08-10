@@ -56,8 +56,7 @@ router.get('/export', async (req, res) => {
          pi.quantity,
          pi.unit_cost,
          pi.subtotal,
-         p.payment_status,
-         p.payment_method,
+         p.notes,
          u.name                                     AS recorded_by
        FROM purchase_items pi
        JOIN purchases p    ON p.id  = pi.purchase_id
