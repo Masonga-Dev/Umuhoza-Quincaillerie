@@ -14,7 +14,8 @@ function determineStatus(qty, min = 5) {
 router.get('/', authMiddleware, async (req, res) => {
   const { q } = req.query;
   let query = `SELECT s.*, u.name AS sold_by_name,
-    COALESCE((SELECT SUM(sri.quantity) FROM sale_return_items sri JOIN sale_returns sr ON sr.id=sri.return_id WHERE sr.sale_id=s.id),0) AS total_returned
+    COALESCE((SELECT SUM(sri.quantity) FROM sale_return_items sri JOIN sale_returns sr ON sr.id=sri.return_id WHERE sr.sale_id=s.id),0) AS total_returned,
+    COALESCE((SELECT SUM(sr2.refund_amount) FROM sale_returns sr2 WHERE sr2.sale_id=s.id),0) AS total_refunded
     FROM sales s LEFT JOIN users u ON s.sold_by=u.id`;
   const params = [], filters = [];
   if (q) { filters.push('(s.invoice_number LIKE ? OR u.name LIKE ? OR s.customer_name LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
@@ -49,35 +50,60 @@ router.get('/export', authMiddleware, async (req, res) => {
          COALESCE(pv.sku, p.sku, '')   AS sku,
          NULLIF(CONCAT_WS(' / ', NULLIF(pv.color,''), NULLIF(pv.size,'')), '') AS variant,
          COALESCE(c.name, '')          AS category,
-         si.quantity,
+         COALESCE((
+           SELECT SUM(sri.quantity)
+           FROM sale_return_items sri
+           JOIN sale_returns sr ON sr.id = sri.return_id
+           WHERE sr.sale_id = si.sale_id
+             AND sri.product_id = si.product_id
+             AND (sri.product_variant_id <=> si.product_variant_id)
+         ), 0)                                        AS returned_quantity,
+         si.quantity - COALESCE((
+           SELECT SUM(sri2.quantity)
+           FROM sale_return_items sri2
+           JOIN sale_returns sr2 ON sr2.id = sri2.return_id
+           WHERE sr2.sale_id = si.sale_id
+             AND sri2.product_id = si.product_id
+             AND (sri2.product_variant_id <=> si.product_variant_id)
+         ), 0)                                        AS net_quantity,
          si.unit_price,
-         si.subtotal,
-         COALESCE(
-           NULLIF(si.cost_price, 0),
-           (SELECT pi.unit_cost
-            FROM purchase_items pi
-            JOIN purchases pu ON pu.id = pi.purchase_id
-            WHERE pi.product_id = si.product_id
-              AND (pi.product_variant_id <=> si.product_variant_id)
-            ORDER BY pu.purchase_date DESC
-            LIMIT 1),
-           0
-         )                             AS cost_price,
-         (si.unit_price - COALESCE(
-           NULLIF(si.cost_price, 0),
-           (SELECT pi2.unit_cost
-            FROM purchase_items pi2
-            JOIN purchases pu2 ON pu2.id = pi2.purchase_id
-            WHERE pi2.product_id = si.product_id
-              AND (pi2.product_variant_id <=> si.product_variant_id)
-            ORDER BY pu2.purchase_date DESC
-            LIMIT 1),
-           0
-         )) * si.quantity              AS profit,
+         (si.quantity - COALESCE((
+           SELECT SUM(sri3.quantity)
+           FROM sale_return_items sri3
+           JOIN sale_returns sr3 ON sr3.id = sri3.return_id
+           WHERE sr3.sale_id = si.sale_id
+             AND sri3.product_id = si.product_id
+             AND (sri3.product_variant_id <=> si.product_variant_id)
+         ), 0)) * si.unit_price                       AS net_subtotal,
+         COALESCE(NULLIF(si.cost_price,0),(
+           SELECT pi.unit_cost FROM purchase_items pi
+           JOIN purchases pu ON pu.id = pi.purchase_id
+           WHERE pi.product_id = si.product_id
+             AND (pi.product_variant_id <=> si.product_variant_id)
+           ORDER BY pu.purchase_date DESC LIMIT 1
+         ), 0)                                        AS cost_price,
+         (si.unit_price - COALESCE(NULLIF(si.cost_price,0),(
+           SELECT pi2.unit_cost FROM purchase_items pi2
+           JOIN purchases pu2 ON pu2.id = pi2.purchase_id
+           WHERE pi2.product_id = si.product_id
+             AND (pi2.product_variant_id <=> si.product_variant_id)
+           ORDER BY pu2.purchase_date DESC LIMIT 1
+         ), 0)) * (si.quantity - COALESCE((
+           SELECT SUM(sri4.quantity)
+           FROM sale_return_items sri4
+           JOIN sale_returns sr4 ON sr4.id = sri4.return_id
+           WHERE sr4.sale_id = si.sale_id
+             AND sri4.product_id = si.product_id
+             AND (sri4.product_variant_id <=> si.product_variant_id)
+         ), 0))                                       AS profit,
          s.payment_method,
          s.status,
          COALESCE(u.name, '')          AS served_by,
-         s.total_amount                AS invoice_total
+         s.total_amount - COALESCE((
+           SELECT SUM(sr5.refund_amount)
+           FROM sale_returns sr5
+           WHERE sr5.sale_id = s.id
+         ), 0)                                        AS invoice_total
        FROM sale_items si
        JOIN sales s    ON s.id  = si.sale_id
        JOIN products p ON p.id  = si.product_id
@@ -85,6 +111,14 @@ router.get('/export', authMiddleware, async (req, res) => {
        LEFT JOIN categories c        ON c.id  = p.category_id
        LEFT JOIN users u             ON u.id  = s.sold_by
        WHERE 1=1 ${dateFilter}
+         AND (si.quantity - COALESCE((
+           SELECT SUM(sri5.quantity)
+           FROM sale_return_items sri5
+           JOIN sale_returns sr6 ON sr6.id = sri5.return_id
+           WHERE sr6.sale_id = si.sale_id
+             AND sri5.product_id = si.product_id
+             AND (sri5.product_variant_id <=> si.product_variant_id)
+         ), 0)) > 0
        ORDER BY s.sale_date DESC, s.id, si.id`,
       params
     );
@@ -95,7 +129,9 @@ router.get('/export', authMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const [saleRows] = await pool.query(
-      'SELECT s.*, u.name AS sold_by_name FROM sales s LEFT JOIN users u ON s.sold_by=u.id WHERE s.id=?',
+      `SELECT s.*, u.name AS sold_by_name,
+        COALESCE((SELECT SUM(sr2.refund_amount) FROM sale_returns sr2 WHERE sr2.sale_id=s.id),0) AS total_refunded
+       FROM sales s LEFT JOIN users u ON s.sold_by=u.id WHERE s.id=?`,
       [req.params.id]
     );
     if (!saleRows.length) return res.status(404).json({ message: 'Sale not found' });
