@@ -52,8 +52,28 @@ router.get('/export', authMiddleware, async (req, res) => {
          si.quantity,
          si.unit_price,
          si.subtotal,
-         si.cost_price,
-         (si.unit_price - si.cost_price) * si.quantity AS profit,
+         COALESCE(
+           NULLIF(si.cost_price, 0),
+           (SELECT pi.unit_cost
+            FROM purchase_items pi
+            JOIN purchases pu ON pu.id = pi.purchase_id
+            WHERE pi.product_id = si.product_id
+              AND (pi.product_variant_id <=> si.product_variant_id)
+            ORDER BY pu.purchase_date DESC
+            LIMIT 1),
+           0
+         )                             AS cost_price,
+         (si.unit_price - COALESCE(
+           NULLIF(si.cost_price, 0),
+           (SELECT pi2.unit_cost
+            FROM purchase_items pi2
+            JOIN purchases pu2 ON pu2.id = pi2.purchase_id
+            WHERE pi2.product_id = si.product_id
+              AND (pi2.product_variant_id <=> si.product_variant_id)
+            ORDER BY pu2.purchase_date DESC
+            LIMIT 1),
+           0
+         )) * si.quantity              AS profit,
          s.payment_method,
          s.status,
          COALESCE(u.name, '')          AS served_by,
