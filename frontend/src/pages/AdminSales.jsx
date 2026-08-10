@@ -272,7 +272,8 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
                 <thead className="sticky top-0 bg-slate-50">
                   <tr className="border-b border-slate-200">
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Product</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Qty</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Sold</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Returned</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Unit Price</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Subtotal</th>
                   </tr>
@@ -280,14 +281,24 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
                 <tbody className="divide-y divide-slate-50">
                   {(sale.items || []).map((item, i) => {
                     const variant = [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+                    const returned = Number(item.already_returned || 0);
+                    const fullyReturned = returned >= Number(item.quantity);
                     return (
-                      <tr key={i}>
+                      <tr key={i} className={fullyReturned ? 'bg-amber-50/60' : ''}>
                         <td className="px-6 py-3.5">
-                          <p className="font-medium text-slate-800">{item.product_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium ${fullyReturned ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.product_name}</p>
+                            {fullyReturned && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Returned</span>}
+                          </div>
                           {variant && <p className="text-xs text-slate-400 mt-0.5">{variant}</p>}
                           {(item.variant_sku || item.product_sku) && <p className="font-mono text-xs text-slate-400 mt-0.5">SKU: {item.variant_sku || item.product_sku}</p>}
                         </td>
                         <td className="px-4 py-3.5 text-center font-bold text-slate-800">{item.quantity}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          {returned > 0
+                            ? <span className="font-bold text-amber-600">{returned}</span>
+                            : <span className="text-slate-300">—</span>}
+                        </td>
                         <td className="px-4 py-3.5 text-right text-slate-600">{fmt(item.unit_price)} RWF</td>
                         <td className="px-6 py-3.5 text-right font-bold text-slate-900">{fmt(item.subtotal)} RWF</td>
                       </tr>
@@ -332,18 +343,28 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
             )}
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
               <div className="flex gap-2">
-                {sale.status !== 'Cancelled' && (
-                  <>
-                    <button onClick={handleCancel} disabled={cancelling}
-                      className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-60">
-                      {cancelling ? 'Cancelling…' : 'Cancel Sale'}
-                    </button>
-                    <button onClick={() => setShowReturn(true)}
-                      className="rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
-                      ↩ Customer Return
-                    </button>
-                  </>
-                )}
+                {sale.status !== 'Cancelled' && (() => {
+                  const allReturned = (sale.items || []).every(it => Number(it.already_returned || 0) >= Number(it.quantity));
+                  return (
+                    <>
+                      <button onClick={handleCancel} disabled={cancelling}
+                        className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-60">
+                        {cancelling ? 'Cancelling…' : 'Cancel Sale'}
+                      </button>
+                      {!allReturned && (
+                        <button onClick={() => setShowReturn(true)}
+                          className="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-200">
+                          ↩ Customer Return
+                        </button>
+                      )}
+                      {allReturned && (
+                        <span className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-600">
+                          ✓ All items returned
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               <div className="text-right">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Amount</p>
@@ -775,8 +796,12 @@ export default function AdminSales() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filtered.map(sale => (
-                    <tr key={sale.id} className={`group transition ${sale.status === 'Cancelled' ? 'opacity-60' : 'hover:bg-slate-50'}`}>
+                  {filtered.map(sale => {
+                    const hasReturn = Number(sale.total_returned || 0) > 0;
+                    return (
+                    <tr key={sale.id} className={`group transition ${
+                      sale.status === 'Cancelled' ? 'opacity-60' : hasReturn ? 'bg-amber-50/40 hover:bg-amber-50' : 'hover:bg-slate-50'
+                    }`}>
                       <td className="px-6 py-4">
                         <span className="font-mono text-sm font-bold text-blue-600">{sale.invoice_number}</span>
                         {sale.sold_by_name && <p className="text-xs text-slate-400 mt-0.5">{sale.sold_by_name}</p>}
@@ -793,9 +818,16 @@ export default function AdminSales() {
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[sale.status] || 'bg-emerald-100 text-emerald-700'}`}>
-                          {sale.status || 'Completed'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold w-fit ${STATUS_COLORS[sale.status] || 'bg-emerald-100 text-emerald-700'}`}>
+                            {sale.status || 'Completed'}
+                          </span>
+                          {hasReturn && (
+                            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 w-fit">
+                              ↩ {sale.total_returned} returned
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-4 text-right">
                         <button onClick={() => setViewId(sale.id)}
@@ -804,7 +836,8 @@ export default function AdminSales() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

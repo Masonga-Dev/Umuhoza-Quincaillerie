@@ -467,10 +467,19 @@ export default function AdminPurchases() {
 
   const handleExport = async (period) => {
     try {
-      const res = await API.get('/purchases/export', {
-        headers: HEADERS(),
-        params: period && period !== 'all' ? { period } : {},
-      });
+      let params = {};
+      if (period && period !== 'all') {
+        if (typeof period === 'object' && period.period === 'custom') {
+          params = {
+            period: 'custom',
+            from: period.from.toISOString().slice(0, 10),
+            to: period.to.toISOString().slice(0, 10),
+          };
+        } else {
+          params = { period };
+        }
+      }
+      const res = await API.get('/purchases/export', { headers: HEADERS(), params });
       const data = res.data || [];
       const rows = data.map(r => [
         r.purchase_id,
@@ -636,7 +645,16 @@ export default function AdminPurchases() {
                       <td className="px-5 py-4 text-sm text-slate-600">{fmtDate(p.purchase_date)}</td>
                       <td className="px-5 py-4 text-sm font-medium text-slate-700">{p.supplier_name || <span className="text-slate-300">—</span>}</td>
                       <td className="px-5 py-4 font-mono text-sm text-slate-500">{p.reference_number || <span className="text-slate-300">—</span>}</td>
-                      <td className="px-5 py-4 text-right font-bold text-slate-900">{fmt(p.total_cost)} <span className="text-xs font-normal text-slate-400">RWF</span></td>
+                      <td className="px-5 py-4 text-right">
+                          {Number(p.total_returned_cost) > 0 ? (
+                            <>
+                              <p className="font-bold text-slate-900">{fmt(Number(p.total_cost) - Number(p.total_returned_cost))} <span className="text-xs font-normal text-slate-400">RWF</span></p>
+                              <p className="text-xs text-orange-500">−{fmt(p.total_returned_cost)} returned</p>
+                            </>
+                          ) : (
+                            <p className="font-bold text-slate-900">{fmt(p.total_cost)} <span className="text-xs font-normal text-slate-400">RWF</span></p>
+                          )}
+                        </td>
                       <td className="px-5 py-4 text-right">
                         <button onClick={() => setViewId(p.id)}
                           className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-blue-600 hover:text-white">
