@@ -483,9 +483,9 @@ export default function AdminPurchases() {
         r.product_name || '',
         r.product_sku || '',
         r.variant || '',
-        r.quantity,
+        r.net_quantity,
         r.unit_cost,
-        r.subtotal,
+        r.net_subtotal,
         r.notes || '',
         r.recorded_by || '',
       ]);
