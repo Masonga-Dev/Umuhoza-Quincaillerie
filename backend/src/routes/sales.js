@@ -13,7 +13,9 @@ function determineStatus(qty, min = 5) {
 
 router.get('/', authMiddleware, async (req, res) => {
   const { q } = req.query;
-  let query = 'SELECT s.*, u.name AS sold_by_name FROM sales s LEFT JOIN users u ON s.sold_by=u.id';
+  let query = `SELECT s.*, u.name AS sold_by_name,
+    COALESCE((SELECT SUM(sri.quantity) FROM sale_return_items sri JOIN sale_returns sr ON sr.id=sri.return_id WHERE sr.sale_id=s.id),0) AS total_returned
+    FROM sales s LEFT JOIN users u ON s.sold_by=u.id`;
   const params = [], filters = [];
   if (q) { filters.push('(s.invoice_number LIKE ? OR u.name LIKE ? OR s.customer_name LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (filters.length) query += ' WHERE ' + filters.join(' AND ');

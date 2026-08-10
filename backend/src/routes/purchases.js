@@ -15,9 +15,11 @@ function determineStatus(qty, min = 5) {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT p.*, s.name AS supplier_name,
+      `SELECT p.*,
+              s.name AS supplier_name,
               COALESCE(s.phone, s.email, '') AS supplier_contact,
-              u.name AS created_by_name
+              u.name AS created_by_name,
+              COALESCE((SELECT SUM(pr2.total_returned_cost) FROM purchase_returns pr2 WHERE pr2.purchase_id = p.id), 0) AS total_returned_cost
        FROM purchases p
        LEFT JOIN suppliers s ON s.id = p.supplier_id
        LEFT JOIN users u ON u.id = p.created_by
@@ -28,11 +30,17 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/export', async (req, res) => {
-  const { period } = req.query;
+  const { period, from, to } = req.query;
   let dateFilter = '';
-  if (period === 'week')  dateFilter = 'AND p.purchase_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-  if (period === 'month') dateFilter = 'AND p.purchase_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
-  if (period === 'year')  dateFilter = 'AND YEAR(p.purchase_date) = YEAR(CURDATE())';
+  const params = [];
+  if (period === 'daily')   dateFilter = 'AND DATE(p.purchase_date) = CURDATE()';
+  if (period === 'weekly')  dateFilter = 'AND p.purchase_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+  if (period === 'monthly') dateFilter = 'AND p.purchase_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+  if (period === 'yearly')  dateFilter = 'AND YEAR(p.purchase_date) = YEAR(CURDATE())';
+  if (period === 'custom' && from && to) {
+    dateFilter = 'AND DATE(p.purchase_date) BETWEEN ? AND ?';
+    params.push(from, to);
+  }
   try {
     const [rows] = await pool.query(
       `SELECT
@@ -58,7 +66,8 @@ router.get('/export', async (req, res) => {
        LEFT JOIN product_variants pv ON pv.id = pi.product_variant_id
        LEFT JOIN users u   ON u.id  = p.created_by
        WHERE 1=1 ${dateFilter}
-       ORDER BY p.purchase_date DESC, p.id, pi.id`
+       ORDER BY p.purchase_date DESC, p.id, pi.id`,
+      params
     );
     res.json(rows);
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not generate export' }); }
