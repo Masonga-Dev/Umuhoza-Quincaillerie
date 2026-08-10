@@ -10,17 +10,28 @@ const upload = makeUpload('subcategories');
 router.get('/', async (req, res) => {
   const { category_id } = req.query;
   try {
-    let sql = `SELECT s.*, c.name AS category_name, COUNT(p.id) AS product_count
-      FROM subcategories s
-      LEFT JOIN categories c ON s.category_id = c.id
-      LEFT JOIN products p ON p.subcategory_id = s.id
-      WHERE 1=1`;
+    // Check if subcategory_id column exists on products before joining
+    const [cols] = await pool.query(`SHOW COLUMNS FROM products LIKE 'subcategory_id'`);
+    const hasCol = cols.length > 0;
+
+    let sql = hasCol
+      ? `SELECT s.*, c.name AS category_name, COUNT(p.id) AS product_count
+         FROM subcategories s
+         LEFT JOIN categories c ON s.category_id = c.id
+         LEFT JOIN products p ON p.subcategory_id = s.id
+         WHERE 1=1`
+      : `SELECT s.*, c.name AS category_name, 0 AS product_count
+         FROM subcategories s
+         LEFT JOIN categories c ON s.category_id = c.id
+         WHERE 1=1`;
+
     const params = [];
     if (category_id) { sql += ' AND s.category_id = ?'; params.push(category_id); }
-    sql += ' GROUP BY s.id ORDER BY s.category_id, s.name ASC';
+    sql += hasCol ? ' GROUP BY s.id ORDER BY s.category_id, s.name ASC' : ' ORDER BY s.category_id, s.name ASC';
+
     const [rows] = await pool.query(sql, params);
     res.json(rows);
-  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch subcategories' }); }
+  } catch (e) { console.error(e); res.status(500).json({ message: e.message }); }
 });
 
 // POST /subcategories
@@ -59,6 +70,20 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await pool.query('DELETE FROM subcategories WHERE id = ?', [req.params.id]);
     res.json({ message: 'Subcategory deleted' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not delete subcategory' }); }
+});
+
+// Temporary debug endpoint — remove after confirming live DB state
+router.get('/debug', async (req, res) => {
+  try {
+    const [tables] = await pool.query(`SHOW TABLES LIKE 'subcategories'`);
+    const [prodCols] = await pool.query(`SHOW COLUMNS FROM products LIKE 'subcategory_id'`);
+    const [subCols] = await pool.query(`SHOW COLUMNS FROM subcategories`);
+    res.json({
+      subcategories_table_exists: tables.length > 0,
+      products_has_subcategory_id: prodCols.length > 0,
+      subcategories_columns: subCols.map(c => c.Field),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 export default router;
