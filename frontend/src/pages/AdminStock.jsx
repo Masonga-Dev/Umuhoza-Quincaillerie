@@ -38,6 +38,7 @@ export default function AdminStock() {
   const [movLoading, setMovLoading] = useState(true);
   const [search, setSearch]         = useState('');
   const [view, setView]             = useState('alerts');
+  const [movLimit, setMovLimit]     = useState(10);
   const navigate = useNavigate();
   const { refreshKey, bindRefresh } = useDataRefresh();
 
@@ -213,7 +214,7 @@ export default function AdminStock() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {movements.map(m => {
+                  {movements.slice(0, movLimit).map(m => {
                     let type = m.transaction_type || '';
                     if (!type) {
                       if (m.notes?.includes('Return to supplier')) type = 'RETURN_OUT';
@@ -265,6 +266,16 @@ export default function AdminStock() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {movements.length > movLimit && (
+            <div className="border-t border-slate-100 px-6 py-3 text-center">
+              <button
+                onClick={() => setMovLimit(v => v + 10)}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition"
+              >
+                Show more ({movements.length - movLimit} remaining)
+              </button>
             </div>
           )}
         </div>
