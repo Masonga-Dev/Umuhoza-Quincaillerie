@@ -28,14 +28,14 @@ export async function initDb() {
     } catch (_) { /* already extended or column name differs */ }
 
     // Ensure cost_price snapshot column exists on sale_items
-    await connection.query(`ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS cost_price DECIMAL(12,2) NOT NULL DEFAULT 0.00`);
+    try { await connection.query(`ALTER TABLE sale_items ADD COLUMN cost_price DECIMAL(12,2) NOT NULL DEFAULT 0.00`); } catch (_) {}
 
     // Ensure notes column exists on stock_transactions
-    await connection.query(`ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL`);
+    try { await connection.query(`ALTER TABLE stock_transactions ADD COLUMN notes TEXT DEFAULT NULL`); } catch (_) {}
 
     // Category multilingual descriptions
-    await connection.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS description_rw TEXT DEFAULT NULL AFTER description`);
-    await connection.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS description_fr TEXT DEFAULT NULL AFTER description_rw`);
+    try { await connection.query(`ALTER TABLE categories ADD COLUMN description_rw TEXT DEFAULT NULL AFTER description`); } catch (_) {}
+    try { await connection.query(`ALTER TABLE categories ADD COLUMN description_fr TEXT DEFAULT NULL AFTER description_rw`); } catch (_) {}
 
     // Subcategories table
     await connection.query(`CREATE TABLE IF NOT EXISTS subcategories (
@@ -53,17 +53,19 @@ export async function initDb() {
     )`);
 
     // subcategory_id on products
-    await connection.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS subcategory_id INT NULL AFTER category_id`);
+    try {
+      await connection.query(`ALTER TABLE products ADD COLUMN subcategory_id INT NULL AFTER category_id`);
+    } catch (_) { /* column already exists */ }
     try {
       await connection.query(`ALTER TABLE products ADD CONSTRAINT fk_products_subcategory FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE SET NULL`);
     } catch (_) { /* constraint already exists */ }
 
     // Brand field on products
-    await connection.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(100) NULL AFTER subcategory_id`);
+    try { await connection.query(`ALTER TABLE products ADD COLUMN brand VARCHAR(100) NULL AFTER subcategory_id`); } catch (_) {}
 
     // Unit and image on product variants
-    await connection.query(`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS unit VARCHAR(50) NULL AFTER size`);
-    await connection.query(`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS image_path VARCHAR(500) NULL`);
+    try { await connection.query(`ALTER TABLE product_variants ADD COLUMN unit VARCHAR(50) NULL AFTER size`); } catch (_) {}
+    try { await connection.query(`ALTER TABLE product_variants ADD COLUMN image_path VARCHAR(500) NULL`); } catch (_) {}
 
     // Purchase returns
     await connection.query(`CREATE TABLE IF NOT EXISTS purchase_returns (
@@ -134,10 +136,10 @@ export async function initDb() {
     await connection.query(`INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('show_prices', 'true')`);
 
     // Announcements multilingual fields
-    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS title_rw VARCHAR(255) DEFAULT NULL`);
-    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS title_fr VARCHAR(255) DEFAULT NULL`);
-    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS content_rw TEXT DEFAULT NULL`);
-    await connection.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS content_fr TEXT DEFAULT NULL`);
+    try { await connection.query(`ALTER TABLE announcements ADD COLUMN title_rw VARCHAR(255) DEFAULT NULL`); } catch (_) {}
+    try { await connection.query(`ALTER TABLE announcements ADD COLUMN title_fr VARCHAR(255) DEFAULT NULL`); } catch (_) {}
+    try { await connection.query(`ALTER TABLE announcements ADD COLUMN content_rw TEXT DEFAULT NULL`); } catch (_) {}
+    try { await connection.query(`ALTER TABLE announcements ADD COLUMN content_fr TEXT DEFAULT NULL`); } catch (_) {}
 
     // Page hero sections
     await connection.query(`CREATE TABLE IF NOT EXISTS page_heroes (
@@ -156,8 +158,8 @@ export async function initDb() {
     await connection.query(`INSERT IGNORE INTO page_heroes (page_key) VALUES ('products'), ('gallery'), ('about'), ('contact')`);
 
     // User profile extensions
-    await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL`);
-    await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_path VARCHAR(255) DEFAULT NULL`);
+    try { await connection.query(`ALTER TABLE users ADD COLUMN phone VARCHAR(30) DEFAULT NULL`); } catch (_) {}
+    try { await connection.query(`ALTER TABLE users ADD COLUMN avatar_path VARCHAR(255) DEFAULT NULL`); } catch (_) {}
   } catch (e) {
     console.error('Migration warning:', e.message);
   } finally {

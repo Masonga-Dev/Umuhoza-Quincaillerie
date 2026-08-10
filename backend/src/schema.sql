@@ -56,12 +56,32 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 
 -- =====================================================
+-- SUBCATEGORIES
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS subcategories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    name_rw VARCHAR(120) DEFAULT NULL,
+    name_fr VARCHAR(120) DEFAULT NULL,
+    description TEXT DEFAULT NULL,
+    description_rw TEXT DEFAULT NULL,
+    description_fr TEXT DEFAULT NULL,
+    image_path VARCHAR(255) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_subcategories_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+-- =====================================================
 -- PRODUCTS  (multilingual + analytics)
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category_id INT NULL,
+    subcategory_id INT NULL,
+    brand VARCHAR(100) NULL,
     sku VARCHAR(100) UNIQUE,
     name VARCHAR(220) NOT NULL,           -- English (primary)
     name_rw VARCHAR(220) DEFAULT NULL,    -- Kinyarwanda
@@ -88,6 +108,11 @@ CREATE TABLE IF NOT EXISTS products (
     CONSTRAINT fk_products_category
         FOREIGN KEY (category_id)
         REFERENCES categories(id)
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_products_subcategory
+        FOREIGN KEY (subcategory_id)
+        REFERENCES subcategories(id)
         ON DELETE SET NULL
 );
 
