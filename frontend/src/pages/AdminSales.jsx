@@ -300,7 +300,14 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
                             : <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-4 py-3.5 text-right text-slate-600">{fmt(item.unit_price)} RWF</td>
-                        <td className="px-6 py-3.5 text-right font-bold text-slate-900">{fmt(item.subtotal)} RWF</td>
+                        <td className="px-6 py-3.5 text-right font-bold text-slate-900">
+                          {returned > 0 ? (
+                            <>
+                              <p className="text-xs text-slate-400 line-through">{fmt(item.subtotal)} RWF</p>
+                              <p>{fmt((Number(item.quantity) - returned) * Number(item.unit_price))} RWF</p>
+                            </>
+                          ) : fmt(item.subtotal) + ' RWF'}
+                        </td>
                       </tr>
                     );
                   })}
@@ -367,8 +374,15 @@ function SaleDetailModal({ saleId, onClose, onCancelled, onReturned }) {
                 })()}
               </div>
               <div className="text-right">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Amount</p>
-                <p className="text-2xl font-extrabold text-slate-900">{fmt(sale.total_amount)} <span className="text-base font-semibold text-slate-400">RWF</span></p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  {Number(sale.total_refunded) > 0 ? 'Net Amount (after returns)' : 'Total Amount'}
+                </p>
+                <p className="text-2xl font-extrabold text-slate-900">
+                  {fmt(Number(sale.total_amount) - Number(sale.total_refunded || 0))} <span className="text-base font-semibold text-slate-400">RWF</span>
+                </p>
+                {Number(sale.total_refunded) > 0 && (
+                  <p className="text-xs text-slate-400">Original: {fmt(sale.total_amount)} · Refunded: <span className="text-amber-500">{fmt(sale.total_refunded)}</span></p>
+                )}
               </div>
             </div>
           </>
@@ -657,10 +671,10 @@ export default function AdminSales() {
         r.sku,
         r.variant || '',
         r.category,
-        r.quantity,
+        r.net_quantity,
         r.unit_price,
         r.cost_price,
-        r.subtotal,
+        r.net_subtotal,
         r.profit,
         r.payment_method,
         r.status,
@@ -811,7 +825,9 @@ export default function AdminSales() {
                         <span className="ml-2 text-slate-400 text-xs">{new Date(sale.sale_date).toLocaleTimeString('en-RW', { hour: '2-digit', minute: '2-digit' })}</span>
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-600">{sale.customer_name || <span className="text-slate-300">—</span>}</td>
-                      <td className="px-5 py-4 text-right font-bold text-slate-900">{fmt(sale.total_amount)} <span className="text-xs font-normal text-slate-400">RWF</span></td>
+                      <td className="px-5 py-4 text-right font-bold text-slate-900">
+                        {fmt(Number(sale.total_amount) - Number(sale.total_refunded || 0))} <span className="text-xs font-normal text-slate-400">RWF</span>
+                      </td>
                       <td className="px-5 py-4">
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PAYMENT_COLORS[sale.payment_method] || 'bg-slate-100 text-slate-600'}`}>
                           {sale.payment_method || 'Cash'}
