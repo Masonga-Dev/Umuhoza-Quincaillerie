@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
@@ -53,21 +53,21 @@ export default function AdminSubcategories() {
   const [activeLang, setActiveLang] = useState('en');
   const fileRef = useRef();
 
-  useEffect(() => {
-    API.get('/categories').then(r => setCategories(r.data || [])).catch(console.error);
-    API.get('/subcategories').then(r => setAllSubs(r.data || [])).catch(console.error);
-  }, []);
-
-  useEffect(() => { fetchSubcategories(); }, [filterCatId]);
-
-  const fetchSubcategories = () => {
+  const fetchSubcategories = useCallback(() => {
     setLoading(true);
     const params = filterCatId ? { category_id: filterCatId } : {};
     API.get('/subcategories', { params })
       .then(r => setSubcategories(r.data || []))
       .catch(() => setError('Could not load subcategories.'))
       .finally(() => setLoading(false));
-  };
+  }, [filterCatId]);
+
+  useEffect(() => {
+    API.get('/categories').then(r => setCategories(r.data || [])).catch(console.error);
+    API.get('/subcategories').then(r => setAllSubs(r.data || [])).catch(console.error);
+  }, []);
+
+  useEffect(() => { fetchSubcategories(); }, [fetchSubcategories]);
 
   const refreshAllSubs = () => API.get('/subcategories').then(r => setAllSubs(r.data || [])).catch(console.error);
 
