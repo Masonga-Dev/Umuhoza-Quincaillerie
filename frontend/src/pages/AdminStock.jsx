@@ -96,12 +96,28 @@ export default function AdminStock() {
           else if (m.notes?.includes('Customer return')) type = 'RETURN_IN';
           else type = Number(m.quantity) >= 0 ? 'IN' : 'OUT';
         }
-        return [m.product_name, m.sku || '', type, m.quantity, m.notes || '', fmtDT(m.created_at), m.created_by_name || ''];
+        const absQty = Math.abs(m.quantity);
+        const qtyChange = (type === 'IN' || type === 'RETURN_IN') ? `+${absQty}` : `-${absQty}`;
+        // extract reference from notes e.g. "Purchase #12" or "Sale #5"
+        const ref = m.notes?.match(/#(\S+)/)?.[0] || '';
+        return [
+          m.product_name,
+          m.sku || '',
+          m.category_name || '',
+          m.variant || '',
+          type,
+          qtyChange,
+          m.notes || '',
+          ref,
+          new Date(m.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          new Date(m.created_at).toLocaleTimeString('en-RW', { hour: '2-digit', minute: '2-digit' }),
+          m.created_by_name || '',
+        ];
       });
 
     exportToCSV(
       `stock-movements-${label}-${now.toISOString().slice(0, 10)}.csv`,
-      ['Product', 'SKU', 'Type', 'Quantity', 'Notes', 'Date', 'By'],
+      ['Product', 'SKU', 'Category', 'Variant', 'Type', 'Qty Change', 'Notes', 'Reference', 'Date', 'Time', 'By'],
       rows
     );
   };
