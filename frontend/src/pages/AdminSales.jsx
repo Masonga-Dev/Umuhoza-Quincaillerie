@@ -14,15 +14,35 @@ const PAYMENT_COLORS = { Cash: 'bg-emerald-100 text-emerald-700', 'Mobile Money'
 const STATUS_COLORS = { Completed: 'bg-emerald-100 text-emerald-700', Cancelled: 'bg-red-100 text-red-700' };
 
 function printReceipt(sale) {
-  const rows = (sale.items || []).map(it => {
-    const variant = [it.variant_color, it.variant_size].filter(Boolean).join(' / ');
-    return `<tr>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee">${it.product_name}${variant ? `<br><small style="color:#777">${variant}</small>` : ''}</td>
-      <td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee">${it.quantity}</td>
-      <td style="padding:6px 8px;text-align:right;border-bottom:1px solid #eee">${fmt(it.unit_price)}</td>
-      <td style="padding:6px 8px;text-align:right;font-weight:700;border-bottom:1px solid #eee">${fmt(it.subtotal)}</td>
-    </tr>`;
-  }).join('');
+  const netTotal = Number(sale.total_amount) - Number(sale.total_refunded || 0);
+  const rows = (sale.items || [])
+    .map(it => {
+      const returned = Number(it.already_returned || 0);
+      const netQty = Number(it.quantity) - returned;
+      if (netQty <= 0) return '';
+      const variant = [it.variant_color, it.variant_size].filter(Boolean).join(' / ');
+      const netSubtotal = netQty * Number(it.unit_price);
+      return `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee">${it.product_name}${variant ? `<br><small style="color:#777">${variant}</small>` : ''}</td>
+        <td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee">${netQty}</td>
+        <td style="padding:6px 8px;text-align:right;border-bottom:1px solid #eee">${fmt(it.unit_price)}</td>
+        <td style="padding:6px 8px;text-align:right;font-weight:700;border-bottom:1px solid #eee">${fmt(netSubtotal)}</td>
+      </tr>`;
+    }).join('');
+
+  const returnsSection = (sale.returns?.length > 0) ? `
+    <hr style="border:none;border-top:1px dashed #bbb;margin:10px 0">
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:6px 0 4px">Returns</p>
+    ${sale.returns.map(ret => ret.items?.map(ri => {
+      const v = [ri.variant_color, ri.variant_size].filter(Boolean).join(' / ');
+      return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#b45309;padding:2px 0">
+        <span>↩ ${ri.product_name}${v ? ` (${v})` : ''}</span>
+        <span>×${ri.quantity}</span>
+      </div>`;
+    }).join('')).join('')}
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#b45309;padding:4px 0;font-weight:700">
+      <span>Total Refunded</span><span>−${fmt(sale.total_refunded)} RWF</span>
+    </div>` : '';
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
   <title>Receipt ${sale.invoice_number}</title>
@@ -54,8 +74,9 @@ function printReceipt(sale) {
       <thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    ${returnsSection}
     <hr class="hr">
-    <div style="text-align:right;font-size:16px;font-weight:700;padding:6px 8px">TOTAL: ${fmt(sale.total_amount)} RWF</div>
+    <div style="text-align:right;font-size:16px;font-weight:700;padding:6px 8px">TOTAL: ${fmt(netTotal)} RWF</div>
     <hr class="hr">
     <p style="text-align:center;font-size:11px;color:#777;margin-top:14px">Thank you for your business!<br>Please come again.</p>
     <div class="no-print" style="text-align:center;margin-top:16px">
