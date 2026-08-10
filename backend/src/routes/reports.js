@@ -79,9 +79,13 @@ router.get('/stock-movements', async (req, res) => {
     const [rows] = await pool.query(
       `SELECT st.id, st.transaction_type, st.quantity, st.notes, st.created_at,
               p.name AS product_name, p.sku,
+              c.name AS category_name,
+              NULLIF(CONCAT_WS(' / ', NULLIF(pv.color,''), NULLIF(pv.size,'')), '') AS variant,
               u.name AS created_by_name
        FROM stock_transactions st
        JOIN products p ON st.product_id = p.id
+       LEFT JOIN categories c ON c.id = p.category_id
+       LEFT JOIN product_variants pv ON pv.id = st.product_variant_id
        LEFT JOIN users u ON st.created_by = u.id
        ORDER BY st.created_at DESC
        LIMIT ?`,
