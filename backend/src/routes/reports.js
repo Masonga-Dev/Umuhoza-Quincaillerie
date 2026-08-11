@@ -17,7 +17,7 @@ router.get('/daily', async (req, res) => {
        JOIN products p ON si.product_id = p.id
        JOIN sales s ON si.sale_id = s.id
        WHERE s.status != 'Cancelled' AND DATE(s.sale_date) = CURDATE()
-       GROUP BY si.product_id ORDER BY quantity_sold DESC LIMIT 10`
+       GROUP BY si.product_id, p.name ORDER BY quantity_sold DESC LIMIT 10`
     );
     const [paymentMethods] = await pool.query(
       `SELECT payment_method, COUNT(*) AS count, SUM(total_amount) AS total
@@ -31,10 +31,54 @@ router.get('/daily', async (req, res) => {
        LEFT JOIN categories c ON c.id = p.category_id
        JOIN sales s ON s.id = si.sale_id
        WHERE s.status != 'Cancelled' AND DATE(s.sale_date) = CURDATE()
-       GROUP BY p.category_id ORDER BY revenue DESC LIMIT 8`
+       GROUP BY p.category_id, c.name ORDER BY revenue DESC LIMIT 8`
     );
     res.json({ summary: summary[0], best_selling: bestSelling, payment_methods: paymentMethods, category_revenue: categoryRevenue });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch daily report' }); }
+});
+
+// All-time top products, category revenue and payment method breakdown
+// (distinct from /daily, which is scoped to today for the dashboard widget).
+router.get('/top-products', async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
+  try {
+    const [rows] = await pool.query(
+      `SELECT p.name, SUM(si.quantity) AS quantity_sold, SUM(si.subtotal) AS total_revenue
+       FROM sale_items si
+       JOIN products p ON si.product_id = p.id
+       JOIN sales s ON si.sale_id = s.id
+       WHERE s.status != 'Cancelled'
+       GROUP BY si.product_id, p.name ORDER BY quantity_sold DESC LIMIT ?`,
+      [limit]
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch top products' }); }
+});
+
+router.get('/category-revenue', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT c.name AS category, SUM(si.subtotal) AS revenue, SUM(si.quantity) AS units
+       FROM sale_items si
+       JOIN products p ON p.id = si.product_id
+       LEFT JOIN categories c ON c.id = p.category_id
+       JOIN sales s ON s.id = si.sale_id
+       WHERE s.status != 'Cancelled'
+       GROUP BY p.category_id, c.name ORDER BY revenue DESC LIMIT 8`
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch category revenue' }); }
+});
+
+router.get('/payment-methods', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT payment_method, COUNT(*) AS count, SUM(total_amount) AS total
+       FROM sales WHERE status != 'Cancelled'
+       GROUP BY payment_method ORDER BY count DESC`
+    );
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch payment methods' }); }
 });
 
 router.get('/weekly', async (req, res) => {
@@ -194,6 +238,30 @@ router.get('/sales-by-day', async (req, res) => {
     );
     res.json(rows);
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sales by day' }); }
+});
+
+// Monthly revenue vs cost (profit trend)
+router.get('/profit-trend', async (req, res) => {
+  try {
+    const [revenue] = await pool.query(
+      `SELECT MONTH(sale_date) AS month, COALESCE(SUM(total_amount),0) AS revenue
+       FROM sales WHERE status != 'Cancelled' AND YEAR(sale_date) = YEAR(CURDATE())
+       GROUP BY MONTH(sale_date)`
+    );
+    const [costs] = await pool.query(
+      `SELECT MONTH(purchase_date) AS month, COALESCE(SUM(total_cost),0) AS cost
+       FROM purchases WHERE YEAR(purchase_date) = YEAR(CURDATE())
+       GROUP BY MONTH(purchase_date)`
+    );
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const rows = MONTHS.map((name, i) => {
+      const m = i + 1;
+      const rev = Number(revenue.find(r => Number(r.month) === m)?.revenue || 0);
+      const cost = Number(costs.find(c => Number(c.month) === m)?.cost || 0);
+      return { month: name, revenue: rev, cost, profit: rev - cost };
+    });
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch profit trend' }); }
 });
 
 export default router;

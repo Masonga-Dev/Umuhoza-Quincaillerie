@@ -1,4 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
+import {
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart, Line,
+  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+} from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
@@ -6,13 +10,12 @@ import { useDataRefresh } from '../utils/dataEvents';
 import ExportDropdown from '../components/ExportDropdown';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 
 function fmt(v) { return Number(v || 0).toLocaleString('en-RW'); }
 function fmtShort(v) {
   const n = Number(v || 0);
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `${Math.round(n / 1_000)}K`;
   return String(Math.round(n));
 }
 function fmtDate(d) {
@@ -30,56 +33,98 @@ function timeAgo(d) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// ── Pie / Donut helpers ───────────────────────────────────────────────────────
-function polar(deg, r = 1) {
-  const a = (deg - 90) * (Math.PI / 180);
-  return [+(Math.cos(a) * r).toFixed(5), +(Math.sin(a) * r).toFixed(5)];
-}
-function slicePath(startDeg, sweep) {
-  if (sweep >= 359.99) {
-    const [hx, hy] = polar(startDeg + 0.01);
-    const [hx2, hy2] = polar(startDeg + 180);
-    return `M ${hx} ${hy} A 1 1 0 1 1 ${hx2} ${hy2} A 1 1 0 1 1 ${hx} ${hy} Z`;
-  }
-  const [sx, sy] = polar(startDeg);
-  const [ex, ey] = polar(startDeg + sweep);
-  return `M 0 0 L ${sx} ${sy} A 1 1 0 ${sweep > 180 ? 1 : 0} 1 ${ex} ${ey} Z`;
+// ── Palette ──────────────────────────────────────────────────────────────────
+// Fixed-order categorical hues, validated for CVD-safe adjacency (see dataviz skill).
+const C = {
+  blue: '#2563eb', amber: '#f59e0b', emerald: '#10b981', violet: '#8b5cf6',
+  red: '#ef4444', cyan: '#06b6d4', pink: '#ec4899', slate: '#94a3b8',
+};
+const CATEGORICAL = [C.blue, C.amber, C.emerald, C.violet, C.red, C.cyan, C.pink];
+const PAY_COLORS = { Cash: C.emerald, 'Mobile Money': C.violet, 'Bank Transfer': C.blue };
+const STOCK_TYPE_META = {
+  IN:         { label: 'Stock In',     color: C.emerald },
+  OUT:        { label: 'Stock Out',    color: C.blue },
+  ADJUSTMENT: { label: 'Adjustment',   color: C.amber },
+  RETURN_IN:  { label: 'Return (In)',  color: C.cyan },
+  RETURN_OUT: { label: 'Return (Out)', color: C.red },
+};
+const GRID = '#f1f5f9';
+const AXIS_TICK = { fontSize: 11, fill: '#94a3b8' };
+
+// Fold long tails into "Other" so a categorical chart never exceeds the
+// validated slot count — a generated 8th+ hue is never used for identity.
+function foldOther(rows, valueKey, labelKey, max = 6) {
+  if (rows.length <= max) return rows;
+  const rest = rows.slice(max).reduce((s, r) => s + Number(r[valueKey] || 0), 0);
+  return [...rows.slice(0, max), { [labelKey]: 'Other', [valueKey]: rest, __other: true }];
 }
 
-// ── DonutChart ────────────────────────────────────────────────────────────────
-function DonutChart({ data, centerLabel, centerSub }) {
-  const total = data.reduce((s, d) => s + (d.value || 0), 0);
-  if (!total) return <p className="py-8 text-center text-sm text-slate-400">No data yet</p>;
-  let cursor = 0;
-  const arcs = data.filter(d => d.value > 0).map(d => {
-    const sweep = (d.value / total) * 360;
-    const arc = { ...d, path: slicePath(cursor, sweep), pct: Math.round((d.value / total) * 100) };
-    cursor += sweep;
-    return arc;
-  });
+// ── Tooltip primitives ────────────────────────────────────────────────────────
+function TooltipCard({ children }) {
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-5">
-      <div className="relative flex-shrink-0">
-        <svg viewBox="-1.25 -1.25 2.5 2.5" className="w-32 h-32 drop-shadow-sm">
-          {arcs.map((a, i) => (
-            <path key={i} d={a.path} fill={a.color} stroke="white" strokeWidth="0.06"/>
-          ))}
-          <circle cx="0" cy="0" r="0.58" fill="white"/>
-        </svg>
+    <div className="min-w-[150px] rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-lg">
+      {children}
+    </div>
+  );
+}
+function TooltipRow({ color, label, value }) {
+  return (
+    <div className="flex items-center gap-2 py-0.5 text-xs">
+      <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: color }}/>
+      <span className="text-slate-500">{label}</span>
+      <span className="ml-auto font-bold tabular-nums text-slate-900">{value}</span>
+    </div>
+  );
+}
+function TooltipLabel({ children }) {
+  return <p className="mb-1 text-[11px] font-semibold text-slate-400">{children}</p>;
+}
+
+// ── DonutChart (Recharts Pie + side legend/value list) ────────────────────────
+function DonutChart({ data, centerLabel, centerSub, valueUnit = '' }) {
+  const total = data.reduce((s, d) => s + (d.value || 0), 0);
+  if (!total) return <p className="py-10 text-center text-sm text-slate-400">No data yet</p>;
+
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload;
+    return (
+      <TooltipCard>
+        <TooltipRow color={d.color} label={d.label} value={d.display ?? `${fmt(d.value)}${valueUnit}`}/>
+      </TooltipCard>
+    );
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-5 sm:flex-row">
+      <div className="relative h-[168px] w-[168px] flex-shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data} dataKey="value" nameKey="label"
+              innerRadius={54} outerRadius={80}
+              paddingAngle={data.length > 1 ? 2 : 0} cornerRadius={3}
+              stroke="#fff" strokeWidth={2} isAnimationActive={false}
+            >
+              {data.map((d, i) => <Cell key={i} fill={d.color}/>)}
+            </Pie>
+            <Tooltip content={renderTooltip}/>
+          </PieChart>
+        </ResponsiveContainer>
         {(centerLabel || centerSub) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            {centerLabel && <span className="text-xs font-bold text-slate-800 leading-tight">{centerLabel}</span>}
-            {centerSub   && <span className="text-[9px] text-slate-400 leading-tight">{centerSub}</span>}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            {centerLabel && <span className="text-sm font-bold leading-tight text-slate-800">{centerLabel}</span>}
+            {centerSub && <span className="text-[10px] leading-tight text-slate-400">{centerSub}</span>}
           </div>
         )}
       </div>
       <div className="w-full space-y-2">
-        {arcs.map((a, i) => (
+        {data.map((d, i) => (
           <div key={i} className="flex items-center gap-2 text-sm">
-            <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: a.color }}/>
-            <span className="flex-1 text-slate-600 truncate text-xs">{a.label}</span>
-            <span className="font-semibold text-slate-800 text-xs">{a.display ?? fmt(a.value)}</span>
-            <span className="w-8 text-right text-[10px] text-slate-400">{a.pct}%</span>
+            <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: d.color }}/>
+            <span className="flex-1 truncate text-xs text-slate-600">{d.label}</span>
+            <span className="text-xs font-semibold text-slate-800">{d.display ?? fmt(d.value)}</span>
+            <span className="w-8 text-right text-[10px] text-slate-400">{Math.round((d.value / total) * 100)}%</span>
           </div>
         ))}
       </div>
@@ -87,90 +132,130 @@ function DonutChart({ data, centerLabel, centerSub }) {
   );
 }
 
-// ── LineChart ─────────────────────────────────────────────────────────────────
-function LineChart({ data, height = 180 }) {
-  const W = 100, H = 65;
-  const pad = { l: 6, r: 3, t: 4, b: 14 };
-  const innerW = W - pad.l - pad.r;
-  const innerH = H - pad.t - pad.b;
-
-  const values = MONTHS.map((_, i) => {
+// ── Monthly Sales Trend (Area) ────────────────────────────────────────────────
+function MonthlyTrendChart({ data, height = 220 }) {
+  const chartData = MONTHS.map((m, i) => {
     const row = data.find(d => Number(d.month) === i + 1);
-    return Number(row?.total_sales || 0);
+    return { month: m, revenue: Number(row?.total_sales || 0) };
   });
-  const maxVal = Math.max(...values, 1);
 
-  const pts = values.map((v, i) => ({
-    x: pad.l + (i / 11) * innerW,
-    y: pad.t + innerH - (v / maxVal) * innerH,
-    v,
-  }));
-
-  const lineD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const fillD = `${lineD} L ${pts[11].x} ${pad.t + innerH} L ${pts[0].x} ${pad.t + innerH} Z`;
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <TooltipCard>
+        <TooltipLabel>{label}</TooltipLabel>
+        <TooltipRow color={C.blue} label="Revenue" value={`${fmt(payload[0].value)} RWF`}/>
+      </TooltipCard>
+    );
+  };
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height }}>
-      <defs>
-        <linearGradient id="rptGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25"/>
-          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
-        </linearGradient>
-      </defs>
-      {[0.25, 0.5, 0.75, 1].map(f => (
-        <line key={f} x1={pad.l} y1={pad.t + innerH - f * innerH} x2={W - pad.r} y2={pad.t + innerH - f * innerH}
-          stroke="#f1f5f9" strokeWidth="0.4"/>
-      ))}
-      {[0.5, 1].map(f => (
-        <text key={f} x="0.5" y={pad.t + innerH - f * innerH + 1.5} fontSize="2.8" fill="#cbd5e1">
-          {fmtShort(maxVal * f)}
-        </text>
-      ))}
-      <path d={fillD} fill="url(#rptGrad)"/>
-      <path d={lineD} fill="none" stroke="#3b82f6" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round"/>
-      {pts.map((p, i) => p.v > 0 && (
-        <circle key={i} cx={p.x} cy={p.y} r="1.2" fill="#3b82f6"/>
-      ))}
-      {MONTH_SHORT.map((m, i) => (
-        <text key={i} x={pts[i].x} y={H - 1} textAnchor="middle" fontSize="3" fill="#94a3b8">{m}</text>
-      ))}
-    </svg>
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={C.blue} stopOpacity={0.22}/>
+            <stop offset="100%" stopColor={C.blue} stopOpacity={0}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke={GRID} vertical={false}/>
+        <XAxis dataKey="month" tick={AXIS_TICK} axisLine={{ stroke: '#e2e8f0' }} tickLine={false}/>
+        <YAxis tick={AXIS_TICK} tickFormatter={fmtShort} axisLine={false} tickLine={false} width={48}/>
+        <Tooltip content={renderTooltip} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '3 3' }}/>
+        <Area
+          type="monotone" dataKey="revenue" stroke={C.blue} strokeWidth={2}
+          fill="url(#revGrad)" dot={false} activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 
-// ── BarChart (Sales by Day) ───────────────────────────────────────────────────
-function DayBarChart({ data, height = 160 }) {
+// ── Sales by Day (Bar) ────────────────────────────────────────────────────────
+function SalesByDayChart({ data, height = 180 }) {
   const today = new Date().getDate();
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const bars = Array.from({ length: daysInMonth }, (_, i) => {
+  const chartData = Array.from({ length: daysInMonth }, (_, i) => {
     const row = data.find(d => Number(d.day) === i + 1);
-    return { day: i + 1, value: Number(row?.total || 0), isToday: i + 1 === today };
+    return { day: i + 1, total: Number(row?.total || 0), isToday: i + 1 === today };
   });
-  const maxVal = Math.max(...bars.map(b => b.value), 1);
-  const W = 100, H = 70;
-  const bw = W / daysInMonth;
-  const pad = bw * 0.15;
+
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <TooltipCard>
+        <TooltipLabel>Day {label}</TooltipLabel>
+        <TooltipRow color={C.blue} label="Revenue" value={`${fmt(payload[0].value)} RWF`}/>
+      </TooltipCard>
+    );
+  };
 
   return (
-    <svg viewBox={`0 0 ${W} ${H + 10}`} preserveAspectRatio="none" style={{ width: '100%', height }}>
-      {[0.5, 1].map(f => (
-        <line key={f} x1="0" y1={H - f * H} x2={W} y2={H - f * H} stroke="#f1f5f9" strokeWidth="0.4"/>
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid stroke={GRID} vertical={false}/>
+        <XAxis dataKey="day" tick={{ ...AXIS_TICK, fontSize: 10 }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} interval={4}/>
+        <YAxis tick={AXIS_TICK} tickFormatter={fmtShort} axisLine={false} tickLine={false} width={48}/>
+        <Tooltip content={renderTooltip} cursor={{ fill: '#f8fafc' }}/>
+        <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={16}>
+          {chartData.map((d, i) => <Cell key={i} fill={d.isToday ? C.blue : '#bfdbfe'}/>)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Profit Trend (Composed: Revenue + Cost bars, Profit line) ────────────────
+const PROFIT_LEGEND_ITEMS = [
+  { label: 'Revenue', color: C.blue },
+  { label: 'Cost', color: C.red },
+  { label: 'Profit', color: C.emerald },
+];
+function renderProfitLegend() {
+  return (
+    <div className="mb-1 flex items-center gap-4">
+      {PROFIT_LEGEND_ITEMS.map(it => (
+        <span key={it.label} className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+          <span className="h-2 w-2 rounded-full" style={{ background: it.color }}/>
+          {it.label}
+        </span>
       ))}
-      {bars.map((b, i) => {
-        const barH = Math.max((b.value / maxVal) * H, b.value > 0 ? 1.5 : 0);
-        const x = i * bw + pad;
-        const w = bw - pad * 2;
-        return (
-          <g key={i}>
-            <rect x={x} y={H - barH} width={w} height={barH}
-              fill={b.isToday ? '#1d4ed8' : b.value > 0 ? '#93c5fd' : '#e2e8f0'} rx="0.8" opacity="0.92"/>
-            {(i % 5 === 0 || i === daysInMonth - 1) && (
-              <text x={x + w / 2} y={H + 7.5} textAnchor="middle" fontSize="3" fill="#94a3b8">{b.day}</text>
-            )}
-          </g>
-        );
-      })}
-    </svg>
+    </div>
+  );
+}
+
+function ProfitTrendChart({ data, height = 240 }) {
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const rev = payload.find(p => p.dataKey === 'revenue')?.value || 0;
+    const cost = payload.find(p => p.dataKey === 'cost')?.value || 0;
+    const profit = payload.find(p => p.dataKey === 'profit')?.value || 0;
+    return (
+      <TooltipCard>
+        <TooltipLabel>{label}</TooltipLabel>
+        <TooltipRow color={C.blue} label="Revenue" value={`${fmt(rev)} RWF`}/>
+        <TooltipRow color={C.red} label="Cost" value={`${fmt(cost)} RWF`}/>
+        <TooltipRow color={C.emerald} label="Profit" value={`${fmt(profit)} RWF`}/>
+      </TooltipCard>
+    );
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 0 }} barGap={2}>
+        <CartesianGrid stroke={GRID} vertical={false}/>
+        <XAxis dataKey="month" tick={AXIS_TICK} axisLine={{ stroke: '#e2e8f0' }} tickLine={false}/>
+        <YAxis tick={AXIS_TICK} tickFormatter={fmtShort} axisLine={false} tickLine={false} width={48}/>
+        <Tooltip content={renderTooltip} cursor={{ fill: '#f8fafc' }}/>
+        <Legend verticalAlign="top" align="left" height={32} content={renderProfitLegend}/>
+        <Bar dataKey="revenue" name="Revenue" fill={C.blue} radius={[4, 4, 0, 0]} maxBarSize={16}/>
+        <Bar dataKey="cost" name="Cost" fill={C.red} radius={[4, 4, 0, 0]} maxBarSize={16}/>
+        <Line
+          type="monotone" dataKey="profit" name="Profit" stroke={C.emerald} strokeWidth={2}
+          dot={{ r: 3, fill: C.emerald, stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 5 }}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -187,7 +272,7 @@ function KpiCard({ label, value, pct, sub, color = 'blue', icon }) {
   const hasPct = pct !== null && pct !== undefined;
   const isPos = pct >= 0;
   return (
-    <div className={`rounded-2xl border ${cfg.border} ${cfg.bg} p-5 shadow-sm`}>
+    <div className={`rounded-2xl border ${cfg.border} ${cfg.bg} p-5 shadow-sm transition hover:shadow-md`}>
       <div className="flex items-start justify-between gap-2">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm ${cfg.icon}`}>
           {icon}
@@ -198,12 +283,10 @@ function KpiCard({ label, value, pct, sub, color = 'blue', icon }) {
           </span>
         )}
       </div>
-      <p className="mt-3 text-2xl font-extrabold text-slate-900 leading-tight">{value}</p>
+      <p className="mt-3 text-2xl font-extrabold leading-tight text-slate-900">{value}</p>
       <p className="mt-0.5 text-sm font-medium text-slate-600">{label}</p>
       <p className="mt-0.5 text-[11px] text-slate-400">
-        {hasPct
-          ? `${isPos ? '+' : ''}${pct}% from last month`
-          : sub}
+        {hasPct ? `${isPos ? '+' : ''}${pct}% from last month` : sub}
       </p>
     </div>
   );
@@ -220,14 +303,27 @@ function SectionTitle({ children }) {
   );
 }
 
+// ── Chart Card wrapper ─────────────────────────────────────────────────────────
+function ChartCard({ title, badge, className = '', children }) {
+  return (
+    <div className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="font-semibold text-slate-800">{title}</p>
+        {badge}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ── Insight Card ──────────────────────────────────────────────────────────────
 function InsightCard({ title, value, desc, accent = '#3b82f6' }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex items-start gap-4">
-      <div className="mt-0.5 h-2 w-2 rounded-full flex-shrink-0" style={{ background: accent, marginTop: 6 }}/>
+    <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mt-0.5 h-2 w-2 flex-shrink-0 rounded-full" style={{ background: accent, marginTop: 6 }}/>
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</p>
-        <p className="mt-1 text-base font-bold text-slate-900 truncate">{value}</p>
+        <p className="mt-1 truncate text-base font-bold text-slate-900">{value}</p>
         <p className="mt-0.5 text-xs text-slate-500">{desc}</p>
       </div>
     </div>
@@ -236,46 +332,55 @@ function InsightCard({ title, value, desc, accent = '#3b82f6' }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AdminReports() {
-  const [kpis, setKpis]               = useState(null);
-  const [monthly, setMonthly]         = useState([]);
-  const [daily, setDaily]             = useState(null);
-  const [inventory, setInventory]     = useState([]);
-  const [recentSales, setRecentSales] = useState([]);
+  const [kpis, setKpis]                 = useState(null);
+  const [monthly, setMonthly]           = useState([]);
+  const [bestSelling, setBestSelling]   = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [catRevenue, setCatRevenue]     = useState([]);
+  const [inventory, setInventory]       = useState([]);
+  const [recentSales, setRecentSales]   = useState([]);
   const [topCustomers, setTopCustomers] = useState([]);
   const [supplierPerf, setSupplierPerf] = useState([]);
-  const [salesByDay, setSalesByDay]   = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const { refreshKey, bindRefresh }   = useDataRefresh();
+  const [salesByDay, setSalesByDay]     = useState([]);
+  const [profitTrend, setProfitTrend]   = useState([]);
+  const [recentPurchases, setRecentPurchases] = useState([]);
+  const [stockActivity, setStockActivity]     = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const { refreshKey, bindRefresh }     = useDataRefresh();
 
   const loadData = useCallback(() => {
     setLoading(true);
-    Promise.all([
-      API.get('/reports/kpis'),
-      API.get('/reports/monthly'),
-      API.get('/reports/daily'),
-      API.get('/reports/inventory'),
-      API.get('/reports/recent-sales'),
-      API.get('/reports/top-customers'),
-      API.get('/reports/supplier-performance'),
-      API.get('/reports/sales-by-day'),
-    ]).then(([kRes, mRes, dRes, iRes, rsRes, tcRes, spRes, sbdRes]) => {
-      setKpis(kRes.data);
-      setMonthly(Array.isArray(mRes.data) ? mRes.data : []);
-      setDaily(dRes.data);
-      setInventory(Array.isArray(iRes.data) ? iRes.data : []);
-      setRecentSales(Array.isArray(rsRes.data) ? rsRes.data : []);
-      setTopCustomers(Array.isArray(tcRes.data) ? tcRes.data : []);
-      setSupplierPerf(Array.isArray(spRes.data) ? spRes.data : []);
-      setSalesByDay(Array.isArray(sbdRes.data) ? sbdRes.data : []);
-    }).catch(console.error).finally(() => setLoading(false));
+    const endpoints = [
+      ['/reports/kpis',               setKpis,           false],
+      ['/reports/monthly',            setMonthly,        true],
+      ['/reports/top-products',       setBestSelling,    true],
+      ['/reports/payment-methods',    setPaymentMethods, true],
+      ['/reports/category-revenue',   setCatRevenue,     true],
+      ['/reports/inventory',          setInventory,      true],
+      ['/reports/recent-sales',       setRecentSales,    true],
+      ['/reports/top-customers',      setTopCustomers,   true],
+      ['/reports/supplier-performance', setSupplierPerf, true],
+      ['/reports/sales-by-day',       setSalesByDay,     true],
+      ['/reports/profit-trend',       setProfitTrend,    true],
+      ['/purchases',                  setRecentPurchases, true], // Purchases module — recent restocks
+      ['/reports/stock-movements?limit=12', setStockActivity, true], // Stock module ledger
+    ];
+    // Settle each endpoint independently — one missing/failing route (e.g. not
+    // yet deployed) no longer blanks the entire page, only that section.
+    Promise.allSettled(endpoints.map(([url]) => API.get(url))).then(results => {
+      results.forEach((res, i) => {
+        const [url, setter, isArray] = endpoints[i];
+        if (res.status === 'fulfilled') {
+          setter(isArray ? (Array.isArray(res.value.data) ? res.value.data : []) : res.value.data);
+        } else {
+          console.error(`Report request failed: ${url}`, res.reason);
+        }
+      });
+    }).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { loadData(); }, [loadData, refreshKey]);
   useEffect(bindRefresh, [bindRefresh]);
-
-  const bestSelling    = daily?.best_selling    || [];
-  const paymentMethods = daily?.payment_methods || [];
-  const catRevenue     = daily?.category_revenue || [];
 
   const totalProducts = inventory.length;
   const inStockCount  = inventory.filter(i => i.status === 'In Stock').length;
@@ -286,10 +391,29 @@ export default function AdminReports() {
 
   const maxQtySold    = bestSelling[0]?.quantity_sold || 1;
 
-  const catTotal = catRevenue.reduce((s, c) => s + Number(c.revenue || 0), 0) || 1;
+  const catTotal   = catRevenue.reduce((s, c) => s + Number(c.revenue || 0), 0) || 1;
+  const catFolded  = foldOther(catRevenue, 'revenue', 'category', 6);
+  const catData    = catFolded.length
+    ? catFolded.map((c, i) => ({
+        label: c.category || 'Other',
+        value: Number(c.revenue),
+        display: `${fmtShort(c.revenue)} RWF`,
+        color: c.__other ? C.slate : CATEGORICAL[i % CATEGORICAL.length],
+      }))
+    : [{ label: 'No sales', value: 1, color: '#e2e8f0', display: '—' }];
 
-  const CAT_COLORS  = ['#0ea5e9','#38bdf8','#7dd3fc','#0284c7','#0369a1','#67e8f9','#22d3ee','#06b6d4'];
-  const PAY_COLORS  = { Cash: '#10b981', 'Mobile Money': '#8b5cf6', 'Bank Transfer': '#3b82f6' };
+  const payData = paymentMethods.length
+    ? paymentMethods.map(p => ({
+        label: p.payment_method || 'Unknown',
+        value: Number(p.count),
+        display: `${p.count} txns`,
+        color: PAY_COLORS[p.payment_method] || C.slate,
+      }))
+    : [{ label: 'No data', value: 1, color: '#e2e8f0', display: '—' }];
+
+  const hasMonthlyData = monthly.some(m => Number(m.total_sales) > 0);
+  const hasProfitData  = profitTrend.some(p => Number(p.revenue) > 0 || Number(p.cost) > 0);
+  const profitThisMonth = profitTrend.find(p => p.month === MONTHS[curMonthIdx]);
 
   // Business insights
   const bestMonth = monthly.reduce((best, m) => Number(m.total_sales) > Number(best?.total_sales || 0) ? m : best, null);
@@ -306,6 +430,11 @@ export default function AdminReports() {
     `inventory-${new Date().toISOString().slice(0,10)}.csv`,
     ['Product','SKU','Category','Stock','Min Stock','Status','Cost Price'],
     inventory.map(i => [i.name, i.sku||'', i.category_name||'', i.stock_quantity, i.minimum_stock||5, i.status, i.cost_price||0])
+  );
+  const exportProfitTrend = () => exportToCSV(
+    `profit-trend-${new Date().toISOString().slice(0,10)}.csv`,
+    ['Month','Revenue (RWF)','Cost (RWF)','Profit (RWF)'],
+    profitTrend.map(p => [p.month, p.revenue, p.cost, p.profit])
   );
 
   return (
@@ -387,36 +516,61 @@ export default function AdminReports() {
             <section>
               <SectionTitle>Sales Performance</SectionTitle>
               <div className="grid gap-4 xl:grid-cols-3">
-                <div className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between">
-                    <p className="font-semibold text-slate-800">Monthly Sales Trend</p>
+                <ChartCard
+                  title="Monthly Sales Trend"
+                  className="xl:col-span-2"
+                  badge={
                     <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
                       {new Date().getFullYear()}
                     </span>
-                  </div>
-                  {monthly.length > 0
-                    ? <LineChart data={monthly} height={180}/>
+                  }
+                >
+                  {hasMonthlyData
+                    ? <MonthlyTrendChart data={monthly} height={200}/>
                     : <p className="py-16 text-center text-sm text-slate-400">No sales data yet</p>}
-                  <div className="mt-3 flex items-center gap-4 text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-5 rounded bg-blue-500"/>Monthly revenue</span>
-                    <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-blue-500"/>Data point</span>
-                  </div>
-                </div>
+                </ChartCard>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <p className="mb-4 font-semibold text-slate-800">Revenue by Category</p>
-                  <DonutChart
-                    data={catRevenue.length
-                      ? catRevenue.map((c, i) => ({
-                          label: c.category || 'Other',
-                          value: Number(c.revenue),
-                          display: `${fmtShort(c.revenue)} RWF`,
-                          color: CAT_COLORS[i % CAT_COLORS.length],
-                        }))
-                      : [{ label: 'No sales', value: 1, color: '#e2e8f0', display: '—' }]}
-                    centerLabel={catRevenue[0] ? `${Math.round((catRevenue[0].revenue / catTotal) * 100)}%` : '—'}
-                    centerSub="top cat."
-                  />
+                <ChartCard title="Revenue by Category">
+                  <DonutChart data={catData} centerLabel={catRevenue[0] ? `${Math.round((catRevenue[0].revenue / catTotal) * 100)}%` : '—'} centerSub="top cat." valueUnit=" RWF"/>
+                </ChartCard>
+              </div>
+            </section>
+
+            {/* ── Profit Trend ── */}
+            <section>
+              <SectionTitle>Profitability</SectionTitle>
+              <div className="grid gap-4 xl:grid-cols-3">
+                <ChartCard
+                  title="Revenue vs Cost vs Profit"
+                  className="xl:col-span-2"
+                  badge={
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-600">
+                      {new Date().getFullYear()}
+                    </span>
+                  }
+                >
+                  {hasProfitData
+                    ? <ProfitTrendChart data={profitTrend} height={220}/>
+                    : <p className="py-16 text-center text-sm text-slate-400">No purchase/sales data yet</p>}
+                </ChartCard>
+
+                <div className="grid gap-4 content-start">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+                    <p className="text-sm font-medium text-emerald-700">Profit this month</p>
+                    <p className="mt-2 text-2xl font-extrabold text-emerald-700">{fmtShort(profitThisMonth?.profit)} RWF</p>
+                    <p className="mt-1 text-xs text-emerald-500">
+                      Revenue {fmtShort(profitThisMonth?.revenue)} − Cost {fmtShort(profitThisMonth?.cost)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={exportProfitTrend}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-slate-50"
+                  >
+                    <svg className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Export Profit Trend
+                  </button>
                 </div>
               </div>
             </section>
@@ -434,16 +588,16 @@ export default function AdminReports() {
                         return (
                           <div key={item.name} className="flex items-center gap-3">
                             <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{i + 1}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-sm font-medium text-slate-700 truncate">{item.name}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="truncate text-sm font-medium text-slate-700">{item.name}</span>
                                 <span className="ml-2 flex-shrink-0 text-xs font-bold text-violet-600">{item.quantity_sold} units</span>
                               </div>
                               <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                                 <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${pct}%` }}/>
                               </div>
                             </div>
-                            <span className="flex-shrink-0 text-[11px] text-slate-400 w-16 text-right">{fmtShort(item.total_revenue)} RWF</span>
+                            <span className="w-16 flex-shrink-0 text-right text-[11px] text-slate-400">{fmtShort(item.total_revenue)} RWF</span>
                           </div>
                         );
                       })}
@@ -453,20 +607,8 @@ export default function AdminReports() {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <p className="mb-4 font-semibold text-slate-800">Payment Methods</p>
-                  <DonutChart
-                    data={paymentMethods.length
-                      ? paymentMethods.map(p => ({
-                          label: p.payment_method || 'Unknown',
-                          value: Number(p.count),
-                          display: `${p.count} txns`,
-                          color: PAY_COLORS[p.payment_method] || '#64748b',
-                        }))
-                      : [{ label: 'No data', value: 1, color: '#e2e8f0', display: '—' }]}
-                    centerLabel={paymentMethods.length ? paymentMethods[0]?.payment_method : '—'}
-                    centerSub="top method"
-                  />
+                <ChartCard title="Payment Methods">
+                  <DonutChart data={payData} centerLabel={paymentMethods.length ? paymentMethods[0]?.payment_method : '—'} centerSub="top method"/>
                   {paymentMethods.length > 0 && (
                     <div className="mt-4 space-y-1.5 border-t border-slate-100 pt-4">
                       {paymentMethods.map(p => (
@@ -477,34 +619,34 @@ export default function AdminReports() {
                       ))}
                     </div>
                   )}
-                </div>
+                </ChartCard>
               </div>
             </section>
 
             {/* ── Sales by Day ── */}
             <section>
               <SectionTitle>Sales by Day — {MONTHS[curMonthIdx]}</SectionTitle>
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="font-semibold text-slate-800">Daily Revenue (RWF)</p>
+              <ChartCard
+                title="Daily Revenue (RWF)"
+                badge={
                   <div className="flex items-center gap-3 text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded bg-blue-700"/>Today</span>
-                    <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded bg-blue-300"/>Other days</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded bg-blue-600"/>Today</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded bg-blue-200"/>Other days</span>
                   </div>
-                </div>
-                <DayBarChart data={salesByDay} height={160}/>
+                }
+              >
+                <SalesByDayChart data={salesByDay} height={160}/>
                 {salesByDay.length === 0 && (
                   <p className="mt-2 text-center text-sm text-slate-400">No sales recorded this month</p>
                 )}
-              </div>
+              </ChartCard>
             </section>
 
             {/* ── Inventory Health ── */}
             <section>
               <SectionTitle>Inventory Health</SectionTitle>
               <div className="grid gap-4 xl:grid-cols-[280px_1fr]">
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <p className="mb-4 font-semibold text-slate-800">Stock Status</p>
+                <ChartCard title="Stock Status">
                   <DonutChart
                     data={[
                       { label: 'In Stock',     value: inStockCount, color: '#10b981', display: `${inStockCount}` },
@@ -515,16 +657,16 @@ export default function AdminReports() {
                     centerSub="healthy"
                   />
                   {totalProducts > 0 && (
-                    <div className="mt-4 h-2 rounded-full overflow-hidden flex gap-px">
-                      {inStockCount > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(inStockCount/totalProducts)*100}%` }}/>}
-                      {lowCount > 0     && <div className="bg-amber-400  h-full" style={{ width: `${(lowCount/totalProducts)*100}%` }}/>}
-                      {outCount > 0     && <div className="bg-red-500    h-full" style={{ width: `${(outCount/totalProducts)*100}%` }}/>}
+                    <div className="mt-4 flex h-2 gap-px overflow-hidden rounded-full">
+                      {inStockCount > 0 && <div className="h-full bg-emerald-500" style={{ width: `${(inStockCount/totalProducts)*100}%` }}/>}
+                      {lowCount > 0     && <div className="h-full bg-amber-400"  style={{ width: `${(lowCount/totalProducts)*100}%` }}/>}
+                      {outCount > 0     && <div className="h-full bg-red-500"    style={{ width: `${(outCount/totalProducts)*100}%` }}/>}
                     </div>
                   )}
                   <p className="mt-1 text-right text-xs text-slate-400">{totalProducts} products total</p>
-                </div>
+                </ChartCard>
 
-                <div className="grid gap-4 sm:grid-cols-3 content-start">
+                <div className="grid content-start gap-4 sm:grid-cols-3">
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
                     <p className="text-sm font-medium text-emerald-700">In Stock</p>
                     <p className="mt-2 text-3xl font-extrabold text-emerald-700">{inStockCount}</p>
@@ -585,16 +727,16 @@ export default function AdminReports() {
             {(lowCount > 0 || outCount > 0) && (
               <section>
                 <SectionTitle>Products Needing Attention</SectionTitle>
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="border-b border-slate-200 bg-slate-50">
                         <tr>
-                          <th className="py-3 px-4 text-left font-semibold text-slate-600">Product</th>
-                          <th className="py-3 px-4 text-left font-semibold text-slate-600">Category</th>
-                          <th className="py-3 px-4 text-right font-semibold text-slate-600">Stock</th>
-                          <th className="py-3 px-4 text-right font-semibold text-slate-600">Min.</th>
-                          <th className="py-3 px-4 text-left font-semibold text-slate-600">Status</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Product</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Category</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Stock</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Min.</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -602,16 +744,16 @@ export default function AdminReports() {
                           .sort((a, b) => a.stock_quantity - b.stock_quantity)
                           .map(item => (
                           <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-3 px-4">
+                            <td className="px-4 py-3">
                               <p className="font-medium text-slate-900">{item.name}</p>
                               {item.sku && <p className="font-mono text-xs text-slate-400">{item.sku}</p>}
                             </td>
-                            <td className="py-3 px-4 text-slate-500">{item.category_name || '—'}</td>
-                            <td className={`py-3 px-4 text-right font-bold ${item.status === 'Out of Stock' ? 'text-red-600' : 'text-amber-600'}`}>
+                            <td className="px-4 py-3 text-slate-500">{item.category_name || '—'}</td>
+                            <td className={`px-4 py-3 text-right font-bold ${item.status === 'Out of Stock' ? 'text-red-600' : 'text-amber-600'}`}>
                               {item.stock_quantity}
                             </td>
-                            <td className="py-3 px-4 text-right text-slate-400">{item.minimum_stock || 5}</td>
-                            <td className="py-3 px-4">
+                            <td className="px-4 py-3 text-right text-slate-400">{item.minimum_stock || 5}</td>
+                            <td className="px-4 py-3">
                               <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.status === 'Out of Stock' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                                 {item.status}
                               </span>
@@ -628,33 +770,33 @@ export default function AdminReports() {
             {/* ── Recent Sales ── */}
             <section>
               <SectionTitle>Recent Sales</SectionTitle>
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 {recentSales.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="border-b border-slate-200 bg-slate-50">
                         <tr>
-                          <th className="py-3 px-4 text-left font-semibold text-slate-600">Invoice</th>
-                          <th className="py-3 px-4 text-left font-semibold text-slate-600">Customer</th>
-                          <th className="py-3 px-4 text-left font-semibold text-slate-600">Payment</th>
-                          <th className="py-3 px-4 text-right font-semibold text-slate-600">Amount (RWF)</th>
-                          <th className="py-3 px-4 text-left font-semibold text-slate-600">Time</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Invoice</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Customer</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Payment</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Amount (RWF)</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Time</th>
                         </tr>
                       </thead>
                       <tbody>
                         {recentSales.map(s => (
                           <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-3 px-4 font-mono text-xs text-slate-700">{s.invoice_number || `#${s.id}`}</td>
-                            <td className="py-3 px-4 font-medium text-slate-800">{s.customer_name || 'Walk-in'}</td>
-                            <td className="py-3 px-4">
+                            <td className="px-4 py-3 font-mono text-xs text-slate-700">{s.invoice_number || `#${s.id}`}</td>
+                            <td className="px-4 py-3 font-medium text-slate-800">{s.customer_name || 'Walk-in'}</td>
+                            <td className="px-4 py-3">
                               <span className="rounded-full px-2.5 py-1 text-xs font-semibold"
                                 style={{ background: PAY_COLORS[s.payment_method] ? PAY_COLORS[s.payment_method] + '20' : '#f1f5f9',
                                          color: PAY_COLORS[s.payment_method] || '#475569' }}>
                                 {s.payment_method || 'Cash'}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-right font-semibold text-slate-900">{fmt(s.total_amount)}</td>
-                            <td className="py-3 px-4 text-slate-400 text-xs">{timeAgo(s.sale_date)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{fmt(s.total_amount)}</td>
+                            <td className="px-4 py-3 text-xs text-slate-400">{timeAgo(s.sale_date)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -666,33 +808,123 @@ export default function AdminReports() {
               </div>
             </section>
 
+            {/* ── Recent Purchases ── */}
+            <section>
+              <SectionTitle>Recent Purchases</SectionTitle>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                {recentPurchases.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-slate-200 bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Reference</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Supplier</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Cost (RWF)</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Returned (RWF)</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentPurchases.slice(0, 8).map(p => (
+                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-4 py-3 font-mono text-xs text-slate-700">{p.reference_number || `#${p.id}`}</td>
+                            <td className="px-4 py-3 font-medium text-slate-800">{p.supplier_name || 'Unknown supplier'}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{fmt(p.total_cost)}</td>
+                            <td className="px-4 py-3 text-right text-slate-400">
+                              {Number(p.total_returned_cost) > 0 ? fmt(p.total_returned_cost) : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-slate-400">{fmtDate(p.purchase_date)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="py-10 text-center text-sm text-slate-400">No purchases yet</p>
+                )}
+              </div>
+            </section>
+
+            {/* ── Recent Stock Activity ── */}
+            <section>
+              <SectionTitle>Recent Stock Activity</SectionTitle>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                {stockActivity.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-slate-200 bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Product</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Type</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Qty</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Note</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">By</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stockActivity.map(m => {
+                          const meta = STOCK_TYPE_META[m.transaction_type] || STOCK_TYPE_META.ADJUSTMENT;
+                          const qty = Number(m.quantity);
+                          return (
+                            <tr key={m.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-slate-900">{m.product_name}</p>
+                                {(m.variant || m.sku) && (
+                                  <p className="text-xs text-slate-400">{[m.variant, m.sku].filter(Boolean).join(' · ')}</p>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                                  style={{ background: meta.color + '1a', color: meta.color }}>
+                                  {meta.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right font-bold tabular-nums" style={{ color: meta.color }}>
+                                {qty > 0 ? `+${fmt(qty)}` : fmt(qty)}
+                              </td>
+                              <td className="px-4 py-3 max-w-[220px] truncate text-slate-500">{m.notes || '—'}</td>
+                              <td className="px-4 py-3 text-slate-500">{m.created_by_name || '—'}</td>
+                              <td className="px-4 py-3 text-xs text-slate-400">{timeAgo(m.created_at)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="py-10 text-center text-sm text-slate-400">No stock activity yet</p>
+                )}
+              </div>
+            </section>
+
             {/* ── Top Customers + Supplier Performance ── */}
             <section>
               <SectionTitle>This Month</SectionTitle>
               <div className="grid gap-4 xl:grid-cols-2">
                 {/* Top Customers */}
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="border-b border-slate-100 px-5 py-4">
                     <p className="font-semibold text-slate-800">Top Customers</p>
                     <p className="text-xs text-slate-400">{MONTHS[curMonthIdx]} {new Date().getFullYear()}</p>
                   </div>
                   {topCustomers.length > 0 ? (
                     <table className="w-full text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-100">
+                      <thead className="border-b border-slate-100 bg-slate-50">
                         <tr>
-                          <th className="py-2.5 px-4 text-left text-xs font-semibold text-slate-500">Customer</th>
-                          <th className="py-2.5 px-4 text-right text-xs font-semibold text-slate-500">Purchases</th>
-                          <th className="py-2.5 px-4 text-right text-xs font-semibold text-slate-500">Spent (RWF)</th>
-                          <th className="py-2.5 px-4 text-left text-xs font-semibold text-slate-500">Last Visit</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500">Customer</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">Purchases</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">Spent (RWF)</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500">Last Visit</th>
                         </tr>
                       </thead>
                       <tbody>
                         {topCustomers.map((c, i) => (
                           <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                            <td className="py-2.5 px-4 font-medium text-slate-800">{c.customer_name}</td>
-                            <td className="py-2.5 px-4 text-right text-slate-600">{c.total_purchases}</td>
-                            <td className="py-2.5 px-4 text-right font-semibold text-slate-900">{fmt(c.amount_spent)}</td>
-                            <td className="py-2.5 px-4 text-xs text-slate-400">{fmtDate(c.last_purchase)}</td>
+                            <td className="px-4 py-2.5 font-medium text-slate-800">{c.customer_name}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-600">{c.total_purchases}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-slate-900">{fmt(c.amount_spent)}</td>
+                            <td className="px-4 py-2.5 text-xs text-slate-400">{fmtDate(c.last_purchase)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -703,26 +935,26 @@ export default function AdminReports() {
                 </div>
 
                 {/* Supplier Performance */}
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="border-b border-slate-100 px-5 py-4">
                     <p className="font-semibold text-slate-800">Supplier Performance</p>
                     <p className="text-xs text-slate-400">{MONTHS[curMonthIdx]} {new Date().getFullYear()}</p>
                   </div>
                   {supplierPerf.length > 0 ? (
                     <table className="w-full text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-100">
+                      <thead className="border-b border-slate-100 bg-slate-50">
                         <tr>
-                          <th className="py-2.5 px-4 text-left text-xs font-semibold text-slate-500">Supplier</th>
-                          <th className="py-2.5 px-4 text-right text-xs font-semibold text-slate-500">Orders</th>
-                          <th className="py-2.5 px-4 text-right text-xs font-semibold text-slate-500">Total (RWF)</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500">Supplier</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">Orders</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">Total (RWF)</th>
                         </tr>
                       </thead>
                       <tbody>
                         {supplierPerf.map((s, i) => (
                           <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                            <td className="py-2.5 px-4 font-medium text-slate-800">{s.supplier}</td>
-                            <td className="py-2.5 px-4 text-right text-slate-600">{s.purchases}</td>
-                            <td className="py-2.5 px-4 text-right font-semibold text-slate-900">{fmt(s.total_value)}</td>
+                            <td className="px-4 py-2.5 font-medium text-slate-800">{s.supplier}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-600">{s.purchases}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-slate-900">{fmt(s.total_value)}</td>
                           </tr>
                         ))}
                       </tbody>
