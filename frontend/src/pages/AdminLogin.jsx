@@ -184,40 +184,40 @@ function AdminLogin() {
                 </div>
 
                 {/* WELCOME */}
-                <div className="mt-10 xl:mt-14">
+                <div className="mt-6 xl:mt-8">
 
-                  <p className="text-xs font-bold uppercase tracking-[0.35em] text-yellow-300">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
                     Welcome Back!
                   </p>
 
-                  <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tight xl:text-5xl">
+                  <h1 className="mt-3 text-3xl font-black leading-[1.08] tracking-tight xl:text-4xl">
                     Admin{' '}
                     <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
                       Dashboard
                     </span>
                   </h1>
 
-                  <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 xl:text-lg">
+                  <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-300 xl:text-base">
                     Sign in to manage your store, track inventory,
                     process sales and grow your business.
                   </p>
                 </div>
 
                 {/* SECURITY */}
-                <div className="mt-8 max-w-xl rounded-3xl border border-blue-400/20 bg-blue-950/40 p-5 backdrop-blur-md xl:mt-10">
+                <div className="mt-6 max-w-xl rounded-3xl border border-blue-400/20 bg-blue-950/40 p-4 backdrop-blur-md xl:mt-7 xl:p-5">
 
                   <div className="flex items-center gap-4">
 
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 text-2xl shadow-lg">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 text-xl shadow-lg xl:h-14 xl:w-14 xl:text-2xl">
                       🛡️
                     </div>
 
                     <div>
-                      <h2 className="text-lg font-bold">
+                      <h2 className="text-base font-bold xl:text-lg">
                         Secure Admin Access
                       </h2>
 
-                      <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                      <p className="mt-1 text-xs leading-relaxed text-slate-300 xl:text-sm">
                         Your data is protected with industry-standard
                         security and encryption.
                       </p>
@@ -229,7 +229,7 @@ function AdminLogin() {
               </div>
 
               {/* FEATURES */}
-              <div className="mt-8 grid grid-cols-2 gap-4">
+              <div className="mt-6 grid grid-cols-2 gap-3 xl:mt-7 xl:gap-4">
 
                 {features.map((feature) => (
                   <div
@@ -238,16 +238,16 @@ function AdminLogin() {
                   >
 
                     <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.color} text-xl shadow-lg`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.color} text-lg shadow-lg xl:h-12 xl:w-12 xl:text-xl`}
                     >
                       {feature.icon}
                     </div>
 
-                    <h3 className="mt-3 text-sm font-bold xl:text-base">
+                    <h3 className="mt-2 text-xs font-bold xl:text-sm">
                       {feature.title}
                     </h3>
 
-                    <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                    <p className="mt-1 text-[10px] leading-relaxed text-slate-400 xl:text-xs">
                       {feature.description}
                     </p>
 
