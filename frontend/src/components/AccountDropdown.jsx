@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import API from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
@@ -58,15 +59,15 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-function ProfilePanel({ user, onEdit, onClose }) {
+function ProfilePanel({ user, onEdit, onClose, t }) {
   return (
-    <Modal title="My Profile" onClose={onClose}>
+    <Modal title={t('admin.profile.myProfile')} onClose={onClose}>
       <div className="flex flex-col items-center gap-3 pb-4 border-b border-slate-100 mb-4">
         <Avatar user={user} size={80} />
         <div className="text-center">
           <p className="text-lg font-bold text-slate-900">{user?.name || '—'}</p>
           <span className="inline-block rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700 capitalize mt-1">
-            {user?.role || 'admin'}
+            {user?.role || t('admin.profile.admin')}
           </span>
         </div>
       </div>
@@ -85,7 +86,7 @@ function ProfilePanel({ user, onEdit, onClose }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
             </svg>
           </span>
-          <span className="text-slate-600">{user?.phone || <span className="text-slate-300 italic">Not set</span>}</span>
+          <span className="text-slate-600">{user?.phone || <span className="text-slate-300 italic">{t('admin.profile.notSet')}</span>}</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="w-5 text-slate-400">
@@ -94,7 +95,7 @@ function ProfilePanel({ user, onEdit, onClose }) {
             </svg>
           </span>
           <span className="text-slate-600">
-            Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-RW', { month: 'long', year: 'numeric' }) : '—'}
+            {t('admin.profile.memberSince')} {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-RW', { month: 'long', year: 'numeric' }) : '—'}
           </span>
         </div>
       </div>
@@ -102,13 +103,13 @@ function ProfilePanel({ user, onEdit, onClose }) {
         onClick={onEdit}
         className="mt-5 w-full rounded-xl bg-[#1a2d5a] py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d1b3e]"
       >
-        Edit Profile
+        {t('admin.profile.editProfile')}
       </button>
     </Modal>
   );
 }
 
-function SettingsPanel({ user, onClose, onSaved }) {
+function SettingsPanel({ user, onClose, onSaved, t }) {
   const [form, setForm]       = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [avatar, setAvatar]   = useState(null);
   const [removePhoto, setRemovePhoto] = useState(false);
@@ -153,7 +154,7 @@ function SettingsPanel({ user, onClose, onSaved }) {
   const hasPhoto = !!preview;
 
   return (
-    <Modal title="Account Settings" onClose={onClose}>
+    <Modal title={t('admin.profile.accountSettings')} onClose={onClose}>
       <form onSubmit={save} className="space-y-4">
         {/* Avatar picker */}
         <div className="flex items-center gap-4">
@@ -169,31 +170,31 @@ function SettingsPanel({ user, onClose, onSaved }) {
           <div className="flex flex-col gap-1">
             <button type="button" onClick={() => fileRef.current?.click()}
               className="text-xs font-semibold text-[#1a2d5a] hover:underline text-left">
-              Change photo
+              {t('admin.profile.changePhoto')}
             </button>
             {hasPhoto && (
               <button type="button" onClick={handleRemovePhoto}
                 className="text-xs font-semibold text-red-500 hover:underline text-left">
-                Remove photo
+                {t('admin.profile.removePhoto')}
               </button>
             )}
-            <p className="text-[11px] text-slate-400">JPG or PNG, max 3 MB</p>
+            <p className="text-[11px] text-slate-400">{t('admin.profile.fileHint')}</p>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickFile} />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1">Full Name</label>
+          <label className="block text-xs font-semibold text-slate-500 mb-1">{t('admin.profile.fullName')}</label>
           <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required
             className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#1a2d5a] focus:ring-2 focus:ring-[#1a2d5a]/10" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1">Email Address</label>
+          <label className="block text-xs font-semibold text-slate-500 mb-1">{t('admin.profile.emailAddress')}</label>
           <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required
             className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#1a2d5a] focus:ring-2 focus:ring-[#1a2d5a]/10" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1">Phone Number</label>
+          <label className="block text-xs font-semibold text-slate-500 mb-1">{t('admin.profile.phoneNumber')}</label>
           <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+250 7XX XXX XXX"
             className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#1a2d5a] focus:ring-2 focus:ring-[#1a2d5a]/10" />
         </div>
@@ -202,14 +203,14 @@ function SettingsPanel({ user, onClose, onSaved }) {
 
         <button type="submit" disabled={saving}
           className="w-full rounded-xl bg-[#1a2d5a] py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d1b3e] disabled:opacity-60">
-          {saving ? 'Saving…' : 'Save Changes'}
+          {saving ? t('admin.profile.saving') : t('admin.profile.saveChanges')}
         </button>
       </form>
     </Modal>
   );
 }
 
-function PasswordPanel({ onClose }) {
+function PasswordPanel({ onClose, t }) {
   const [form, setForm]   = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
@@ -218,19 +219,19 @@ function PasswordPanel({ onClose }) {
   const save = async e => {
     e.preventDefault();
     setError(''); setSuccess('');
-    if (form.next !== form.confirm) { setError('New passwords do not match'); return; }
-    if (form.next.length < 6) { setError('New password must be at least 6 characters'); return; }
+    if (form.next !== form.confirm) { setError(t('admin.profile.passwordMismatch')); return; }
+    if (form.next.length < 6) { setError(t('admin.profile.passwordLength')); return; }
     setSaving(true);
     try {
       await API.put('/admin/me/password',
         { current_password: form.current, new_password: form.next },
         { headers: HEADERS() }
       );
-      setSuccess('Password updated successfully!');
+      setSuccess(t('admin.profile.passwordUpdated'));
       setForm({ current: '', next: '', confirm: '' });
       setTimeout(onClose, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update password');
+      setError(err.response?.data?.message || t('admin.profile.passwordUpdateFailed'));
     } finally { setSaving(false); }
   };
 
@@ -246,16 +247,16 @@ function PasswordPanel({ onClose }) {
   );
 
   return (
-    <Modal title="Change Password" onClose={onClose}>
+    <Modal title={t('admin.profile.changePassword')} onClose={onClose}>
       <form onSubmit={save} className="space-y-4">
-        {field('Current Password', 'current', 'Enter current password')}
-        {field('New Password', 'next', 'Min. 6 characters')}
-        {field('Confirm New Password', 'confirm', 'Repeat new password')}
+        {field(t('admin.profile.currentPassword'), 'current', t('admin.profile.currentPasswordPlaceholder'))}
+        {field(t('admin.profile.newPassword'), 'next', t('admin.profile.newPasswordPlaceholder'))}
+        {field(t('admin.profile.confirmPassword'), 'confirm', t('admin.profile.confirmPasswordPlaceholder'))}
         {error   && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{error}</p>}
         {success && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-600">{success}</p>}
         <button type="submit" disabled={saving}
           className="w-full rounded-xl bg-[#1a2d5a] py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d1b3e] disabled:opacity-60">
-          {saving ? 'Updating…' : 'Update Password'}
+          {saving ? t('admin.profile.updating') : t('admin.profile.updatePassword')}
         </button>
       </form>
     </Modal>
@@ -263,6 +264,7 @@ function PasswordPanel({ onClose }) {
 }
 
 export default function AccountDropdown({ onSignOut }) {
+  const { t } = useLanguage();
   const [open, setOpen]     = useState(false);
   const [panel, setPanel]   = useState(null); // 'profile' | 'settings' | 'password'
   const [user, setUser]     = useState(null);
@@ -301,8 +303,8 @@ export default function AccountDropdown({ onSignOut }) {
             <div className="flex items-center gap-3 px-4 py-4" style={{ background: 'linear-gradient(135deg,#0d1b3e,#1a2d5a)' }}>
               <Avatar user={user} size={44} />
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">{user?.name || 'Administrator'}</p>
-                <p className="text-[11px] text-amber-300/80 capitalize">{user?.role || 'admin'}</p>
+                <p className="text-sm font-bold text-white truncate">{user?.name || t('admin.profile.admin')}</p>
+                <p className="text-[11px] text-amber-300/80 capitalize">{user?.role || t('admin.profile.admin')}</p>
                 <p className="text-[10px] text-slate-400 truncate mt-0.5">{user?.email || ''}</p>
               </div>
             </div>
@@ -310,9 +312,9 @@ export default function AccountDropdown({ onSignOut }) {
             {/* Menu */}
             <div className="py-1.5">
               {[
-                { icon: '👤', label: 'My Profile',       action: () => openPanel('profile')  },
-                { icon: '⚙️', label: 'Account Settings',  action: () => openPanel('settings') },
-                { icon: '🔒', label: 'Change Password',   action: () => openPanel('password') },
+                { icon: '👤', label: t('admin.profile.myProfile'), action: () => openPanel('profile') },
+                { icon: '⚙️', label: t('admin.profile.accountSettings'), action: () => openPanel('settings') },
+                { icon: '🔒', label: t('admin.profile.changePassword'), action: () => openPanel('password') },
               ].map(({ icon, label, action }) => (
                 <button
                   key={label}
@@ -331,7 +333,7 @@ export default function AccountDropdown({ onSignOut }) {
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 transition hover:bg-red-50"
               >
                 <span className="text-base leading-none w-5 text-center">🚪</span>
-                Sign Out
+                {t('admin.signOut')}
               </button>
             </div>
           </div>
@@ -339,9 +341,9 @@ export default function AccountDropdown({ onSignOut }) {
       </div>
 
       {/* Panels */}
-      {panel === 'profile'  && <ProfilePanel  user={user} onClose={() => setPanel(null)} onEdit={() => setPanel('settings')} />}
-      {panel === 'settings' && <SettingsPanel user={user} onClose={() => setPanel(null)} onSaved={u => setUser(u)} />}
-      {panel === 'password' && <PasswordPanel onClose={() => setPanel(null)} />}
+      {panel === 'profile'  && <ProfilePanel  user={user} onClose={() => setPanel(null)} onEdit={() => setPanel('settings')} t={t} />}
+      {panel === 'settings' && <SettingsPanel user={user} onClose={() => setPanel(null)} onSaved={u => setUser(u)} t={t} />}
+      {panel === 'password' && <PasswordPanel onClose={() => setPanel(null)} t={t} />}
     </>
   );
 }

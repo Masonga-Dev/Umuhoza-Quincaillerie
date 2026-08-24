@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import AccountDropdown from './AccountDropdown';
@@ -98,8 +98,21 @@ export default function AdminLayout({ children, currentPage }) {
   const isOnProductsSection = currentPage?.startsWith('/admin/products');
   const [openMenu, setOpenMenu]     = useState(isOnProductsSection ? t('admin.products') : null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const langMenuRef = useRef(null);
 
   const currentLang = LANG_OPTIONS.find((item) => item.code === lang) || LANG_OPTIONS[0];
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target)) {
+        setLangMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleMenu  = (label) => setOpenMenu((prev) => (prev === label ? null : label));
   const isActive    = (path)  => currentPage === path;
@@ -108,22 +121,48 @@ export default function AdminLayout({ children, currentPage }) {
   const goTo = (path) => { navigate(path); setMobileOpen(false); };
 
   const LanguageSwitcher = () => (
-    <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1">
-      {LANG_OPTIONS.map((item) => (
-        <button
-          key={item.code}
-          type="button"
-          onClick={() => setLang(item.code)}
-          className={`rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide transition ${
-            lang === item.code ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-          title={item.label}
-        >
-          {item.short}
-        </button>
-      ))}
+    <div className="relative" ref={langMenuRef}>
+      <button
+        type="button"
+        onClick={() => setLangMenuOpen((prev) => !prev)}
+        className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100"
+      >
+        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-bold text-white">
+          {currentLang.short}
+        </span>
+        <span>{currentLang.label}</span>
+        <svg className={`h-3.5 w-3.5 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {langMenuOpen && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          {LANG_OPTIONS.map((item) => (
+            <button
+              key={item.code}
+              type="button"
+              onClick={() => {
+                setLang(item.code);
+                setLangMenuOpen(false);
+              }}
+              className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition ${
+                lang === item.code ? 'bg-slate-100 font-semibold text-slate-900' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span>{item.label}</span>
+              {lang === item.code && (
+                <svg className="h-4 w-4 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 3" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
+
   const signOut = () => { localStorage.removeItem('umuhoza_token'); navigate('/admin'); };
 
   const SidebarContent = () => (
