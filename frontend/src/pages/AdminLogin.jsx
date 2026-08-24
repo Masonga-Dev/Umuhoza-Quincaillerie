@@ -157,7 +157,7 @@ function AdminLogin() {
             </div>
 
             {/* CONTENT */}
-            <div className="relative z-10 flex h-full flex-col justify-between px-8 py-8 xl:px-14 xl:py-10">
+            <div className="relative z-10 flex h-full flex-col justify-between px-8 py-7 xl:px-12 xl:py-8">
 
               {/* TOP */}
               <div>
@@ -190,7 +190,7 @@ function AdminLogin() {
                     Welcome Back!
                   </p>
 
-                  <h1 className="mt-5 text-5xl font-black leading-[1.05] tracking-tight xl:text-6xl">
+                  <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tight xl:text-5xl">
                     Admin{' '}
                     <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
                       Dashboard
@@ -234,7 +234,7 @@ function AdminLogin() {
                 {features.map((feature) => (
                   <div
                     key={feature.title}
-                    className="group rounded-3xl border border-white/10 bg-slate-950/35 p-4 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-slate-900/60"
+                    className="group rounded-3xl border border-white/10 bg-slate-950/35 p-3 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-slate-900/60 xl:p-4"
                   >
 
                     <div
