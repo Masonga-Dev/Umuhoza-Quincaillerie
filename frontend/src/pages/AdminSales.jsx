@@ -634,6 +634,8 @@ export default function AdminSales() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const { refreshKey, bindRefresh } = useDataRefresh();
 
   const loadSales = useCallback(() => {
@@ -668,6 +670,17 @@ export default function AdminSales() {
     if (paymentFilter && s.payment_method !== paymentFilter) return false;
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, dateFrom, dateTo, paymentFilter]);
+
+  const paginatedSales = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const today = new Date().toDateString();
   const todaySales = filtered.filter(s => new Date(s.sale_date).toDateString() === today && s.status !== 'Cancelled');
@@ -831,7 +844,7 @@ export default function AdminSales() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filtered.map(sale => {
+                  {paginatedSales.map(sale => {
                     const hasReturn = Number(sale.total_returned || 0) > 0;
                     return (
                     <tr key={sale.id} className={`group transition ${
@@ -877,6 +890,39 @@ export default function AdminSales() {
                   })}
                 </tbody>
               </table>
+
+              {filtered.length > pageSize && (
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Prev
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setPage(num)}
+                      className={`h-8 min-w-[2rem] rounded-lg px-2 text-sm font-semibold ${page === num ? 'bg-blue-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
