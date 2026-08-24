@@ -39,15 +39,25 @@ function AdminLogin() {
           50% { stroke-dashoffset: 0; opacity: 1; }
           100% { stroke-dashoffset: -240; opacity: 0.45; }
         }
+
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
       `}</style>
 
       <div className="flex min-h-screen items-center justify-center bg-[#eef3ff] px-3 py-3 sm:px-5">
-        <div className="relative mx-auto w-full max-w-[1260px] overflow-hidden rounded-[32px] bg-[#071d3d] shadow-[0_35px_80px_rgba(4,11,28,0.2)] lg:h-[760px]">
-          <div className="absolute inset-y-0 right-0 hidden w-[46%] bg-[#f5f4f7] lg:block" />
+        <div className="relative mx-auto w-full max-w-[1280px] overflow-hidden rounded-[32px] bg-[#091d3f] shadow-[0_30px_80px_rgba(15,23,42,0.18)] lg:h-[760px]">
+          <div className="absolute inset-y-0 right-0 hidden w-[52%] bg-[#f4f1f7] lg:block" />
 
-          <div className="relative z-10 grid lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(60,118,255,0.18),_transparent_28%),linear-gradient(135deg,#07182f,#0a234e_38%,#07182f_100%)] px-8 py-8 text-white sm:px-10 lg:px-12 lg:py-10">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(255,255,255,0.15),transparent_20%),radial-gradient(circle_at_60%_30%,rgba(255,174,0,0.12),transparent_18%)]" />
+          <div className="relative z-10 grid lg:grid-cols-[1.14fr_0.86fr]">
+            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_50%_0%,rgba(91,143,255,0.18),transparent_30%),linear-gradient(135deg,#07172d,#0a224a_42%,#07172d_100%)] px-8 py-8 text-white sm:px-10 lg:px-12 lg:py-10">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.12),transparent_20%),radial-gradient(circle_at_50%_70%,rgba(255,183,0,0.08),transparent_18%)]" />
+
+              <div className="absolute left-[18%] top-[9%] h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_18px_#fff]" style={{ animation: 'twinkle 2.8s ease-in-out infinite' }} />
+              <div className="absolute left-[33%] top-[15%] h-1 w-1 rounded-full bg-[#92c6ff] shadow-[0_0_20px_#92c6ff]" style={{ animation: 'twinkle 2.4s ease-in-out infinite 0.3s' }} />
+              <div className="absolute right-[25%] top-[18%] h-1.5 w-1.5 rounded-full bg-[#ffdc6a] shadow-[0_0_18px_#ffdc6a]" style={{ animation: 'twinkle 3s ease-in-out infinite 0.8s' }} />
+              <div className="absolute right-[15%] top-[22%] h-1 w-1 rounded-full bg-white shadow-[0_0_16px_#ffffff]" style={{ animation: 'twinkle 2.7s ease-in-out infinite 0.5s' }} />
 
               <div className="relative z-10 space-y-8">
                 <div className="flex items-center gap-3">
@@ -62,7 +72,7 @@ function AdminLogin() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#f7c75c]">Welcome back!</p>
                   <h1 className="max-w-[520px] text-4xl font-black leading-[1.06] tracking-[-0.04em] text-white sm:text-5xl">
                     <span className="block">Admin</span>
-                    <span className="bg-gradient-to-r from-[#63d0ff] via-[#75a7ff] to-[#8d6dff] bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-r from-[#63d0ff] via-[#7ea2ff] to-[#8e73ff] bg-clip-text text-transparent">
                       Dashboard
                     </span>
                   </h1>
@@ -87,19 +97,13 @@ function AdminLogin() {
 
                 <div className="grid max-w-[540px] gap-3 sm:grid-cols-2">
                   {[
-                    ['📦', 'Manage Products', 'Add, edit and organize your products', '#8a5cf6', 'purple'],
-                    ['📊', 'Track Inventory', 'Monitor stock levels in real-time', '#3b82f6', 'blue'],
-                    ['🛒', 'Record Sales', 'Process sales and manage transactions', '#10b981', 'green'],
-                    ['📈', 'Analytics & Reports', 'View insights and grow your business', '#f59e0b', 'amber'],
+                    ['📦', 'Manage Products', 'Add, edit and organize your products', '#8a5cf6'],
+                    ['📊', 'Track Inventory', 'Monitor stock levels in real-time', '#3b82f6'],
+                    ['🛒', 'Record Sales', 'Process sales and manage transactions', '#10b981'],
+                    ['📈', 'Analytics & Reports', 'View insights and grow your business', '#f59e0b'],
                   ].map(([icon, title, text, colour]) => (
-                    <div
-                      key={title}
-                      className="rounded-[22px] border border-white/10 bg-slate-950/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm"
-                    >
-                      <div
-                        className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl shadow-lg"
-                        style={{ background: `linear-gradient(135deg, ${colour}, rgba(255,255,255,0.18))` }}
-                      >
+                    <div key={title} className="rounded-[22px] border border-white/10 bg-slate-950/20 p-4 backdrop-blur-sm">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl shadow-lg" style={{ background: `linear-gradient(135deg, ${colour}, rgba(255,255,255,0.16))` }}>
                         {icon}
                       </div>
                       <p className="mt-3 text-lg font-semibold text-white">{title}</p>
@@ -111,12 +115,12 @@ function AdminLogin() {
             </div>
 
             <div className="relative hidden bg-[#f5f4f7] lg:block">
-              <div className="absolute inset-y-0 left-[-90px] w-[190px] bg-[#071d3d]" />
-              <svg viewBox="0 0 260 760" className="absolute left-[-118px] top-0 h-full w-[220px] opacity-100" preserveAspectRatio="none">
+              <div className="absolute inset-y-0 left-[-76px] w-[180px] bg-[#071d3d]" />
+              <svg viewBox="0 0 260 760" className="absolute left-[-120px] top-0 h-full w-[220px] opacity-100" preserveAspectRatio="none">
                 <path
-                  d="M 160 0 C 70 120, 58 220, 130 320 S 190 550, 150 760"
+                  d="M 162 0 C 68 120, 54 220, 118 332 S 190 550, 150 760"
                   fill="none"
-                  stroke="rgba(99,208,255,0.9)"
+                  stroke="rgba(96,140,255,0.9)"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeDasharray="18 15"
@@ -126,7 +130,7 @@ function AdminLogin() {
             </div>
 
             <div className="flex items-center justify-center bg-[#f4f1f7] px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
-              <div className="w-full max-w-[430px] rounded-[32px] bg-[#f7f5f9] p-7 shadow-[0_30px_60px_rgba(96,112,146,0.15)] ring-1 ring-slate-200/80">
+              <div className="w-full max-w-[430px] rounded-[32px] bg-[#f8f5f8] p-7 shadow-[0_25px_60px_rgba(96,112,146,0.15)] ring-1 ring-slate-200/80">
                 <div className="mb-8 flex flex-col items-center text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#eef4ff] ring-1 ring-[#dfe8ff] shadow-[0_15px_25px_rgba(94,115,255,0.15)]">
                     <img src="/logo.png" alt="Umuhoza Quincaillerie logo" className="h-9 w-9 object-contain" />
@@ -141,9 +145,7 @@ function AdminLogin() {
                   <div>
                     <label className="block text-[11px] font-semibold uppercase tracking-[0.17em] text-slate-500">Email Address</label>
                     <div className="relative mt-2">
-                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                        ✉
-                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">✉</span>
                       <input
                         type="email"
                         value={email}
@@ -157,9 +159,7 @@ function AdminLogin() {
                   <div>
                     <label className="block text-[11px] font-semibold uppercase tracking-[0.17em] text-slate-500">Password</label>
                     <div className="relative mt-2">
-                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                        🔒
-                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">🔒</span>
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={password}
@@ -193,7 +193,7 @@ function AdminLogin() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#7c4dff] via-[#4a76ff] to-[#3aa6ff] px-5 py-3.5 text-lg font-bold text-white shadow-[0_18px_30px_rgba(89,98,255,0.35)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#7d4dff] via-[#526eff] to-[#3aa5ff] px-5 py-3.5 text-lg font-bold text-white shadow-[0_18px_30px_rgba(89,98,255,0.35)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {isLoading ? 'Signing in...' : 'Sign In'}
                     <span className="ml-2 text-xl">→</span>
