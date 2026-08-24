@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import AccountDropdown from './AccountDropdown';
 
 const icons = {
@@ -64,37 +65,65 @@ const icons = {
   ),
 };
 
-const menuItems = [
-  { label: 'Dashboard',       path: '/admin/dashboard', icon: 'dashboard' },
+const getMenuItems = (t) => [
+  { label: t('admin.dashboard'), path: '/admin/dashboard', icon: 'dashboard' },
   {
-    label: 'Products', icon: 'products',
+    label: t('admin.products'), icon: 'products',
     subItems: [
-      { label: 'All Products',  path: '/admin/products' },
-      { label: 'Add Product',   path: '/admin/products/add' },
-      { label: 'Categories',    path: '/admin/products/categories' },
-      { label: 'Subcategories', path: '/admin/products/subcategories' },
+      { label: t('admin.allProducts'), path: '/admin/products' },
+      { label: t('admin.addProduct'), path: '/admin/products/add' },
+      { label: t('admin.categories'), path: '/admin/products/categories' },
+      { label: t('admin.subcategories'), path: '/admin/products/subcategories' },
     ],
   },
-  { label: 'Stock',           path: '/admin/stock',      icon: 'stock' },
-  { label: 'Sales',           path: '/admin/sales',      icon: 'sales' },
-  { label: 'Suppliers',       path: '/admin/suppliers',  icon: 'suppliers' },
-  { label: 'Purchases',       path: '/admin/purchases',  icon: 'purchases' },
-  { label: 'Reports',         path: '/admin/reports',    icon: 'reports' },
-  { label: 'Website Content', path: '/admin/content',    icon: 'content' },
-  { label: 'Settings',        path: '/admin/settings',   icon: 'settings' },
+  { label: t('admin.stock'), path: '/admin/stock', icon: 'stock' },
+  { label: t('admin.sales'), path: '/admin/sales', icon: 'sales' },
+  { label: t('admin.suppliers'), path: '/admin/suppliers', icon: 'suppliers' },
+  { label: t('admin.purchases'), path: '/admin/purchases', icon: 'purchases' },
+  { label: t('admin.reports'), path: '/admin/reports', icon: 'reports' },
+  { label: t('admin.websiteContent'), path: '/admin/content', icon: 'content' },
+  { label: t('admin.settings'), path: '/admin/settings', icon: 'settings' },
+];
+
+const LANG_OPTIONS = [
+  { code: 'en', label: 'English', short: 'EN' },
+  { code: 'rw', label: 'Kinyarwanda', short: 'RW' },
+  { code: 'fr', label: 'Français', short: 'FR' },
 ];
 
 export default function AdminLayout({ children, currentPage }) {
   const navigate = useNavigate();
+  const { t, lang, setLang } = useLanguage();
+  const menuItems = getMenuItems(t);
   const isOnProductsSection = currentPage?.startsWith('/admin/products');
-  const [openMenu, setOpenMenu]     = useState(isOnProductsSection ? 'Products' : null);
+  const [openMenu, setOpenMenu]     = useState(isOnProductsSection ? t('admin.products') : null);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const currentLang = LANG_OPTIONS.find((item) => item.code === lang) || LANG_OPTIONS[0];
 
   const toggleMenu  = (label) => setOpenMenu((prev) => (prev === label ? null : label));
   const isActive    = (path)  => currentPage === path;
   const isSubActive = (subs)  => subs.some((s) => currentPage === s.path);
 
   const goTo = (path) => { navigate(path); setMobileOpen(false); };
+
+  const LanguageSwitcher = () => (
+    <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1">
+      {LANG_OPTIONS.map((item) => (
+        <button
+          key={item.code}
+          type="button"
+          onClick={() => setLang(item.code)}
+          className={`rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide transition ${
+            lang === item.code ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          }`}
+          title={item.label}
+        >
+          {item.short}
+        </button>
+      ))}
+    </div>
+  );
   const signOut = () => { localStorage.removeItem('umuhoza_token'); navigate('/admin'); };
 
   const SidebarContent = () => (
@@ -112,8 +141,8 @@ export default function AdminLayout({ children, currentPage }) {
           />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-base font-extrabold leading-tight tracking-[0.04em] text-white">Umuhoza</p>
-          <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.28em] text-amber-300">Admin Panel</p>
+          <p className="truncate text-base font-extrabold leading-tight tracking-[0.04em] text-white">{t('admin.appName')}</p>
+          <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.28em] text-amber-300">{t('admin.adminPanel')}</p>
         </div>
         {/* Mobile close button */}
         <button
@@ -212,7 +241,7 @@ export default function AdminLayout({ children, currentPage }) {
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-          Sign Out
+          {t('admin.signOut')}
         </button>
       </div>
     </>
@@ -256,11 +285,14 @@ export default function AdminLayout({ children, currentPage }) {
               </svg>
             </button>
             <div className="min-w-0">
-              <p className="hidden text-xs font-semibold uppercase tracking-widest text-slate-400 sm:block">Admin Dashboard</p>
-              <p className="truncate text-sm font-bold text-slate-900 sm:text-lg">Umuhoza Quincaillerie</p>
+              <p className="hidden text-xs font-semibold uppercase tracking-widest text-slate-400 sm:block">{t('admin.adminPanel')}</p>
+              <p className="truncate text-sm font-bold text-slate-900 sm:text-lg">{t('admin.appName')}</p>
             </div>
           </div>
-          <AccountDropdown onSignOut={signOut} />
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <AccountDropdown onSignOut={signOut} />
+          </div>
         </header>
 
         {/* Page content */}

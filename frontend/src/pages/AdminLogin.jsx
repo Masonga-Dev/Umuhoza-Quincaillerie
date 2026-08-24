@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ function AdminLogin() {
   const [success, setSuccess] = useState('');
 
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -27,13 +29,13 @@ function AdminLogin() {
 
       localStorage.setItem('umuhoza_token', response.data.token);
 
-      setSuccess('Login successful! Redirecting to admin dashboard...');
+      setSuccess(t('admin.login.success') || 'Login successful! Redirecting to admin dashboard...');
 
       navigate('/admin/dashboard');
     } catch (err) {
       setError(
         err?.response?.data?.message ||
-          'Login failed. Check your credentials and try again.'
+          t('admin.login.failed') || 'Login failed. Check your credentials and try again.'
       );
     } finally {
       setIsLoading(false);
@@ -43,26 +45,26 @@ function AdminLogin() {
   const features = [
     {
       icon: '📦',
-      title: 'Manage Products',
-      description: 'Add, edit and organize your products',
+      title: t('admin.login.manageProducts'),
+      description: t('admin.login.featureManageProducts'),
       color: 'from-purple-500 to-indigo-500',
     },
     {
       icon: '📊',
-      title: 'Track Inventory',
-      description: 'Monitor stock levels in real-time',
+      title: t('admin.login.trackInventory'),
+      description: t('admin.login.featureTrackInventory'),
       color: 'from-blue-500 to-cyan-400',
     },
     {
       icon: '🛒',
-      title: 'Record Sales',
-      description: 'Process sales and manage transactions',
+      title: t('admin.login.recordSales'),
+      description: t('admin.login.featureRecordSales'),
       color: 'from-emerald-500 to-teal-400',
     },
     {
       icon: '📈',
-      title: 'Analytics & Reports',
-      description: 'View insights and grow your business',
+      title: t('admin.login.analytics'),
+      description: t('admin.login.featureAnalytics'),
       color: 'from-orange-500 to-yellow-400',
     },
   ];
@@ -174,11 +176,11 @@ function AdminLogin() {
 
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white xl:text-sm">
-                      UMUHOZA
+                      {t('admin.appName').toUpperCase()}
                     </p>
 
                     <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-yellow-300 xl:text-[9px]">
-                      QUINCAILLERIE
+                      {t('admin.adminPanel').toUpperCase()}
                     </p>
                   </div>
                 </div>
@@ -187,19 +189,18 @@ function AdminLogin() {
                 <div className="mt-4 xl:mt-5">
 
                   <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-yellow-300 xl:text-[10px]">
-                    Welcome Back!
+                    {t('admin.login.welcome')}
                   </p>
 
                   <h1 className="mt-2 text-[2rem] font-black leading-[1.06] tracking-tight xl:text-[2.5rem]">
-                    Admin{' '}
+                    {t('admin.login.title').split(' ')[0]}{' '}
                     <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
-                      Dashboard
+                      {t('admin.dashboard')}
                     </span>
                   </h1>
 
                   <p className="mt-2 max-w-xl text-xs leading-relaxed text-slate-300 xl:text-sm">
-                    Sign in to manage your store, track inventory,
-                    process sales and grow your business.
+                    {t('admin.login.subtitle')}
                   </p>
                 </div>
 
@@ -214,12 +215,11 @@ function AdminLogin() {
 
                     <div>
                       <h2 className="text-sm font-bold xl:text-base">
-                        Secure Admin Access
+                        {t('admin.login.secureAccess')}
                       </h2>
 
                       <p className="mt-1 text-[10px] leading-relaxed text-slate-300 xl:text-xs">
-                        Your data is protected with industry-standard
-                        security and encryption.
+                        {t('admin.login.subtitle')}
                       </p>
                     </div>
 
@@ -314,12 +314,11 @@ function AdminLogin() {
                   </div>
 
                   <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-900">
-                    Admin Login
+                    {t('admin.login.title')}
                   </h2>
 
                   <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-slate-500">
-                    Use your administrator account to access the
-                    dashboard and manage your store.
+                    {t('admin.login.subtitle')}
                   </p>
 
                 </div>
@@ -335,7 +334,7 @@ function AdminLogin() {
                   <div>
 
                     <label className="text-sm font-semibold text-slate-700">
-                      Email Address
+                      {t('admin.login.email')}
                     </label>
 
                     <div className="relative mt-2">
@@ -348,7 +347,7 @@ function AdminLogin() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your email"
+                        placeholder={t('admin.login.emailPlaceholder')}
                         required
                         className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3.5 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
                       />
@@ -362,7 +361,7 @@ function AdminLogin() {
                   <div>
 
                     <label className="text-sm font-semibold text-slate-700">
-                      Password
+                      {t('admin.login.password')}
                     </label>
 
                     <div className="relative mt-2">
@@ -375,7 +374,7 @@ function AdminLogin() {
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
+                        placeholder={t('admin.login.passwordPlaceholder')}
                         required
                         className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3.5 pr-20 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
                       />
@@ -387,7 +386,7 @@ function AdminLogin() {
                         }
                         className="absolute inset-y-0 right-4 text-sm font-semibold text-indigo-600 transition hover:text-indigo-800"
                       >
-                        {showPassword ? 'Hide' : 'Show'}
+                        {showPassword ? t('admin.login.hide') : t('admin.login.show')}
                       </button>
 
                     </div>
@@ -405,7 +404,7 @@ function AdminLogin() {
                         className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                       />
 
-                      Remember me
+                      {t('admin.login.remember')}
 
                     </label>
 
@@ -413,7 +412,7 @@ function AdminLogin() {
                       to="/admin/forgot-password"
                       className="font-semibold text-indigo-600 transition hover:text-indigo-800"
                     >
-                      Forgot password?
+                      {t('admin.login.forgot')}
                     </Link>
 
                   </div>
@@ -442,7 +441,7 @@ function AdminLogin() {
                     className="group flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 px-5 py-3.5 text-base font-bold text-white shadow-[0_18px_35px_rgba(79,70,229,0.35)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(79,70,229,0.45)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
 
-                    {isLoading ? 'Signing in...' : 'Sign In'}
+                    {isLoading ? t('admin.login.signingIn') : t('admin.login.signIn')}
 
                     {!isLoading && (
                       <span className="ml-2 transition-transform duration-300 group-hover:translate-x-1">
@@ -461,7 +460,7 @@ function AdminLogin() {
                   <div className="h-px flex-1 bg-slate-200" />
 
                   <span className="text-xs text-slate-400">
-                    Secure access
+                    {t('admin.login.secureAccess')}
                   </span>
 
                   <div className="h-px flex-1 bg-slate-200" />
