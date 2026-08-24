@@ -637,7 +637,7 @@ export const translations = {
         addProduct: 'Ongeraho Ibicuruzwa',
         totalProducts: 'Ibicuruzwa Byose',
         lowStock: 'Ububiko Buke',
-        outOfStock: 'Bidashize',
+        outOfStock: 'Byashize',
         totalStockValue: 'Agaciro k’ububiko bwose',
         basedOnPurchasePrices: 'Kusubira ku nguzanyo',
         recentMovements: 'Imyitwarire ya Vuba',
