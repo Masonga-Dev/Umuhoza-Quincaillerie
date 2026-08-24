@@ -660,12 +660,12 @@ export default function AdminPurchases() {
               </table>
 
               {filtered.length > pageSize && (
-                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
+                <div className="flex items-center justify-end gap-1.5 border-t border-slate-100 px-4 py-3 sm:gap-2">
                   <button
                     type="button"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Prev
                   </button>
@@ -675,7 +675,11 @@ export default function AdminPurchases() {
                       key={num}
                       type="button"
                       onClick={() => setPage(num)}
-                      className={`h-8 min-w-[2rem] rounded-lg px-2 text-sm font-semibold ${page === num ? 'bg-blue-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      className={`flex h-8 min-w-[2rem] items-center justify-center rounded-lg px-2 text-xs font-bold transition ${
+                        page === num
+                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                          : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
                     >
                       {num}
                     </button>
@@ -685,7 +689,7 @@ export default function AdminPurchases() {
                     type="button"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Next
                   </button>
