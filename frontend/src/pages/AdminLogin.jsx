@@ -157,67 +157,67 @@ function AdminLogin() {
             </div>
 
             {/* CONTENT */}
-            <div className="relative z-10 flex h-full flex-col justify-between px-8 py-7 xl:px-12 xl:py-8">
+            <div className="relative z-10 flex h-full flex-col justify-between px-6 py-5 xl:px-8 xl:py-6">
 
               {/* TOP */}
               <div>
 
                 {/* LOGO */}
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-yellow-400/40 bg-yellow-400/10 shadow-lg">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-yellow-400/40 bg-yellow-400/10 shadow-lg xl:h-11 xl:w-11">
                     <img
                       src="/logo.png"
                       alt="Umuhoza Quincaillerie logo"
-                      className="h-9 w-9 object-contain"
+                      className="h-7 w-7 object-contain xl:h-8 xl:w-8"
                     />
                   </div>
 
                   <div>
-                    <p className="text-sm font-black uppercase tracking-[0.25em] text-white">
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white xl:text-sm">
                       UMUHOZA
                     </p>
 
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-yellow-300">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-yellow-300 xl:text-[9px]">
                       QUINCAILLERIE
                     </p>
                   </div>
                 </div>
 
                 {/* WELCOME */}
-                <div className="mt-6 xl:mt-8">
+                <div className="mt-4 xl:mt-5">
 
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-yellow-300 xl:text-[10px]">
                     Welcome Back!
                   </p>
 
-                  <h1 className="mt-3 text-3xl font-black leading-[1.08] tracking-tight xl:text-4xl">
+                  <h1 className="mt-2 text-[2rem] font-black leading-[1.06] tracking-tight xl:text-[2.5rem]">
                     Admin{' '}
                     <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
                       Dashboard
                     </span>
                   </h1>
 
-                  <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-300 xl:text-base">
+                  <p className="mt-2 max-w-xl text-xs leading-relaxed text-slate-300 xl:text-sm">
                     Sign in to manage your store, track inventory,
                     process sales and grow your business.
                   </p>
                 </div>
 
                 {/* SECURITY */}
-                <div className="mt-6 max-w-xl rounded-3xl border border-blue-400/20 bg-blue-950/40 p-4 backdrop-blur-md xl:mt-7 xl:p-5">
+                <div className="mt-4 max-w-xl rounded-2xl border border-blue-400/20 bg-blue-950/40 p-3 backdrop-blur-md xl:mt-5 xl:p-4">
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
 
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 text-xl shadow-lg xl:h-14 xl:w-14 xl:text-2xl">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 text-lg shadow-lg xl:h-12 xl:w-12 xl:text-xl">
                       🛡️
                     </div>
 
                     <div>
-                      <h2 className="text-base font-bold xl:text-lg">
+                      <h2 className="text-sm font-bold xl:text-base">
                         Secure Admin Access
                       </h2>
 
-                      <p className="mt-1 text-xs leading-relaxed text-slate-300 xl:text-sm">
+                      <p className="mt-1 text-[10px] leading-relaxed text-slate-300 xl:text-xs">
                         Your data is protected with industry-standard
                         security and encryption.
                       </p>
@@ -229,25 +229,25 @@ function AdminLogin() {
               </div>
 
               {/* FEATURES */}
-              <div className="mt-6 grid grid-cols-2 gap-3 xl:mt-7 xl:gap-4">
+              <div className="mt-4 grid grid-cols-2 gap-2.5 xl:mt-5 xl:gap-3">
 
                 {features.map((feature) => (
                   <div
                     key={feature.title}
-                    className="group rounded-3xl border border-white/10 bg-slate-950/35 p-3 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-slate-900/60 xl:p-4"
+                    className="group rounded-2xl border border-white/10 bg-slate-950/35 p-2.5 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-slate-900/60 xl:p-3"
                   >
 
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.color} text-lg shadow-lg xl:h-12 xl:w-12 xl:text-xl`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color} text-sm shadow-lg xl:h-10 xl:w-10 xl:text-lg`}
                     >
                       {feature.icon}
                     </div>
 
-                    <h3 className="mt-2 text-xs font-bold xl:text-sm">
+                    <h3 className="mt-2 text-[10px] font-bold xl:text-xs">
                       {feature.title}
                     </h3>
 
-                    <p className="mt-1 text-[10px] leading-relaxed text-slate-400 xl:text-xs">
+                    <p className="mt-1 text-[8px] leading-relaxed text-slate-400 xl:text-[10px]">
                       {feature.description}
                     </p>
 
