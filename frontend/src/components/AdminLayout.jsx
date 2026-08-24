@@ -101,18 +101,19 @@ export default function AdminLayout({ children, currentPage }) {
     <>
       {/* Brand */}
       <div
-        className="flex items-center gap-3 px-5 py-5"
+        className="flex items-center gap-3 px-4 py-4"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
       >
-        <img
-          src="/logo.png"
-          alt="UQ"
-          className="h-12 w-12 rounded-xl object-cover flex-shrink-0"
-          style={{ boxShadow: '0 0 0 2.5px #f59e0b, 0 4px 14px rgba(0,0,0,0.5)' }}
-        />
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-amber-300/70 bg-white/95 shadow-[0_0_0_2px_rgba(245,158,11,0.45),0_8px_22px_rgba(0,0,0,0.25)] flex-shrink-0">
+          <img
+            src="/logo.png"
+            alt="Umuhoza logo"
+            className="h-8 w-8 object-contain"
+          />
+        </div>
         <div className="min-w-0">
-          <p className="text-base font-extrabold text-white leading-tight truncate tracking-wide">Umuhoza</p>
-          <p className="text-[10px] text-amber-400/70 mt-0.5 font-semibold tracking-widest uppercase">Admin Panel</p>
+          <p className="truncate text-base font-extrabold leading-tight tracking-[0.04em] text-white">Umuhoza</p>
+          <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.28em] text-amber-300">Admin Panel</p>
         </div>
         {/* Mobile close button */}
         <button
