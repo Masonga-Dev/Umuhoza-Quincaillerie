@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
@@ -36,6 +37,7 @@ function timeAgo(d) {
 
 export default function AdminCategories() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [categories, setCategories] = useState([]);
   const [allSubcategories, setAllSubcategories] = useState([]);
   const [form, setForm] = useState(EMPTY);
@@ -131,20 +133,20 @@ export default function AdminCategories() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900">Categories</h2>
-            <p className="mt-1 text-sm text-slate-500">Manage your product categories and organize your catalog.</p>
+            <h2 className="text-3xl font-bold text-slate-900">{t('admin.categoriesPage.title')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t('admin.categoriesPage.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              Export
+              {t('admin.categoriesPage.export')}
             </button>
             <button
               onClick={() => { setEditing(null); setForm(EMPTY); setError(''); setActiveLang('en'); setShowForm(true); }}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition">
-              <span className="text-lg leading-none">+</span> Add Category
+              <span className="text-lg leading-none">+</span> {t('admin.categoriesPage.addCategory')}
             </button>
           </div>
         </div>
@@ -153,17 +155,17 @@ export default function AdminCategories() {
         <div className="grid gap-4 sm:grid-cols-3">
           {[
             {
-              label: 'Total Categories', value: categories.length,
+              label: t('admin.categoriesPage.totalCategories'), value: categories.length,
               icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
               iconBg: 'bg-blue-100', iconColor: 'text-blue-600', valColor: 'text-blue-600', border: 'border-blue-100',
             },
             {
-              label: 'Subcategories', value: allSubcategories.length,
+              label: t('admin.categoriesPage.subcategories'), value: allSubcategories.length,
               icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h7"/></svg>,
               iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', valColor: 'text-emerald-600', border: 'border-emerald-100',
             },
             {
-              label: 'Total Products', value: totalProducts,
+              label: t('admin.categoriesPage.totalProducts'), value: totalProducts,
               icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
               iconBg: 'bg-violet-100', iconColor: 'text-violet-600', valColor: 'text-violet-600', border: 'border-violet-100',
             },
@@ -184,17 +186,17 @@ export default function AdminCategories() {
             <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35"/>
             </svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search categories…"
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('admin.categoriesPage.searchPlaceholder')}
               className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"/>
           </div>
           <div className="flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <button onClick={() => setViewMode('grid')} title="Grid view"
+            <button onClick={() => setViewMode('grid')} title={t('admin.categoriesPage.gridView')}
               className={`px-3 py-2.5 transition ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-700'}`}>
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3A1.5 1.5 0 0115 10.5v3A1.5 1.5 0 0113.5 15h-3A1.5 1.5 0 019 13.5v-3z"/>
               </svg>
             </button>
-            <button onClick={() => setViewMode('list')} title="List view"
+            <button onClick={() => setViewMode('list')} title={t('admin.categoriesPage.listView')}
               className={`px-3 py-2.5 transition ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-700'}`}>
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
@@ -220,7 +222,7 @@ export default function AdminCategories() {
         ) : filtered.length === 0 ? (
           <div className="flex h-56 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
             <span className="text-5xl select-none">📦</span>
-            <p className="text-sm font-semibold">{search ? 'No categories match your search.' : 'No categories yet. Add the first one!'}</p>
+            <p className="text-sm font-semibold">{search ? t('admin.categoriesPage.noSearchMatch') : t('admin.categoriesPage.noCategories')}</p>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

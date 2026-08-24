@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const DEFAULTS = {
   siteName: '',
@@ -22,6 +23,7 @@ function fieldClass() {
 }
 
 function AdminSettings() {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,28 +82,28 @@ function AdminSettings() {
     <AdminLayout currentPage="/admin/settings">
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-          <p className="mt-1 text-sm text-slate-500">Global site configuration. Changes reflect immediately on the website.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('admin.settingsPage.title')}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t('admin.settingsPage.subtitle')}</p>
         </div>
 
         {/* General */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">General</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t('admin.settingsPage.general')}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Site Name</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.siteName')}</label>
               <input type="text" value={settings.siteName} onChange={set('siteName')} placeholder="Umuhoza Quincaillerie" className={fieldClass()} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Currency Symbol</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.currencySymbol')}</label>
               <input type="text" value={settings.currencySymbol} onChange={set('currencySymbol')} placeholder="RWF" className={fieldClass()} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Years of Experience</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.yearsExperience')}</label>
               <input type="text" value={settings.years_experience} onChange={set('years_experience')} placeholder="5" className={fieldClass()} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Footer Text</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.footerText')}</label>
               <input type="text" value={settings.footerText} onChange={set('footerText')} placeholder="Your trusted partner for hardware and construction supplies." className={fieldClass()} />
             </div>
           </div>
@@ -109,26 +111,26 @@ function AdminSettings() {
 
         {/* Contact */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Contact Details</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t('admin.settingsPage.contactDetails')}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Phone</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.phone')}</label>
               <input type="tel" value={settings.sitePhone} onChange={set('sitePhone')} placeholder="+250 788 123 456" className={fieldClass()} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">WhatsApp</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.whatsapp')}</label>
               <input type="tel" value={settings.whatsapp} onChange={set('whatsapp')} placeholder="+250 788 123 456" className={fieldClass()} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Email</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.email')}</label>
               <input type="email" value={settings.siteEmail} onChange={set('siteEmail')} placeholder="info@umuhoza.com" className={fieldClass()} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Business Hours</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.businessHours')}</label>
               <input type="text" value={settings.businessHours} onChange={set('businessHours')} placeholder="Mon–Sat · 7:30 AM–6:00 PM" className={fieldClass()} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Physical Address</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.physicalAddress')}</label>
               <textarea rows={2} value={settings.siteAddress} onChange={set('siteAddress')} placeholder="Kigali, Rwanda" className={fieldClass()} />
             </div>
           </div>
@@ -136,14 +138,14 @@ function AdminSettings() {
 
         {/* Customer Experience */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Customer Experience</h2>
-          <p className="mt-1 text-sm text-slate-400">Control what customers see on the public website.</p>
+          <h2 className="text-base font-semibold text-slate-900">{t('admin.settingsPage.customerExperience')}</h2>
+          <p className="mt-1 text-sm text-slate-400">{t('admin.settingsPage.showPricesHint')}</p>
           <div className="mt-5 space-y-3">
             {/* Show Prices toggle */}
             <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
               <div>
-                <p className="text-sm font-semibold text-slate-800">Show Prices to Customers</p>
-                <p className="text-xs text-slate-500 mt-0.5">When OFF, all prices are hidden on the public catalogue. Saves immediately.</p>
+                <p className="text-sm font-semibold text-slate-800">{t('admin.settingsPage.showPrices')}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{t('admin.settingsPage.showPricesHint')}</p>
               </div>
               <button
                 type="button"
@@ -160,14 +162,14 @@ function AdminSettings() {
 
         {/* Social */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Social Media</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t('admin.settingsPage.socialMedia')}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Facebook URL</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.facebook')}</label>
               <input type="url" value={settings.facebook} onChange={set('facebook')} placeholder="https://facebook.com/umuhoza" className={fieldClass()} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Instagram URL</label>
+              <label className="block text-sm font-medium text-slate-700">{t('admin.settingsPage.instagram')}</label>
               <input type="url" value={settings.instagram} onChange={set('instagram')} placeholder="https://instagram.com/umuhoza" className={fieldClass()} />
             </div>
           </div>
@@ -186,7 +188,7 @@ function AdminSettings() {
             disabled={saving}
             className="rounded-xl bg-blue-600 px-8 py-3 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:opacity-60"
           >
-            {saving ? 'Saving…' : 'Save All Settings'}
+            {saving ? 'Saving…' : t('admin.settingsPage.saveAll')}
           </button>
         </div>
 

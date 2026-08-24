@@ -8,6 +8,7 @@ import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
 import { useDataRefresh } from '../utils/dataEvents';
 import ExportDropdown from '../components/ExportDropdown';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -332,6 +333,7 @@ function InsightCard({ title, value, desc, accent = '#3b82f6' }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AdminReports() {
+  const { t } = useLanguage();
   const [kpis, setKpis]                 = useState(null);
   const [monthly, setMonthly]           = useState([]);
   const [bestSelling, setBestSelling]   = useState([]);
@@ -444,15 +446,15 @@ export default function AdminReports() {
         {/* ── Header ── */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Analytics & Reports</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t('admin.reportsPage.title')}</h2>
             <p className="mt-0.5 text-sm text-slate-500">
-              {MONTHS[curMonthIdx]} {new Date().getFullYear()} — live data from your store
+              {MONTHS[curMonthIdx]} {new Date().getFullYear()} — {t('admin.reportsPage.subtitle')}
             </p>
           </div>
           {!loading && (
             <div className="flex flex-wrap gap-2">
-              <ExportDropdown label="Export Sales"     onExport={exportBestSelling}/>
-              <ExportDropdown label="Export Inventory" onExport={exportInventory}/>
+              <ExportDropdown label={t('admin.reportsPage.exportSales')} onExport={exportBestSelling}/>
+              <ExportDropdown label={t('admin.reportsPage.exportInventory')} onExport={exportInventory}/>
             </div>
           )}
         </div>
@@ -466,7 +468,7 @@ export default function AdminReports() {
             {/* ── KPI Cards ── */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <KpiCard
-                label="Items Sold This Month"
+                label={t('admin.reportsPage.salesPerformance')}
                 value={fmt(kpis?.items_sold?.value)}
                 pct={kpis?.items_sold?.pct}
                 color="blue"
@@ -477,7 +479,7 @@ export default function AdminReports() {
                 }
               />
               <KpiCard
-                label="Average Sale"
+                label={t('admin.reportsPage.averageSale')}
                 value={`${fmtShort(kpis?.avg_sale?.value)} RWF`}
                 pct={kpis?.avg_sale?.pct}
                 color="green"
@@ -488,7 +490,7 @@ export default function AdminReports() {
                 }
               />
               <KpiCard
-                label="Customers This Month"
+                label={t('admin.reportsPage.customersThisMonth')}
                 value={fmt(kpis?.new_customers?.value)}
                 pct={kpis?.new_customers?.pct}
                 color="purple"
@@ -499,10 +501,10 @@ export default function AdminReports() {
                 }
               />
               <KpiCard
-                label="Total Stock Value"
+                label={t('admin.reportsPage.totalStockValue')}
                 value={`${fmtShort(kpis?.stock_value?.value ?? stockValue)} RWF`}
                 pct={null}
-                sub="Based on cost prices"
+                sub={t('admin.reportsPage.basedOnCostPrices')}
                 color="amber"
                 icon={
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -514,10 +516,10 @@ export default function AdminReports() {
 
             {/* ── Sales Trend + Category Revenue ── */}
             <section>
-              <SectionTitle>Sales Performance</SectionTitle>
+              <SectionTitle>{t('admin.reportsPage.salesPerformance')}</SectionTitle>
               <div className="grid gap-4 xl:grid-cols-3">
                 <ChartCard
-                  title="Monthly Sales Trend"
+                  title={t('admin.reportsPage.monthlySalesTrend')}
                   className="xl:col-span-2"
                   badge={
                     <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
@@ -530,7 +532,7 @@ export default function AdminReports() {
                     : <p className="py-16 text-center text-sm text-slate-400">No sales data yet</p>}
                 </ChartCard>
 
-                <ChartCard title="Revenue by Category">
+                <ChartCard title={t('admin.reportsPage.revenueByCategory')}>
                   <DonutChart data={catData} centerLabel={catRevenue[0] ? `${Math.round((catRevenue[0].revenue / catTotal) * 100)}%` : '—'} centerSub="top cat." valueUnit=" RWF"/>
                 </ChartCard>
               </div>
@@ -538,10 +540,10 @@ export default function AdminReports() {
 
             {/* ── Profit Trend ── */}
             <section>
-              <SectionTitle>Profitability</SectionTitle>
+              <SectionTitle>{t('admin.reportsPage.profitability')}</SectionTitle>
               <div className="grid gap-4 xl:grid-cols-3">
                 <ChartCard
-                  title="Revenue vs Cost vs Profit"
+                  title={t('admin.reportsPage.revenueVsCost')}
                   className="xl:col-span-2"
                   badge={
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-600">
@@ -556,7 +558,7 @@ export default function AdminReports() {
 
                 <div className="grid gap-4 content-start">
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
-                    <p className="text-sm font-medium text-emerald-700">Profit this month</p>
+                    <p className="text-sm font-medium text-emerald-700">{t('admin.reportsPage.profitThisMonth')}</p>
                     <p className="mt-2 text-2xl font-extrabold text-emerald-700">{fmtShort(profitThisMonth?.profit)} RWF</p>
                     <p className="mt-1 text-xs text-emerald-500">
                       Revenue {fmtShort(profitThisMonth?.revenue)} − Cost {fmtShort(profitThisMonth?.cost)}
@@ -569,7 +571,7 @@ export default function AdminReports() {
                     <svg className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
-                    Export Profit Trend
+                    {t('admin.reportsPage.exportProfitTrend')}
                   </button>
                 </div>
               </div>
@@ -580,7 +582,7 @@ export default function AdminReports() {
               <SectionTitle>Products & Payments</SectionTitle>
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <p className="mb-5 font-semibold text-slate-800">Top Products (All Time)</p>
+                  <p className="mb-5 font-semibold text-slate-800">{t('admin.reportsPage.topProducts')}</p>
                   {bestSelling.length > 0 ? (
                     <div className="space-y-4">
                       {bestSelling.slice(0, 8).map((item, i) => {
@@ -644,9 +646,9 @@ export default function AdminReports() {
 
             {/* ── Inventory Health ── */}
             <section>
-              <SectionTitle>Inventory Health</SectionTitle>
+              <SectionTitle>{t('admin.reportsPage.inventoryHealth')}</SectionTitle>
               <div className="grid gap-4 xl:grid-cols-[280px_1fr]">
-                <ChartCard title="Stock Status">
+                <ChartCard title={t('admin.reportsPage.stockStatus')}>
                   <DonutChart
                     data={[
                       { label: 'In Stock',     value: inStockCount, color: '#10b981', display: `${inStockCount}` },
@@ -673,12 +675,12 @@ export default function AdminReports() {
                     <p className="mt-1 text-xs text-emerald-500">products available</p>
                   </div>
                   <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5 shadow-sm">
-                    <p className="text-sm font-medium text-amber-700">Low Stock</p>
+                    <p className="text-sm font-medium text-amber-700">{t('admin.reportsPage.lowStock')}</p>
                     <p className="mt-2 text-3xl font-extrabold text-amber-600">{lowCount}</p>
                     <p className="mt-1 text-xs text-amber-500">need restocking soon</p>
                   </div>
                   <div className="rounded-2xl border border-red-100 bg-red-50 p-5 shadow-sm">
-                    <p className="text-sm font-medium text-red-700">Out of Stock</p>
+                    <p className="text-sm font-medium text-red-700">{t('admin.reportsPage.outOfStock')}</p>
                     <p className="mt-2 text-3xl font-extrabold text-red-600">{outCount}</p>
                     <p className="mt-1 text-xs text-red-500">restock immediately</p>
                   </div>
@@ -726,7 +728,7 @@ export default function AdminReports() {
             {/* ── Products Needing Attention ── */}
             {(lowCount > 0 || outCount > 0) && (
               <section>
-                <SectionTitle>Products Needing Attention</SectionTitle>
+                <SectionTitle>{t('admin.reportsPage.productsNeedingAttention')}</SectionTitle>
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -769,7 +771,7 @@ export default function AdminReports() {
 
             {/* ── Recent Sales ── */}
             <section>
-              <SectionTitle>Recent Sales</SectionTitle>
+              <SectionTitle>{t('admin.reportsPage.recentSales')}</SectionTitle>
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 {recentSales.length > 0 ? (
                   <div className="overflow-x-auto">
@@ -803,14 +805,14 @@ export default function AdminReports() {
                     </table>
                   </div>
                 ) : (
-                  <p className="py-10 text-center text-sm text-slate-400">No sales yet</p>
+                  <p className="py-10 text-center text-sm text-slate-400">{t('admin.reportsPage.noSalesYet')}</p>
                 )}
               </div>
             </section>
 
             {/* ── Recent Purchases ── */}
             <section>
-              <SectionTitle>Recent Purchases</SectionTitle>
+              <SectionTitle>{t('admin.reportsPage.recentPurchases')}</SectionTitle>
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 {recentPurchases.length > 0 ? (
                   <div className="overflow-x-auto">
@@ -840,14 +842,14 @@ export default function AdminReports() {
                     </table>
                   </div>
                 ) : (
-                  <p className="py-10 text-center text-sm text-slate-400">No purchases yet</p>
+                  <p className="py-10 text-center text-sm text-slate-400">{t('admin.reportsPage.noPurchasesYet')}</p>
                 )}
               </div>
             </section>
 
             {/* ── Recent Stock Activity ── */}
             <section>
-              <SectionTitle>Recent Stock Activity</SectionTitle>
+              <SectionTitle>{t('admin.reportsPage.recentStockActivity')}</SectionTitle>
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 {stockActivity.length > 0 ? (
                   <div className="overflow-x-auto">

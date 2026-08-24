@@ -5,6 +5,7 @@ import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
 import { useDataRefresh } from '../utils/dataEvents';
 import ExportDropdown from '../components/ExportDropdown';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND_BASE}/${p}`;
@@ -33,6 +34,7 @@ function StatCard({ label, value, sub, color, dotColor, borderColor }) {
 }
 
 export default function AdminProducts() {
+  const { t } = useLanguage();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,27 +109,27 @@ export default function AdminProducts() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900">Products</h2>
-            <p className="mt-1 text-slate-500">Manage your catalogue. Set prices through variants, stock through purchases.</p>
+            <h2 className="text-3xl font-bold text-slate-900">{t('admin.productsPage.title')}</h2>
+            <p className="mt-1 text-slate-500">{t('admin.productsPage.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             <ExportDropdown onExport={handleExportPeriod} />
             <button onClick={() => navigate('/admin/products/add')}
               className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
-              <span className="text-lg leading-none">+</span> Add Product
+              <span className="text-lg leading-none">+</span> {t('admin.productsPage.addProduct')}
             </button>
           </div>
         </div>
 
         {/* Stat cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Products" value={Number(summary.total || 0)} sub="In catalogue"
+          <StatCard label={t('admin.productsPage.totalProducts')} value={Number(summary.total || 0)} sub={t('admin.productsPage.inCatalogue')}
             color="text-blue-600" dotColor="bg-blue-500" borderColor="border-slate-200" />
-          <StatCard label="In Stock" value={Number(summary.in_stock || 0)} sub="Ready to sell"
+          <StatCard label={t('admin.productsPage.inStock')} value={Number(summary.in_stock || 0)} sub={t('admin.productsPage.readyToSell')}
             color="text-emerald-600" dotColor="bg-emerald-500" borderColor="border-emerald-200" />
-          <StatCard label="Low Stock" value={Number(summary.low_stock || 0)} sub="Below minimum"
+          <StatCard label={t('admin.productsPage.lowStock')} value={Number(summary.low_stock || 0)} sub={t('admin.productsPage.belowMinimum')}
             color="text-amber-600" dotColor="bg-amber-500" borderColor="border-amber-200" />
-          <StatCard label="Out of Stock" value={Number(summary.out_of_stock || 0)} sub="Need restocking"
+          <StatCard label={t('admin.productsPage.outOfStock')} value={Number(summary.out_of_stock || 0)} sub={t('admin.productsPage.needRestocking')}
             color="text-red-600" dotColor="bg-red-500" borderColor="border-red-200" />
         </div>
 
@@ -140,26 +142,26 @@ export default function AdminProducts() {
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
               </svg>
-              <input type="text" placeholder="Search by name, SKU, or description…"
+              <input type="text" placeholder={t('admin.productsPage.searchPlaceholder')}
                 value={searchTerm} onChange={handleFilterChange(setSearchTerm)}
                 className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
             </div>
             <select value={categoryFilter} onChange={handleFilterChange(setCategoryFilter)}
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400">
-              <option value="">All Categories</option>
+              <option value="">{t('admin.productsPage.allCategories')}</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select value={statusFilter} onChange={handleFilterChange(setStatusFilter)}
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400">
-              <option value="">All Statuses</option>
-              <option value="In Stock">In Stock</option>
-              <option value="Low Stock">Low Stock</option>
-              <option value="Out of Stock">Out of Stock</option>
+              <option value="">{t('admin.productsPage.allStatuses')}</option>
+              <option value="In Stock">{t('admin.productsPage.inStock')}</option>
+              <option value="Low Stock">{t('admin.productsPage.lowStock')}</option>
+              <option value="Out of Stock">{t('admin.productsPage.outOfStock')}</option>
             </select>
             {(searchTerm || categoryFilter || statusFilter) && (
               <button onClick={() => { setSearchTerm(''); setCategoryFilter(''); setStatusFilter(''); setPage(1); }}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-                Clear
+                {t('admin.productsPage.clear')}
               </button>
             )}
           </div>
@@ -178,11 +180,11 @@ export default function AdminProducts() {
               <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
               </svg>
-              <p className="text-sm font-semibold">No products found</p>
+              <p className="text-sm font-semibold">{t('admin.productsPage.noProducts')}</p>
               {!searchTerm && !categoryFilter && !statusFilter && (
                 <button onClick={() => navigate('/admin/products/add')}
                   className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-                  + Add First Product
+                  + {t('admin.productsPage.addFirstProduct')}
                 </button>
               )}
             </div>
@@ -192,13 +194,13 @@ export default function AdminProducts() {
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="w-16 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Image</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Product</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Category</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Selling Price</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Cost Price</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">Stock</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Status</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('admin.productsPage.product')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('admin.productsPage.category')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">{t('admin.productsPage.sellingPrice')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">{t('admin.productsPage.costPrice')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">{t('admin.productsPage.stock')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('admin.productsPage.status')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">{t('admin.productsPage.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -230,7 +232,7 @@ export default function AdminProducts() {
                             <span className="ml-1 text-xs text-slate-400">RWF</span>
                           </>
                         ) : (
-                          <span className="text-xs italic text-amber-500">Set via variants</span>
+                          <span className="text-xs italic text-amber-500">{t('admin.productsPage.setViaVariants')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">

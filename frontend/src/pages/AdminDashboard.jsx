@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { useDataRefresh } from '../utils/dataEvents';
+import { useLanguage } from '../i18n/LanguageContext';
 
 function fmtPrice(value) {
   return Number(value || 0).toLocaleString('en-RW');
@@ -57,6 +58,7 @@ function StatCard({ label, value, sub, icon, colorClass, bgClass }) {
 
 function AdminDashboard() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { refreshKey, bindRefresh } = useDataRefresh();
 
   const [daily, setDaily] = useState(null);
@@ -117,8 +119,8 @@ function AdminDashboard() {
         {/* Header */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-            <p className="mt-1 text-sm text-slate-500">Overview of your store inventory, sales, and alerts.</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t('admin.dashboardPage.title')}</h1>
+            <p className="mt-1 text-sm text-slate-500">{t('admin.dashboardPage.subtitle')}</p>
           </div>
           <button
             onClick={() => navigate('/admin/products/add')}
@@ -127,40 +129,40 @@ function AdminDashboard() {
             <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Add Product
+            {t('admin.dashboardPage.addProduct')}
           </button>
         </div>
 
         {/* Stat Cards */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Total Products"
+            label={t('admin.dashboardPage.totalProducts')}
             value={totalProducts}
-            sub="In your catalog"
+            sub={t('admin.dashboardPage.inCatalog')}
             icon={statIcons.products}
             colorClass="text-blue-600"
             bgClass="bg-blue-50"
           />
           <StatCard
-            label="Categories"
+            label={t('admin.dashboardPage.categories')}
             value={totalCategories}
-            sub="Product groups"
+            sub={t('admin.dashboardPage.productGroups')}
             icon={statIcons.categories}
             colorClass="text-violet-600"
             bgClass="bg-violet-50"
           />
           <StatCard
-            label="Low Stock"
+            label={t('admin.dashboardPage.lowStock')}
             value={lowStock.length}
-            sub="Need restocking soon"
+            sub={t('admin.dashboardPage.needRestockingSoon')}
             icon={statIcons.lowStock}
             colorClass="text-amber-600"
             bgClass="bg-amber-50"
           />
           <StatCard
-            label="Out of Stock"
+            label={t('admin.dashboardPage.outOfStock')}
             value={outOfStock.length}
-            sub="Requires immediate action"
+            sub={t('admin.dashboardPage.requiresImmediateAction')}
             icon={statIcons.outOfStock}
             colorClass="text-red-600"
             bgClass="bg-red-50"
@@ -171,17 +173,17 @@ function AdminDashboard() {
         <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white shadow-lg shadow-blue-600/20">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-100">Today's Revenue</p>
+              <p className="text-sm font-medium text-blue-100">{t('admin.dashboardPage.todaysRevenue')}</p>
               <p className="mt-1 text-4xl font-bold">{fmtPrice(daily?.summary?.total_sales)} RWF</p>
               <p className="mt-2 text-sm text-blue-200">
-                {daily?.summary?.total_transactions ?? 0} transaction{daily?.summary?.total_transactions !== 1 ? 's' : ''} today
+                {daily?.summary?.total_transactions ?? 0} {t('admin.dashboardPage.transactionsToday')}
               </p>
             </div>
             <button
               onClick={() => navigate('/admin/sales')}
               className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/25"
             >
-              View Sales
+              {t('admin.dashboardPage.viewSales')}
               <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
               </svg>
@@ -195,12 +197,12 @@ function AdminDashboard() {
           {/* Best Selling Products */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="font-semibold text-slate-900">Best Selling Products</h2>
+              <h2 className="font-semibold text-slate-900">{t('admin.dashboardPage.bestSelling')}</h2>
               <button
                 onClick={() => navigate('/admin/reports')}
                 className="text-xs font-medium text-blue-600 hover:underline"
               >
-                View report
+                {t('admin.dashboardPage.viewReport')}
               </button>
             </div>
             <div className="divide-y divide-slate-100">
@@ -211,7 +213,7 @@ function AdminDashboard() {
                       {index + 1}
                     </div>
                     <p className="flex-1 text-sm font-medium text-slate-800 truncate">{item.name}</p>
-                    <span className="text-sm font-semibold text-blue-600">{item.quantity_sold} sold</span>
+                    <span className="text-sm font-semibold text-blue-600">{item.quantity_sold} {t('admin.dashboardPage.sold')}</span>
                   </div>
                 ))
               ) : (
@@ -220,7 +222,7 @@ function AdminDashboard() {
                     <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
                     <line x1="3" y1="6" x2="21" y2="6"/>
                   </svg>
-                  <p className="mt-3 text-sm">No sales recorded today</p>
+                  <p className="mt-3 text-sm">{t('admin.dashboardPage.noSales')}</p>
                 </div>
               )}
             </div>
@@ -229,12 +231,12 @@ function AdminDashboard() {
           {/* Stock Alerts */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="font-semibold text-slate-900">Stock Alerts</h2>
+              <h2 className="font-semibold text-slate-900">{t('admin.dashboardPage.stockAlerts')}</h2>
               <button
                 onClick={() => navigate('/admin/stock')}
                 className="text-xs font-medium text-blue-600 hover:underline"
               >
-                Manage stock
+                {t('admin.dashboardPage.manageStock')}
               </button>
             </div>
             <div className="divide-y divide-slate-100">
@@ -243,7 +245,7 @@ function AdminDashboard() {
                   <svg className="h-10 w-10 opacity-40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
-                  <p className="mt-3 text-sm">All stock levels are healthy</p>
+                  <p className="mt-3 text-sm">{t('admin.dashboardPage.allHealthy')}</p>
                 </div>
               ) : (
                 [...outOfStock, ...lowStock].slice(0, 6).map((item) => (

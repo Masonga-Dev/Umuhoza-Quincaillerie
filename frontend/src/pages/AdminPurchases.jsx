@@ -4,6 +4,7 @@ import API from '../api';
 import { emitDataChanged, useDataRefresh } from '../utils/dataEvents';
 import { exportToCSV } from '../utils/exportCSV';
 import ExportDropdown, { getPeriodStart, getPeriodEnd, getPeriodLabel } from '../components/ExportDropdown';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = v => Number(v || 0).toLocaleString('en-RW');
@@ -429,6 +430,7 @@ function NewPurchaseForm({ products, suppliers, onSuccess, onClose, purchaseCoun
 }
 
 export default function AdminPurchases() {
+  const { t } = useLanguage();
   const [purchases, setPurchases] = useState([]);
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -539,14 +541,14 @@ export default function AdminPurchases() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Purchases</h2>
-            <p className="mt-1 text-sm text-slate-500">Record incoming stock from suppliers. Stock is updated automatically.</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t('admin.purchasesPage.title')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t('admin.purchasesPage.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             <ExportDropdown onExport={handleExport} />
             <button onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">
-              <span className="text-lg leading-none">+</span> Record Purchase
+              <span className="text-lg leading-none">+</span> {t('admin.purchasesPage.recordPurchase')}
             </button>
           </div>
         </div>
@@ -561,17 +563,17 @@ export default function AdminPurchases() {
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Total Purchases</p>
+            <p className="text-sm font-medium text-slate-500">{t('admin.purchasesPage.totalPurchases')}</p>
             <p className="mt-1.5 text-2xl font-extrabold text-blue-600">{purchases.length}</p>
             <p className="mt-1 text-xs text-slate-400">All time</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Total Cost</p>
+            <p className="text-sm font-medium text-slate-500">{t('admin.purchasesPage.totalCost')}</p>
             <p className="mt-1.5 text-2xl font-extrabold text-emerald-600">{fmt(totalCost)} <span className="text-sm font-semibold text-slate-400">RWF</span></p>
             <p className="mt-1 text-xs text-slate-400">All time</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Suppliers</p>
+            <p className="text-sm font-medium text-slate-500">{t('admin.purchasesPage.suppliers')}</p>
             <p className="mt-1.5 text-2xl font-extrabold text-violet-600">{suppliers.length}</p>
             <p className="mt-1 text-xs text-slate-400">Registered</p>
           </div>
@@ -586,36 +588,36 @@ export default function AdminPurchases() {
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
               </svg>
               <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search supplier, reference, or #…"
+                placeholder={t('admin.purchasesPage.searchPlaceholder')}
                 className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
             </div>
             <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400">
-              <option value="">All Suppliers</option>
+              <option value="">{t('admin.purchasesPage.allSuppliers')}</option>
               {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
             <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">From</label>
+              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">{t('admin.purchasesPage.from')}</label>
               <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">To</label>
+              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">{t('admin.purchasesPage.to')}</label>
               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
             </div>
             {(search || supplierFilter || dateFrom || dateTo) && (
               <button onClick={() => { setSearch(''); setSupplierFilter(''); setDateFrom(''); setDateTo(''); }}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-                Clear
+                {t('admin.purchasesPage.clear')}
               </button>
             )}
           </div>
 
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
-            <span className="text-sm text-slate-500">{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
+            <span className="text-sm text-slate-500">{filtered.length} {t('admin.purchasesPage.records')}</span>
             {(search || supplierFilter || dateFrom || dateTo) && (
-              <span className="text-sm text-slate-500">Filtered total: <span className="font-bold text-slate-800">{fmt(filteredCost)} RWF</span></span>
+              <span className="text-sm text-slate-500">{t('admin.purchasesPage.filteredTotal')}: <span className="font-bold text-slate-800">{fmt(filteredCost)} RWF</span></span>
             )}
           </div>
 
@@ -623,7 +625,7 @@ export default function AdminPurchases() {
             <div className="flex h-48 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"/></div>
           ) : filtered.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-400">
-              <p className="text-sm font-semibold">{purchases.length === 0 ? 'No purchases recorded yet.' : 'No purchases match your filters.'}</p>
+              <p className="text-sm font-semibold">{purchases.length === 0 ? t('admin.purchasesPage.noPurchases') : t('admin.purchasesPage.noPurchasesFilter')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -634,8 +636,8 @@ export default function AdminPurchases() {
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Supplier</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Reference</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Total Cost</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">{t('admin.purchasesPage.totalCost')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">{t('admin.productsPage.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -651,7 +653,7 @@ export default function AdminPurchases() {
                       <td className="px-5 py-4 text-right">
                         <button onClick={() => setViewId(p.id)}
                           className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-blue-600 hover:text-white">
-                          View
+                          {t('admin.purchasesPage.view')}
                         </button>
                       </td>
                     </tr>

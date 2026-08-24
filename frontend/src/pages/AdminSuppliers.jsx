@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const EMPTY = { name: '', contact_person: '', phone: '', email: '', address: '', notes: '' };
 
@@ -29,6 +30,7 @@ function timeAgo(d) {
 }
 
 export default function AdminSuppliers() {
+  const { t } = useLanguage();
   const [suppliers, setSuppliers] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
@@ -87,13 +89,13 @@ export default function AdminSuppliers() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900">Suppliers</h2>
-            <p className="mt-1 text-sm text-slate-500">Manage suppliers used when recording stock purchases.</p>
+            <h2 className="text-3xl font-bold text-slate-900">{t('admin.suppliersPage.title')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t('admin.suppliersPage.subtitle')}</p>
           </div>
           <button
             onClick={() => { setEditing(null); setForm(EMPTY); setError(''); setShowForm(true); }}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition">
-            <span className="text-lg leading-none">+</span> Add Supplier
+            <span className="text-lg leading-none">+</span> {t('admin.suppliersPage.addSupplier')}
           </button>
         </div>
 
@@ -105,7 +107,7 @@ export default function AdminSuppliers() {
             </svg>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Suppliers</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('admin.suppliersPage.totalSuppliers')}</p>
             <p className="text-3xl font-extrabold leading-none mt-0.5 text-blue-600">{suppliers.length}</p>
           </div>
         </div>
@@ -116,17 +118,17 @@ export default function AdminSuppliers() {
             <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35"/>
             </svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search suppliers…"
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('admin.suppliersPage.searchPlaceholder')}
               className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"/>
           </div>
           <div className="flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <button onClick={() => setViewMode('grid')} title="Grid view"
+            <button onClick={() => setViewMode('grid')} title={t('admin.suppliersPage.gridView')}
               className={`px-3 py-2.5 transition ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-700'}`}>
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3A1.5 1.5 0 0115 10.5v3A1.5 1.5 0 0113.5 15h-3A1.5 1.5 0 019 13.5v-3z"/>
               </svg>
             </button>
-            <button onClick={() => setViewMode('list')} title="List view"
+            <button onClick={() => setViewMode('list')} title={t('admin.suppliersPage.listView')}
               className={`px-3 py-2.5 transition ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-700'}`}>
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
@@ -147,7 +149,7 @@ export default function AdminSuppliers() {
         ) : filtered.length === 0 ? (
           <div className="flex h-56 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
             <span className="text-5xl select-none">🏭</span>
-            <p className="text-sm font-semibold">{search ? 'No suppliers match your search.' : 'No suppliers yet. Add the first one!'}</p>
+            <p className="text-sm font-semibold">{search ? t('admin.suppliersPage.noSearchMatch') : t('admin.suppliersPage.noSuppliers')}</p>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -189,7 +191,7 @@ export default function AdminSuppliers() {
                   <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4">
                     <button onClick={() => handleEdit(s)}
                       className="flex-1 rounded-lg border border-slate-200 bg-slate-50 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 transition">
-                      Edit
+                      {t('admin.suppliersPage.edit')}
                     </button>
                     <button onClick={() => handleDelete(s)}
                       className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition">

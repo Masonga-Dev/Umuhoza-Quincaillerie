@@ -5,6 +5,7 @@ import API from '../api';
 import { exportToCSV } from '../utils/exportCSV';
 import { useDataRefresh } from '../utils/dataEvents';
 import ExportDropdown from '../components/ExportDropdown';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
 const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND_BASE}/${p}`;
@@ -32,6 +33,7 @@ function StatCard({ label, value, sub, color = 'text-blue-600', border = 'border
 }
 
 export default function AdminStock() {
+  const { t } = useLanguage();
   const [inventory, setInventory]   = useState([]);
   const [movements, setMovements]   = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -130,8 +132,8 @@ export default function AdminStock() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Stock Management</h2>
-            <p className="mt-1 text-sm text-slate-500">Monitor inventory, track movements from sales and purchases.</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t('admin.stockPage.title')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t('admin.stockPage.subtitle')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -141,7 +143,7 @@ export default function AdminStock() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5V21h18v-4.5M12 3v12m0 0l-3-3m3 3l3-3"/>
               </svg>
-              Record Purchase
+              {t('admin.stockPage.recordPurchase')}
             </button>
             <button
               onClick={() => navigate('/admin/sales')}
@@ -150,31 +152,31 @@ export default function AdminStock() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              View Sales
+              {t('admin.stockPage.viewSales')}
             </button>
             <button
               onClick={() => navigate('/admin/products/add')}
               className="inline-flex items-center gap-2 rounded-full bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-900"
             >
-              + Add Product
+              + {t('admin.stockPage.addProduct')}
             </button>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Products" value={inventory.length} color="text-slate-900" />
-          <StatCard label="Low Stock" value={lowStock.length} color="text-amber-600"
+          <StatCard label={t('admin.stockPage.totalProducts')} value={inventory.length} color="text-slate-900" />
+          <StatCard label={t('admin.stockPage.lowStock')} value={lowStock.length} color="text-amber-600"
             border="border-amber-100" bg="bg-amber-50" sub={lowStock.length ? 'Need restocking soon' : 'All good'} />
-          <StatCard label="Out of Stock" value={outOfStock.length} color="text-red-600"
+          <StatCard label={t('admin.stockPage.outOfStock')} value={outOfStock.length} color="text-red-600"
             border="border-red-100" bg="bg-red-50" sub={outOfStock.length ? 'Restock immediately' : 'All good'} />
           <StatCard
-            label="Total Stock Value"
+            label={t('admin.stockPage.totalStockValue')}
             value={`${fmt(stockValue)} RWF`}
             color="text-violet-600"
             border="border-violet-100"
             bg="bg-violet-50"
-            sub="Based on purchase prices"
+            sub={t('admin.stockPage.basedOnPurchasePrices')}
           />
         </div>
 
@@ -182,15 +184,15 @@ export default function AdminStock() {
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
             <div>
-              <h3 className="font-semibold text-slate-900">Recent Stock Movements</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Last 50 transactions — purchases, sales, and returns</p>
+              <h3 className="font-semibold text-slate-900">{t('admin.stockPage.recentMovements')}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t('admin.stockPage.lastTransactions')}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
               <span className="flex items-center gap-1.5 text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500 inline-block"/>IN</span>
               <span className="flex items-center gap-1.5 text-red-500"><span className="h-2 w-2 rounded-full bg-red-400 inline-block"/>OUT</span>
               <span className="flex items-center gap-1.5 text-blue-600"><span className="h-2 w-2 rounded-full bg-blue-400 inline-block"/>RETURN IN</span>
               <span className="flex items-center gap-1.5 text-orange-600"><span className="h-2 w-2 rounded-full bg-orange-400 inline-block"/>RETURN OUT</span>
-              <button onClick={loadData} className="ml-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">↻ Refresh</button>
+              <button onClick={loadData} className="ml-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">↻ {t('admin.stockPage.refresh')}</button>
             </div>
           </div>
 
@@ -199,7 +201,7 @@ export default function AdminStock() {
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"/>
             </div>
           ) : movements.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-400">No stock movements recorded yet.</div>
+            <div className="py-10 text-center text-sm text-slate-400">{t('admin.stockPage.noMovements')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
