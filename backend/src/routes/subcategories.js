@@ -10,15 +10,12 @@ const upload = makeUpload('subcategories');
 router.get('/', async (req, res) => {
   const { category_id } = req.query;
   try {
-    // Check if subcategory_id column exists on products before joining
+r    // Check if subcategory_id column exists on products before joining
     const [cols] = await pool.query(`SHOW COLUMNS FROM products LIKE 'subcategory_id'`);
     const hasCol = cols.length > 0;
 
     let sql = hasCol
-      ? `SELECT s.id, s.category_id, s.name, s.name_rw, s.name_fr,
-           s.description, s.description_rw, s.description_fr,
-           s.image_path, s.created_at,
-           ANY_VALUE(c.name) AS category_name, COUNT(p.id) AS product_count
+      ? `SELECT s.*, c.name AS category_name, COUNT(p.id) AS product_count
          FROM subcategories s
          LEFT JOIN categories c ON s.category_id = c.id
          LEFT JOIN products p ON p.subcategory_id = s.id
@@ -73,6 +70,20 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await pool.query('DELETE FROM subcategories WHERE id = ?', [req.params.id]);
     res.json({ message: 'Subcategory deleted' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not delete subcategory' }); }
+});
+
+// Temporary debug endpoint — remove after confirming live DB state
+router.get('/debug', async (req, res) => {
+  try {
+    const [tables] = await pool.query(`SHOW TABLES LIKE 'subcategories'`);
+    const [prodCols] = await pool.query(`SHOW COLUMNS FROM products LIKE 'subcategory_id'`);
+    const [subCols] = await pool.query(`SHOW COLUMNS FROM subcategories`);
+    res.json({
+      subcategories_table_exists: tables.length > 0,
+      products_has_subcategory_id: prodCols.length > 0,
+      subcategories_columns: subCols.map(c => c.Field),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 export default router;
