@@ -1,11 +1,11 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
-const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
+import { imgUrl } from '../utils/imgUrl';
+
 const EMPTY = { name: '', name_rw: '', name_fr: '', description: '', description_rw: '', description_fr: '' };
 
 const PALETTE = [

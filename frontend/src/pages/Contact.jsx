@@ -1,10 +1,10 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 import ScrollReveal from '../components/ScrollReveal';
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
-const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
+import { imgUrl } from '../utils/imgUrl';
+
 
 const WhatsAppIcon = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>

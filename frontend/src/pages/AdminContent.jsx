@@ -1,9 +1,9 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
-const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
+import { imgUrl } from '../utils/imgUrl';
+
 const TABS = ['Homepage', 'Announcements', 'Gallery', 'Contact Info', 'Heroes'];
 
 function fieldClass() {

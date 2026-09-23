@@ -1,7 +1,8 @@
 ﻿import axios from 'axios';
+import { BACKEND } from './utils/imgUrl';
 
 const API = axios.create({
-  baseURL: 'https://umuhoza-backend.onrender.com/api',
+  baseURL: `${BACKEND}/api`,
 });
 
 // Auto-attach token; strip Content-Type for FormData so browser sets the multipart boundary

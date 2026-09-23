@@ -1,11 +1,11 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 import ScrollReveal from '../components/ScrollReveal';
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
-const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
+import { imgUrl } from '../utils/imgUrl';
+
 
 /* ── helpers ─────────────────────────────────────────────────────────────────── */
 const CATEGORY_EMOJI = { construction:'🏗️', tool:'🔧', paint:'🎨', electric:'⚡', plumb:'🔩', roof:'🏠', hardware:'⚙️', fastener:'🔩', screw:'🔩', nail:'🔨', bolt:'⚙️', nut:'⚙️', pipe:'🔧', valve:'🔧', wire:'⚡', switch:'⚡', door:'🚪', window:'🪟' };

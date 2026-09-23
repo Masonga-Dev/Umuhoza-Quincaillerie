@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api';
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
-const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
+import { imgUrl } from '../utils/imgUrl';
+
 
 function fmtPrice(v) {
   return Number(v || 0).toLocaleString('en-RW');

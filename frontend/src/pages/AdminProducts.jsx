@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import API from '../api';
@@ -7,8 +7,8 @@ import { useDataRefresh } from '../utils/dataEvents';
 import ExportDropdown from '../components/ExportDropdown';
 import { useLanguage } from '../i18n/LanguageContext';
 
-const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
-const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND_BASE}/${p}`;
+import { imgUrl } from '../utils/imgUrl';
+
 const HEADERS = () => ({ Authorization: `Bearer ${localStorage.getItem('umuhoza_token')}` });
 const fmt = v => Number(v || 0).toLocaleString('en-RW');
 

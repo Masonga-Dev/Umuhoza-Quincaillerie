@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -19,8 +19,8 @@ function getCatMeta(name = '') {
   return { emoji: '📦', color: 'bg-indigo-50 border-indigo-200', accent: 'text-indigo-600' };
 }
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://umuhoza-backend.onrender.com';
-const imgUrl = p => !p ? '' : p.startsWith('http') ? p : `${BACKEND}/${p}`;
+import { imgUrl } from '../utils/imgUrl';
+
 
 const STATUS_CLASS = {
   'In Stock': 'bg-emerald-100 text-emerald-700',
