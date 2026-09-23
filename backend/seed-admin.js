@@ -4,19 +4,27 @@ import mysql from 'mysql2/promise';
 
 dotenv.config();
 
-const ADMIN_EMAIL = 'umuhozacompanyltd@gmail.com';
-const ADMIN_PASSWORD = 'Umuhoza@02';
-const ADMIN_NAME = 'Umuhoza Company Ltd';
-const ADMIN_ROLE = 'admin';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_NAME = process.env.ADMIN_NAME || 'Umuhoza Company Ltd';
+const ADMIN_ROLE = process.env.ADMIN_ROLE || 'admin';
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.error('Missing ADMIN_EMAIL and/or ADMIN_PASSWORD.');
+  console.error('Set them in backend/.env — note the previously hardcoded password was committed to git history and must be rotated.');
+  process.exit(1);
+}
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'umuhoza_quincaillerie',
+  port: Number(process.env.DB_PORT) || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  ...(process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && { ssl: { rejectUnauthorized: false } }),
 });
 
 try {

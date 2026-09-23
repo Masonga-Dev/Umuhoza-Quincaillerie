@@ -63,7 +63,8 @@ router.post('/upload', authMiddleware, upload.single('image'), (req, res) => {
 });
 
 // ── Product list ──────────────────────────────────────────────────────────────
-router.get('/', async (req, res) => {
+// Admin product catalog (includes cost_price/stock) — public site uses /public/products instead
+router.get('/', authMiddleware, async (req, res) => {
   const { q, category, status, page = 1, pageSize = 50 } = req.query;
   const offset = (Number(page) - 1) * Number(pageSize);
   const filters = [], params = [];
@@ -92,7 +93,7 @@ router.get('/', async (req, res) => {
 });
 
 // ── Single product with images + variants ─────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON p.category_id=c.id WHERE p.id=?',

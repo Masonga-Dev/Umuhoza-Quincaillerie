@@ -249,11 +249,67 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Cancelling a sale must restore stock (net of any items already returned),
+// otherwise inventory drifts while reports exclude the cancelled revenue.
 router.patch('/:id/cancel', authMiddleware, async (req, res) => {
+  const conn = await pool.getConnection();
+  await conn.beginTransaction();
   try {
-    await pool.query("UPDATE sales SET status='Cancelled' WHERE id=?", [req.params.id]);
-    res.json({ message: 'Sale cancelled' });
-  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not cancel sale' }); }
+    const [saleRows] = await conn.query('SELECT id, status FROM sales WHERE id=? FOR UPDATE', [req.params.id]);
+    if (!saleRows.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+    if (saleRows[0].status === 'Cancelled') {
+      await conn.rollback();
+      return res.json({ message: 'Sale is already cancelled' });
+    }
+
+    const [items] = await conn.query(
+      `SELECT si.product_id, si.product_variant_id, si.quantity,
+              COALESCE((
+                SELECT SUM(sri.quantity)
+                FROM sale_return_items sri
+                JOIN sale_returns sr ON sr.id = sri.return_id
+                WHERE sr.sale_id = si.sale_id
+                  AND sri.product_id = si.product_id
+                  AND (sri.product_variant_id <=> si.product_variant_id)
+              ), 0) AS already_returned
+       FROM sale_items si
+       WHERE si.sale_id = ?`,
+      [req.params.id]
+    );
+
+    for (const item of items) {
+      const restore = Number(item.quantity) - Number(item.already_returned || 0);
+      if (restore <= 0) continue;
+
+      if (item.product_variant_id) {
+        await conn.query('UPDATE product_variants SET stock_quantity=stock_quantity+? WHERE id=?', [restore, item.product_variant_id]);
+        const [v] = await conn.query('SELECT stock_quantity,minimum_stock FROM product_variants WHERE id=?', [item.product_variant_id]);
+        if (v.length) await conn.query('UPDATE product_variants SET status=? WHERE id=?', [determineStatus(v[0].stock_quantity, v[0].minimum_stock), item.product_variant_id]);
+        const [agg] = await conn.query('SELECT COALESCE(SUM(stock_quantity),0) AS total,COALESCE(MIN(minimum_stock),5) AS min_stk FROM product_variants WHERE product_id=?', [item.product_id]);
+        await conn.query('UPDATE products SET stock_quantity=?,status=? WHERE id=?', [agg[0].total, determineStatus(agg[0].total, agg[0].min_stk), item.product_id]);
+      } else {
+        await conn.query('UPDATE products SET stock_quantity=stock_quantity+? WHERE id=?', [restore, item.product_id]);
+        const [p] = await conn.query('SELECT stock_quantity,minimum_stock FROM products WHERE id=?', [item.product_id]);
+        if (p.length) await conn.query('UPDATE products SET status=? WHERE id=?', [determineStatus(p[0].stock_quantity, p[0].minimum_stock), item.product_id]);
+      }
+
+      await conn.query(
+        'INSERT INTO stock_transactions (product_id,product_variant_id,quantity,transaction_type,notes,created_by,transaction_date,created_at) VALUES (?,?,?,?,?,?,NOW(),NOW())',
+        [item.product_id, item.product_variant_id || null, restore, 'RETURN_IN', `Sale #${req.params.id} cancelled`, req.user.id]
+      );
+    }
+
+    await conn.query("UPDATE sales SET status='Cancelled' WHERE id=?", [req.params.id]);
+    await conn.commit();
+    res.json({ message: 'Sale cancelled, stock restored' });
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    res.status(500).json({ message: 'Could not cancel sale' });
+  } finally { conn.release(); }
 });
 
 // ── Customer return ────────────────────────────────────────────────────────────

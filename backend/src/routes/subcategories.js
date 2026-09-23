@@ -10,12 +10,12 @@ const upload = makeUpload('subcategories');
 router.get('/', async (req, res) => {
   const { category_id } = req.query;
   try {
-r    // Check if subcategory_id column exists on products before joining
+    // Check if subcategory_id column exists on products before joining
     const [cols] = await pool.query(`SHOW COLUMNS FROM products LIKE 'subcategory_id'`);
     const hasCol = cols.length > 0;
 
     let sql = hasCol
-      ? `SELECT s.*, c.name AS category_name, COUNT(p.id) AS product_count
+      ? `SELECT s.*, ANY_VALUE(c.name) AS category_name, COUNT(p.id) AS product_count
          FROM subcategories s
          LEFT JOIN categories c ON s.category_id = c.id
          LEFT JOIN products p ON p.subcategory_id = s.id
@@ -52,6 +52,7 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
 // PUT /subcategories/:id
 router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
   const { category_id, name, name_rw, name_fr, description, description_rw, description_fr, existing_image_path } = req.body;
+  if (!category_id) return res.status(400).json({ message: 'Category is required' });
   if (!name?.trim()) return res.status(400).json({ message: 'Subcategory name is required' });
   const image_path = req.file ? req.file.path : (existing_image_path || null);
   try {
@@ -70,20 +71,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await pool.query('DELETE FROM subcategories WHERE id = ?', [req.params.id]);
     res.json({ message: 'Subcategory deleted' });
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not delete subcategory' }); }
-});
-
-// Temporary debug endpoint — remove after confirming live DB state
-router.get('/debug', async (req, res) => {
-  try {
-    const [tables] = await pool.query(`SHOW TABLES LIKE 'subcategories'`);
-    const [prodCols] = await pool.query(`SHOW COLUMNS FROM products LIKE 'subcategory_id'`);
-    const [subCols] = await pool.query(`SHOW COLUMNS FROM subcategories`);
-    res.json({
-      subcategories_table_exists: tables.length > 0,
-      products_has_subcategory_id: prodCols.length > 0,
-      subcategories_columns: subCols.map(c => c.Field),
-    });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 export default router;

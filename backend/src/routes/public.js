@@ -23,7 +23,10 @@ router.get('/homepage', async (req, res) => {
     const [settingsRows] = await pool.query('SELECT setting_key,setting_value FROM settings');
     const [productCount] = await pool.query('SELECT COUNT(*) AS total FROM products');
     const [categoryCount] = await pool.query('SELECT COUNT(*) AS total FROM categories');
-    const [customerCount] = await pool.query('SELECT COUNT(DISTINCT sold_by) AS total FROM sales WHERE sold_by IS NOT NULL');
+    // Each completed sale represents a customer served (walk-ins have no customer_name)
+    const [customerCount] = await pool.query(
+      "SELECT COUNT(*) AS total FROM sales WHERE status != 'Cancelled'"
+    );
     const [categories] = await pool.query(
       `SELECT c.id, c.name, c.name_rw, c.name_fr, c.description, c.description_rw, c.description_fr, c.image_path, COUNT(p.id) AS product_count,
         COALESCE(c.image_path,
