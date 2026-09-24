@@ -3,6 +3,56 @@ import { useNavigate, Link } from 'react-router-dom';
 import API from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 
+/* ── Stroke icons — consistent line style used inside the fields ────────── */
+const ICON = {
+  className: 'h-5 w-5 shrink-0',
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+};
+
+function MailIcon() {
+  return (
+    <svg {...ICON}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg {...ICON}>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg {...ICON}>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg {...ICON}>
+      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+      <path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+      <path d="M2 2l20 20" />
+    </svg>
+  );
+}
+
 function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,445 +92,224 @@ function AdminLogin() {
     }
   };
 
-  const features = [
-    {
-      icon: '📦',
-      title: t('admin.login.manageProducts'),
-      description: t('admin.login.featureManageProducts'),
-      color: 'from-purple-500 to-indigo-500',
-    },
-    {
-      icon: '📊',
-      title: t('admin.login.trackInventory'),
-      description: t('admin.login.featureTrackInventory'),
-      color: 'from-blue-500 to-cyan-400',
-    },
-    {
-      icon: '🛒',
-      title: t('admin.login.recordSales'),
-      description: t('admin.login.featureRecordSales'),
-      color: 'from-emerald-500 to-teal-400',
-    },
-    {
-      icon: '📈',
-      title: t('admin.login.analytics'),
-      description: t('admin.login.featureAnalytics'),
-      color: 'from-orange-500 to-yellow-400',
-    },
-  ];
-
   return (
-    <>
+    /* ── FULL-SCREEN SPLIT — two solid blocks, no gap, no radius, no shadow ── */
+    <div className="flex min-h-screen w-full flex-col bg-white lg:h-screen lg:flex-row lg:overflow-hidden">
+
+      {/* Short-viewport compaction — keeps the entire form on screen without scrolling */}
       <style>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px) translateX(0px);
-          }
-          50% {
-            transform: translateY(-12px) translateX(6px);
-          }
-        }
-
-        @keyframes glow {
-          0%, 100% {
-            opacity: 0.3;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes moveLine {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(300%);
-          }
-        }
-
-        @keyframes pulseGlow {
-          0%, 100% {
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
-          }
-          50% {
-            box-shadow: 0 0 40px rgba(99, 102, 241, 0.35);
-          }
+        @media (max-height: 820px) {
+          .lp { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+          .lp-logo { height: 3rem !important; width: 3rem !important; }
+          .lp-name { margin-top: 0.6rem !important; }
+          .lp-title { margin-top: 1.25rem !important; font-size: 1.75rem !important; line-height: 1.2 !important; }
+          .lp-prompt { margin-top: 0.4rem !important; font-size: 0.95rem !important; }
+          .lp-rule { margin-top: 0.7rem !important; }
+          .lp-form { margin-top: 1.25rem !important; }
+          .lp-form > * + * { margin-top: 0.7rem !important; }
+          .lp-gap { margin-top: 0.35rem !important; }
+          .lp-input { padding-top: 0.65rem !important; padding-bottom: 0.65rem !important; }
+          .lp-submit { padding-top: 0.8rem !important; padding-bottom: 0.8rem !important; }
+          .lp-help { margin-top: 1rem !important; }
         }
       `}</style>
 
-      {/* MAIN PAGE */}
-      <div className="min-h-screen bg-slate-100 lg:h-screen lg:overflow-hidden">
+      {/* ================= LEFT PANEL — white / light theme (45%) ================= */}
+      <section className="relative flex min-h-screen w-full min-w-0 flex-col bg-white lg:h-full lg:min-h-0 lg:w-[45%] lg:overflow-y-auto">
 
-        <div className="grid min-h-screen lg:grid-cols-2">
+        <div className="lp flex w-full max-w-[770px] flex-1 flex-col justify-center px-8 py-8 sm:px-12 xl:px-24">
 
-          {/* ================= LEFT SIDE ================= */}
-          <section className="relative hidden overflow-hidden bg-[#07162f] text-white lg:flex lg:flex-col lg:justify-between">
+          {/* BRAND — logo stacked over the business name */}
+          <img
+            src="/logo.png"
+            alt="Umuhoza Quincaillerie logo"
+            className="lp-logo h-16 w-16 object-contain"
+          />
 
-            {/* Background gradients */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(74,120,255,0.18),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(124,58,237,0.12),transparent_25%),linear-gradient(135deg,#061226,#0a2047_55%,#07162f)]" />
+          <p className="lp-name mt-4 text-lg font-bold text-slate-900">
+            {t('admin.appName')}
+          </p>
 
-            {/* Decorative dots */}
-            <div className="absolute bottom-10 left-10 grid grid-cols-8 gap-3 opacity-30">
-              {Array.from({ length: 32 }).map((_, index) => (
-                <span
-                  key={index}
-                  className="h-1 w-1 rounded-full bg-purple-400"
+          <p className="mt-1 text-sm text-slate-500">
+            {t('admin.adminPanel')}
+          </p>
+
+          {/* HEADING — "Welcome Back!" */}
+          <h1 className="lp-title mt-8 text-4xl font-extrabold leading-tight tracking-tight text-slate-900 xl:text-5xl">
+            {t('admin.login.welcome')}
+          </h1>
+
+          <p className="lp-prompt mt-3 text-base text-slate-500 xl:text-lg">
+            {t('admin.login.signInPrompt')}
+          </p>
+
+          {/* Short accent divider */}
+          <div className="lp-rule mt-4 h-[3px] w-10 rounded-full bg-slate-300" />
+
+
+          {/* FORM */}
+          <form
+            onSubmit={handleSubmit}
+            className="lp-form mt-8 space-y-4"
+          >
+
+            {/* EMAIL */}
+            <div>
+
+              <label
+                htmlFor="login-email"
+                className="block text-sm font-medium text-slate-700 xl:text-base"
+              >
+                {t('admin.login.email')}
+              </label>
+
+              <div className="lp-gap relative mt-2">
+
+                <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-500">
+                  <MailIcon />
+                </span>
+
+                <input
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('admin.login.emailPlaceholder')}
+                  required
+                  className="lp-input w-full rounded-lg border-0 bg-slate-100 py-4 pl-12 pr-4 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500"
                 />
-              ))}
-            </div>
-
-            {/* Animated glowing lines */}
-            <div
-              className="absolute left-12 top-1/3 h-[2px] w-24 rotate-[-30deg] bg-cyan-400 blur-[1px]"
-              style={{ animation: 'float 4s ease-in-out infinite' }}
-            />
-
-            <div
-              className="absolute right-32 top-20 h-[3px] w-20 rotate-[-40deg] bg-blue-400 blur-[1px]"
-              style={{ animation: 'float 5s ease-in-out infinite' }}
-            />
-
-            <div
-              className="absolute bottom-16 right-28 h-[3px] w-20 rotate-[-35deg] bg-yellow-400"
-              style={{ animation: 'float 6s ease-in-out infinite' }}
-            />
-
-            {/* Hardware background image */}
-            <div className="absolute right-0 top-0 h-full w-[52%] opacity-[0.10]">
-              <img
-                src="/hardware-tools.jpg"
-                alt=""
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
-
-            {/* CONTENT */}
-            <div className="relative z-10 flex h-full flex-col justify-between px-6 py-5 xl:px-8 xl:py-6">
-
-              {/* TOP */}
-              <div>
-
-                {/* LOGO */}
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-yellow-400/40 bg-yellow-400/10 shadow-lg xl:h-11 xl:w-11">
-                    <img
-                      src="/logo.png"
-                      alt="Umuhoza Quincaillerie logo"
-                      className="h-7 w-7 object-contain xl:h-8 xl:w-8"
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white xl:text-sm">
-                      {t('admin.appName').toUpperCase()}
-                    </p>
-
-                    <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-yellow-300 xl:text-[9px]">
-                      {t('admin.adminPanel').toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* WELCOME */}
-                <div className="mt-4 xl:mt-5">
-
-                  <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-yellow-300 xl:text-[10px]">
-                    {t('admin.login.welcome')}
-                  </p>
-
-                  <h1 className="mt-2 text-[2rem] font-black leading-[1.06] tracking-tight xl:text-[2.5rem]">
-                    {t('admin.login.title').split(' ')[0]}{' '}
-                    <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
-                      {t('admin.dashboard')}
-                    </span>
-                  </h1>
-
-                  <p className="mt-2 max-w-xl text-xs leading-relaxed text-slate-300 xl:text-sm">
-                    {t('admin.login.subtitle')}
-                  </p>
-                </div>
-
-                {/* SECURITY */}
-                <div className="mt-4 max-w-xl rounded-2xl border border-blue-400/20 bg-blue-950/40 p-3 backdrop-blur-md xl:mt-5 xl:p-4">
-
-                  <div className="flex items-center gap-3">
-
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 text-lg shadow-lg xl:h-12 xl:w-12 xl:text-xl">
-                      🛡️
-                    </div>
-
-                    <div>
-                      <h2 className="text-sm font-bold xl:text-base">
-                        {t('admin.login.secureAccess')}
-                      </h2>
-
-                      <p className="mt-1 text-[10px] leading-relaxed text-slate-300 xl:text-xs">
-                        {t('admin.login.subtitle')}
-                      </p>
-                    </div>
-
-                  </div>
-                </div>
-
-              </div>
-
-              {/* FEATURES */}
-              <div className="mt-4 grid grid-cols-2 gap-2.5 xl:mt-5 xl:gap-3">
-
-                {features.map((feature) => (
-                  <div
-                    key={feature.title}
-                    className="group rounded-2xl border border-white/10 bg-slate-950/35 p-2.5 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-slate-900/60 xl:p-3"
-                  >
-
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color} text-sm shadow-lg xl:h-10 xl:w-10 xl:text-lg`}
-                    >
-                      {feature.icon}
-                    </div>
-
-                    <h3 className="mt-2 text-[10px] font-bold xl:text-xs">
-                      {feature.title}
-                    </h3>
-
-                    <p className="mt-1 text-[8px] leading-relaxed text-slate-400 xl:text-[10px]">
-                      {feature.description}
-                    </p>
-
-                  </div>
-                ))}
 
               </div>
 
             </div>
 
-            {/* CURVED DIVIDER */}
-            <div className="absolute right-[-1px] top-0 z-20 hidden h-full w-28 lg:block">
-              <svg
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                className="h-full w-full"
+            {/* PASSWORD */}
+            <div>
+
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-medium text-slate-700 xl:text-base"
               >
-                <path
-                  d="M100,0 C35,20 35,45 55,65 C70,80 60,92 45,100 L100,100 Z"
-                  fill="#f8fafc"
+                {t('admin.login.password')}
+              </label>
+
+              <div className="lp-gap relative mt-2">
+
+                <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-500">
+                  <LockIcon />
+                </span>
+
+                <input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t('admin.login.passwordPlaceholder')}
+                  required
+                  className="lp-input w-full rounded-lg border-0 bg-slate-100 py-4 pl-12 pr-12 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500"
                 />
-              </svg>
-            </div>
 
-          </section>
-
-
-          {/* ================= RIGHT SIDE ================= */}
-          <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#f8fafc] via-[#eef2ff] to-[#f5f3ff] px-5 py-8 lg:h-screen lg:min-h-0 lg:py-6">
-
-            {/* Background decorations */}
-            <div className="absolute right-10 top-10 grid grid-cols-6 gap-3 opacity-30">
-              {Array.from({ length: 30 }).map((_, index) => (
-                <span
-                  key={index}
-                  className="h-1.5 w-1.5 rounded-full bg-indigo-400"
-                />
-              ))}
-            </div>
-
-            <div
-              className="absolute -left-20 bottom-0 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl"
-              style={{ animation: 'float 7s ease-in-out infinite' }}
-            />
-
-            <div
-              className="absolute right-0 top-1/4 h-64 w-64 rounded-full bg-blue-300/20 blur-3xl"
-              style={{ animation: 'float 6s ease-in-out infinite' }}
-            />
-
-            {/* LOGIN CARD */}
-            <div className="relative z-10 w-full max-w-[480px]">
-
-              <div
-                className="rounded-[32px] border border-white/80 bg-white/85 p-6 shadow-[0_25px_80px_rgba(70,80,120,0.18)] backdrop-blur-xl sm:p-8 xl:p-9"
-                style={{ animation: 'pulseGlow 4s ease-in-out infinite' }}
-              >
-
-                {/* LOGIN HEADER */}
-                <div className="text-center">
-
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 shadow-lg">
-                    <span className="text-3xl">🔐</span>
-                  </div>
-
-                  <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-900">
-                    {t('admin.login.title')}
-                  </h2>
-
-                  <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-slate-500">
-                    {t('admin.login.subtitle')}
-                  </p>
-
-                </div>
-
-
-                {/* FORM */}
-                <form
-                  onSubmit={handleSubmit}
-                  className="mt-7 space-y-4"
+                {/* EYE TOGGLE — icon inside the field */}
+                <button
+                  type="button"
+                  aria-label={
+                    showPassword ? t('admin.login.hide') : t('admin.login.show')
+                  }
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-1 flex w-10 items-center justify-center text-slate-500 transition hover:text-orange-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                 >
-
-                  {/* EMAIL */}
-                  <div>
-
-                    <label className="text-sm font-semibold text-slate-700">
-                      {t('admin.login.email')}
-                    </label>
-
-                    <div className="relative mt-2">
-
-                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                        ✉
-                      </span>
-
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder={t('admin.login.emailPlaceholder')}
-                        required
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3.5 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                      />
-
-                    </div>
-
-                  </div>
-
-
-                  {/* PASSWORD */}
-                  <div>
-
-                    <label className="text-sm font-semibold text-slate-700">
-                      {t('admin.login.password')}
-                    </label>
-
-                    <div className="relative mt-2">
-
-                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                        🔒
-                      </span>
-
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder={t('admin.login.passwordPlaceholder')}
-                        required
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3.5 pr-20 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword((prev) => !prev)
-                        }
-                        className="absolute inset-y-0 right-4 text-sm font-semibold text-indigo-600 transition hover:text-indigo-800"
-                      >
-                        {showPassword ? t('admin.login.hide') : t('admin.login.show')}
-                      </button>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* OPTIONS */}
-                  <div className="flex items-center justify-between gap-3 pt-1 text-sm">
-
-                    <label className="flex cursor-pointer items-center gap-2 text-slate-600">
-
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-
-                      {t('admin.login.remember')}
-
-                    </label>
-
-                    <Link
-                      to="/admin/forgot-password"
-                      className="font-semibold text-indigo-600 transition hover:text-indigo-800"
-                    >
-                      {t('admin.login.forgot')}
-                    </Link>
-
-                  </div>
-
-
-                  {/* ERROR */}
-                  {error && (
-                    <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                      {error}
-                    </p>
-                  )}
-
-
-                  {/* SUCCESS */}
-                  {success && (
-                    <p className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                      {success}
-                    </p>
-                  )}
-
-
-                  {/* SUBMIT BUTTON */}
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="group flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 px-5 py-3.5 text-base font-bold text-white shadow-[0_18px_35px_rgba(79,70,229,0.35)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(79,70,229,0.45)] disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-
-                    {isLoading ? t('admin.login.signingIn') : t('admin.login.signIn')}
-
-                    {!isLoading && (
-                      <span className="ml-2 transition-transform duration-300 group-hover:translate-x-1">
-                        →
-                      </span>
-                    )}
-
-                  </button>
-
-                </form>
-
-
-                {/* FOOTER */}
-                <div className="mt-6 flex items-center gap-3">
-
-                  <div className="h-px flex-1 bg-slate-200" />
-
-                  <span className="text-xs text-slate-400">
-                    {t('admin.login.secureAccess')}
-                  </span>
-
-                  <div className="h-px flex-1 bg-slate-200" />
-
-                </div>
-
-                <p className="mt-4 text-center text-xs text-slate-400">
-                  Umuhoza Quincaillerie Management System.
-                </p>
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
 
               </div>
 
             </div>
 
-          </section>
+            {/* ERROR */}
+            {error && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </p>
+            )}
+
+
+            {/* SUCCESS */}
+            {success && (
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-600">
+                {success}
+              </p>
+            )}
+
+
+            {/* SUBMIT — orange gradient */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="lp-submit flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 px-5 py-4 text-base font-bold text-white shadow-[0_18px_35px_rgba(249,115,22,0.35)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(249,115,22,0.45)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isLoading ? t('admin.login.signingIn') : t('admin.login.signIn')}
+            </button>
+
+          </form>
+
+
+          {/* HELP LINE */}
+          <p className="lp-help mt-8 text-center text-sm text-slate-500">
+            {t('admin.login.signInHelp')}{' '}
+            <Link
+              to="/admin/forgot-password"
+              className="font-semibold text-orange-600 transition hover:text-orange-700"
+            >
+              {t('admin.login.forgot')}
+            </Link>
+          </p>
 
         </div>
 
-      </div>
-    </>
+      </section>
+
+      {/* ================= RIGHT PANEL — image + gradient overlay ONLY (no content) ================= */}
+      <section className="relative hidden min-w-0 overflow-hidden bg-[#0f1b2d] lg:block lg:h-full lg:w-[55%]">
+
+        {/* Full-bleed background image — cover, never stretched or distorted */}
+        <img
+          src="/home.jpg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+
+        {/* Subtle dark tint — keeps the image depth consistent with the app mood */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to right, rgba(15,27,45,0.08), rgba(15,27,45,0.30))',
+          }}
+        />
+
+        {/* WHITE OVERLAY — continues the white form panel into the image and fades out,
+            so the seam blends smoothly instead of showing a hard vertical line */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to right, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.70) 12%, rgba(255,255,255,0.38) 22%, rgba(255,255,255,0.12) 32%, rgba(255,255,255,0) 42%)',
+          }}
+        />
+
+      </section>
+
+    </div>
   );
 }
 
