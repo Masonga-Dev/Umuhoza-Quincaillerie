@@ -56,6 +56,8 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
 
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
+    // products.category_id has no FK constraint — detach first so deletes don't orphan rows
+    await pool.query('UPDATE products SET category_id = NULL WHERE category_id = ?', [req.params.id]);
     await pool.query('DELETE FROM categories WHERE id = ?', [req.params.id]);
     res.json({ message: 'Category deleted' });
   } catch (error) {

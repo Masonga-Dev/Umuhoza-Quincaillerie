@@ -40,20 +40,37 @@ async function syncProductFromVariants(productId) {
     if (!p) return;
     const [[agg]] = await pool.query(
       `SELECT COUNT(*) AS cnt,
-        COALESCE(SUM(stock_quantity), 0) AS total_stock,
-        COALESCE(MIN(NULLIF(selling_price, 0)), 0) AS min_sell,
-        COALESCE(MIN(NULLIF(cost_price, 0)), 0) AS min_cost
+        COALESCE(SUM(stock_quantity), 0) AS total_stock
        FROM product_variants WHERE product_id=?`,
       [productId]
     );
     const stock = Number(agg.total_stock);
     const minStock = Number(p.minimum_stock || 5);
     const status = Number(agg.cnt) === 0 || stock <= 0 ? 'Out of Stock' : stock <= minStock ? 'Low Stock' : 'In Stock';
+    // Only stock + status are synced. selling_price/cost_price are intentionally NOT
+    // overwritten — the storefront computes min_variant_price on the fly, and clobbering
+    // the product-level prices destroyed admin-entered values (§5).
     await pool.query(
-      'UPDATE products SET stock_quantity=?, selling_price=?, cost_price=?, status=? WHERE id=?',
-      [stock, agg.min_sell, agg.min_cost, status, productId]
+      'UPDATE products SET stock_quantity=?, status=? WHERE id=?',
+      [stock, status, productId]
     );
   } catch (e) { console.error('syncProductFromVariants error:', e.message); }
+}
+
+function normalizeAttributes(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'object') return JSON.stringify(value);
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed) : null;
+  } catch { return null; }
+}
+
+function normalizeIsActive(value, fallback = 1) {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (value === true || value === 1 || value === '1' || value === 'true') return 1;
+  if (value === false || value === 0 || value === '0' || value === 'false') return 0;
+  return fallback;
 }
 
 // ── Legacy single upload (backward compat) ────────────────────────────────────
@@ -63,7 +80,7 @@ router.post('/upload', authMiddleware, upload.single('image'), (req, res) => {
 });
 
 // ── Product list ──────────────────────────────────────────────────────────────
-// Admin product catalog (includes cost_price/stock) — public site uses /public/products instead
+// GET /api/products — Admin product catalog (includes cost_price/stock) — public site uses /public/products instead
 router.get('/', authMiddleware, async (req, res) => {
   const { q, category, status, page = 1, pageSize = 50 } = req.query;
   const offset = (Number(page) - 1) * Number(pageSize);
@@ -225,7 +242,7 @@ router.get('/:id/variants', authMiddleware, async (req, res) => {
 });
 
 router.post('/:id/variants', authMiddleware, variantUpload.single('image'), async (req, res) => {
-  const { color, size, unit, selling_price, cost_price, minimum_stock } = req.body;
+  const { color, size, unit, selling_price, cost_price, minimum_stock, attributes, is_active } = req.body;
   const image_path = req.file ? req.file.path : null;
   try {
     const [pRows] = await pool.query('SELECT sku FROM products WHERE id=?', [req.params.id]);
@@ -234,8 +251,8 @@ router.post('/:id/variants', authMiddleware, variantUpload.single('image'), asyn
     const sizeCode  = (size  || '').replace(/\s+/g, '').toUpperCase().slice(0, 3) || 'X';
     const varSku    = `${productSku}-${colorCode}${sizeCode}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
     const [r] = await pool.query(
-      'INSERT INTO product_variants (product_id,color,size,unit,sku,selling_price,cost_price,stock_quantity,minimum_stock,image_path,status) VALUES (?,?,?,?,?,?,?,0,?,?,?)',
-      [req.params.id, color || null, size || null, unit || null, varSku, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), image_path, 'Out of Stock']
+      'INSERT INTO product_variants (product_id,color,size,unit,sku,selling_price,cost_price,stock_quantity,minimum_stock,image_path,status,attributes,is_active) VALUES (?,?,?,?,?,?,?,0,?,?,?,?,?)',
+      [req.params.id, color || null, size || null, unit || null, varSku, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), image_path, 'Out of Stock', normalizeAttributes(attributes), normalizeIsActive(is_active, 1)]
     );
     await syncProductFromVariants(req.params.id);
     res.status(201).json({ id: r.insertId, sku: varSku, image_path, message: 'Variant created' });
@@ -243,15 +260,18 @@ router.post('/:id/variants', authMiddleware, variantUpload.single('image'), asyn
 });
 
 router.put('/:id/variants/:vid', authMiddleware, variantUpload.single('image'), async (req, res) => {
-  const { color, size, unit, selling_price, cost_price, minimum_stock, existing_image_path } = req.body;
+  const { color, size, unit, selling_price, cost_price, minimum_stock, existing_image_path, attributes, is_active } = req.body;
   const image_path = req.file ? req.file.path : (existing_image_path || null);
   try {
-    const [existing] = await pool.query('SELECT stock_quantity FROM product_variants WHERE id=? AND product_id=?', [req.params.vid, req.params.id]);
+    const [existing] = await pool.query('SELECT stock_quantity, attributes, is_active FROM product_variants WHERE id=? AND product_id=?', [req.params.vid, req.params.id]);
     if (!existing.length) return res.status(404).json({ message: 'Variant not found' });
     const status = determineStatus(existing[0].stock_quantity, minimum_stock);
+    // Only overwrite attributes/is_active when the client actually sent them (keeps existing values otherwise)
+    const nextAttributes = attributes === undefined ? existing[0].attributes : normalizeAttributes(attributes);
+    const nextActive = is_active === undefined ? existing[0].is_active : normalizeIsActive(is_active, existing[0].is_active);
     await pool.query(
-      'UPDATE product_variants SET color=?,size=?,unit=?,selling_price=?,cost_price=?,minimum_stock=?,image_path=?,status=? WHERE id=? AND product_id=?',
-      [color || null, size || null, unit || null, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), image_path, status, req.params.vid, req.params.id]
+      'UPDATE product_variants SET color=?,size=?,unit=?,selling_price=?,cost_price=?,minimum_stock=?,image_path=?,status=?,attributes=?,is_active=? WHERE id=? AND product_id=?',
+      [color || null, size || null, unit || null, Number(selling_price ?? 0), Number(cost_price ?? 0), Number(minimum_stock ?? 5), image_path, status, nextAttributes, nextActive, req.params.vid, req.params.id]
     );
     await syncProductFromVariants(req.params.id);
     res.json({ message: 'Variant updated', image_path });

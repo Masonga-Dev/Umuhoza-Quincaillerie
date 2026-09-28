@@ -139,7 +139,7 @@ router.get('/products', async (req, res) => {
     if (products.length) {
       const ids = products.map(p => p.id);
       const [variants] = await pool.query(
-        `SELECT id, product_id, color, size, sku, selling_price, cost_price, stock_quantity, minimum_stock, status FROM product_variants WHERE product_id IN (${ids.map(() => '?').join(',')}) ORDER BY created_at ASC`,
+        `SELECT id, product_id, color, size, unit, sku, selling_price, stock_quantity, minimum_stock, status, attributes FROM product_variants WHERE is_active=1 AND product_id IN (${ids.map(() => '?').join(',')}) ORDER BY created_at ASC`,
         ids
       );
       products.forEach(p => { p.variants = variants.filter(v => v.product_id === p.id); });
@@ -164,7 +164,7 @@ router.get('/products/:id', async (req, res) => {
       [req.params.id]
     );
     const [variants] = await pool.query(
-      'SELECT id, product_id, color, size, unit, sku, selling_price, cost_price, stock_quantity, minimum_stock, status, image_path FROM product_variants WHERE product_id=? ORDER BY created_at ASC',
+      'SELECT id, product_id, color, size, unit, sku, selling_price, stock_quantity, minimum_stock, status, image_path, attributes FROM product_variants WHERE is_active=1 AND product_id=? ORDER BY created_at ASC',
       [req.params.id]
     );
     const [[spRow]] = await pool.query("SELECT setting_value FROM settings WHERE setting_key='show_prices' LIMIT 1");

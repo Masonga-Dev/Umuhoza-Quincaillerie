@@ -40,6 +40,28 @@ CREATE TABLE IF NOT EXISTS suppliers (
 );
 
 -- =====================================================
+-- CUSTOMERS  (online + optional physical-sale identity)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    email VARCHAR(180) DEFAULT NULL,
+    province VARCHAR(80) DEFAULT NULL,
+    district VARCHAR(80) DEFAULT NULL,
+    sector VARCHAR(80) DEFAULT NULL,
+    address_details VARCHAR(255) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_customers_phone (phone),
+    KEY idx_customers_email (email),
+    KEY idx_customers_name (name)
+);
+
+-- =====================================================
 -- CATEGORIES  (multilingual + image)
 -- =====================================================
 
@@ -148,6 +170,8 @@ CREATE TABLE IF NOT EXISTS product_variants (
     stock_quantity INT NOT NULL DEFAULT 0,
     minimum_stock INT NOT NULL DEFAULT 5,
     status ENUM('In Stock','Low Stock','Out of Stock') NOT NULL DEFAULT 'In Stock',
+    attributes JSON DEFAULT NULL,                 -- extra attributes (length, weight, material…)
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_variants_product
@@ -165,7 +189,11 @@ CREATE TABLE IF NOT EXISTS stock_transactions (
     product_id INT NOT NULL,
     product_variant_id INT NULL,
     quantity INT NOT NULL,
-    transaction_type ENUM('IN','OUT','ADJUSTMENT','RETURN_IN','RETURN_OUT') NOT NULL,
+    transaction_type ENUM('IN','OUT','ADJUSTMENT','RETURN_IN','RETURN_OUT','ONLINE_ORDER') NOT NULL,
+    reference_type VARCHAR(30) DEFAULT NULL,      -- SALE / ORDER / PURCHASE / PURCHASE_RETURN / SALES_RETURN / ADJUSTMENT
+    reference_id INT DEFAULT NULL,                -- id of the row in the referenced table
+    stock_before INT DEFAULT NULL,                -- quantity before this movement
+    stock_after INT DEFAULT NULL,                 -- quantity after this movement
     notes TEXT,
     created_by INT NULL,
     transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -252,6 +280,9 @@ CREATE TABLE IF NOT EXISTS sales (
     payment_method ENUM('Cash','Mobile Money','Bank Transfer') NOT NULL DEFAULT 'Cash',
     status ENUM('Completed','Cancelled') NOT NULL DEFAULT 'Completed',
     customer_name VARCHAR(120) DEFAULT NULL,
+    customer_id INT DEFAULT NULL,                 -- linked customers row (nullable)
+    order_id INT DEFAULT NULL,                    -- soft link to orders.id when created online
+    sales_channel ENUM('Physical Store','Online') NOT NULL DEFAULT 'Physical Store',
     notes TEXT DEFAULT NULL,
 
     sold_by INT NULL,
@@ -262,7 +293,15 @@ CREATE TABLE IF NOT EXISTS sales (
     CONSTRAINT fk_sales_user
         FOREIGN KEY (sold_by)
         REFERENCES users(id)
-        ON DELETE SET NULL
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_sales_customer
+        FOREIGN KEY (customer_id)
+        REFERENCES customers(id)
+        ON DELETE SET NULL,
+
+    KEY idx_sales_channel (sales_channel),
+    KEY idx_sales_order (order_id)
 );
 
 -- =====================================================
@@ -277,6 +316,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
 
     quantity INT NOT NULL,
     unit_price DECIMAL(12,2) NOT NULL,
+    cost_price DECIMAL(12,2) NOT NULL DEFAULT 0.00,  -- cost snapshot at time of sale (gross profit)
     subtotal DECIMAL(12,2) NOT NULL,
 
     CONSTRAINT fk_sale_items_sale
@@ -399,3 +439,170 @@ CREATE INDEX idx_sale_items_variant ON sale_items(product_variant_id);
 CREATE INDEX idx_purchase_items_purchase ON purchase_items(purchase_id);
 CREATE INDEX idx_purchase_items_product ON purchase_items(product_id);
 CREATE INDEX idx_variants_product ON product_variants(product_id);
+CREATE INDEX idx_stock_reference ON stock_transactions(reference_type, reference_id);
+
+-- =====================================================
+-- ORDERS  (customer online orders — status ≠ payment status)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_number VARCHAR(40) NOT NULL,            -- ORD-MAS-2026-0001
+    customer_id INT NOT NULL,
+    fulfillment_type ENUM('Delivery','Pickup') NOT NULL DEFAULT 'Delivery',
+    status ENUM('Pending','Confirmed','Processing','Ready for Pickup',
+                'Out for Delivery','Completed','Cancelled')
+           NOT NULL DEFAULT 'Pending',
+    payment_status ENUM('Pending','Processing','Paid','Failed','Cancelled','Refunded')
+                   NOT NULL DEFAULT 'Pending',
+
+    -- buyer snapshot at time of order
+    customer_name VARCHAR(150) NOT NULL,
+    customer_phone VARCHAR(30) NOT NULL,
+    customer_email VARCHAR(180) DEFAULT NULL,
+    province VARCHAR(80) DEFAULT NULL,
+    district VARCHAR(80) DEFAULT NULL,
+    sector VARCHAR(80) DEFAULT NULL,
+    address_details VARCHAR(255) DEFAULT NULL,
+    delivery_instructions TEXT DEFAULT NULL,
+
+    -- money (always recalculated server-side)
+    subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    delivery_fee DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    discount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    tax DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    total_amount DECIMAL(12,2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'RWF',
+
+    -- lifecycle guards
+    stock_deducted TINYINT(1) NOT NULL DEFAULT 0, -- deduct stock exactly once
+    linked_sale_id INT DEFAULT NULL,              -- soft link → sales.id (unified ledger)
+    notes TEXT DEFAULT NULL,
+    confirmed_by INT DEFAULT NULL,                -- users.id of the admin who confirmed
+    placed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_orders_number (order_number),
+    KEY idx_orders_status (status),
+    KEY idx_orders_payment_status (payment_status),
+    KEY idx_orders_customer (customer_id),
+    KEY idx_orders_placed (placed_at),
+    KEY idx_orders_sale (linked_sale_id),
+
+    CONSTRAINT fk_orders_customer
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+);
+
+-- =====================================================
+-- ORDER ITEMS  (price/cost snapshots — never trusted from client)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    product_variant_id INT DEFAULT NULL,
+
+    product_name VARCHAR(220) NOT NULL,           -- snapshot
+    variant_label VARCHAR(190) DEFAULT NULL,      -- snapshot, e.g. "25kg" / "Red / 40mm"
+    sku VARCHAR(100) DEFAULT NULL,                -- snapshot
+
+    unit_price DECIMAL(12,2) NOT NULL,            -- price actually charged
+    unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0.00,-- cost at time of order (profit reporting)
+    quantity INT NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+
+    CONSTRAINT fk_order_items_order
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_product
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_order_items_variant
+        FOREIGN KEY (product_variant_id) REFERENCES product_variants(id) ON DELETE SET NULL,
+
+    KEY idx_order_items_order (order_id),
+    KEY idx_order_items_product (product_id),
+    KEY idx_order_items_variant (product_variant_id)
+);
+
+-- =====================================================
+-- PAYMENTS  (provider transactions / reconciliation)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_reference VARCHAR(40) NOT NULL,       -- PAY-MAS-2026-0001
+    order_id INT NOT NULL,
+    provider ENUM('IremboPay','Cash','Manual') NOT NULL DEFAULT 'IremboPay',
+    payment_method ENUM('MTN','Airtel','Card','Cash') NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'RWF',
+    status ENUM('Pending','Processing','Paid','Failed','Cancelled','Refunded')
+           NOT NULL DEFAULT 'Pending',
+
+    provider_transaction_id VARCHAR(120) DEFAULT NULL,
+    provider_payment_number VARCHAR(60) DEFAULT NULL,  -- MSISDN / card last4
+    provider_response TEXT DEFAULT NULL,               -- raw payload, for reconciliation
+    failure_reason VARCHAR(255) DEFAULT NULL,
+    verified_at DATETIME DEFAULT NULL,                 -- set ONLY by backend verification
+    paid_at DATETIME DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_payments_reference (payment_reference),
+    UNIQUE KEY uq_payments_provider_txn (provider, provider_transaction_id),
+    KEY idx_payments_order (order_id),
+    KEY idx_payments_status (status),
+
+    CONSTRAINT fk_payments_order
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- PAYMENT EVENTS  (webhook audit trail / idempotency)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS payment_events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_id INT DEFAULT NULL,
+    payment_reference VARCHAR(40) DEFAULT NULL,
+    event_type VARCHAR(60) NOT NULL,
+    payload TEXT DEFAULT NULL,
+    signature_valid TINYINT(1) DEFAULT NULL,
+    processed TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    KEY idx_payment_events_payment (payment_id),
+    KEY idx_payment_events_reference (payment_reference)
+);
+
+-- =====================================================
+-- NOTIFICATIONS  (admin alerts)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    type ENUM('new_order','pending_payment','low_stock','out_of_stock',
+              'new_purchase','purchase_return','sale_return') NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body TEXT DEFAULT NULL,
+    reference_type VARCHAR(30) DEFAULT NULL,
+    reference_id INT DEFAULT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    KEY idx_notifications_unread (is_read, created_at),
+    KEY idx_notifications_reference (reference_type, reference_id)
+);
+
+-- =====================================================
+-- SEQUENCES  (race-safe reference numbers: ORD-/PAY-/INV-/RET-)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS sequences (
+    name VARCHAR(40) NOT NULL PRIMARY KEY,
+    last_number INT NOT NULL DEFAULT 0
+);
+
+INSERT IGNORE INTO sequences (name, last_number) VALUES
+    ('INV', 0), ('ORD', 0), ('PAY', 0), ('RET', 0), ('PRET', 0);

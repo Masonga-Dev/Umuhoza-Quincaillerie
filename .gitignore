@@ -5,3 +5,10 @@ dist/
 frontend/node_modules/
 backend/node_modules/
 .DS_Store
+
+# Generated logs / verification artifacts
+*.log
+boot-check.txt
+backend/port.txt
+backend/verify-report.txt
+backend/phase2-report.txt
