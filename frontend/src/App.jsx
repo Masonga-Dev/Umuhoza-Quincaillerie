@@ -5,6 +5,10 @@ import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
+import TrackOrder from './pages/TrackOrder';
 import Contact from './pages/Contact';
 import About from './pages/About';
 import Gallery from './pages/Gallery';
@@ -23,7 +27,13 @@ import AdminCategories from './pages/AdminCategories';
 import AdminSuppliers from './pages/AdminSuppliers';
 import AdminPurchases from './pages/AdminPurchases';
 import AdminSubcategories from './pages/AdminSubcategories';
+import AdminOrders from './pages/AdminOrders';
+import AdminCustomers from './pages/AdminCustomers';
+import AdminPayments from './pages/AdminPayments';
+import AdminPurchaseReturns from './pages/AdminPurchaseReturns';
+import AdminSalesReturns from './pages/AdminSalesReturns';
 import ForgotPassword from './pages/ForgotPassword';
+import { CartProvider, useCart } from './cart/CartContext';
 
 const LANGS = [
   { code: 'en', label: 'English',     flag: 'https://flagcdn.com/w40/gb.png', short: 'EN' },
@@ -86,6 +96,7 @@ function AppContent() {
   const [categories, setCategories] = useState([]);
   const [menuOpen,   setMenuOpen]   = useState(false);
   const { t } = useLanguage();
+  const { count: cartCount } = useCart();
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
@@ -132,6 +143,7 @@ function AppContent() {
                 <NavLink to="/"        className={navClass} end>{t('nav.home')}</NavLink>
                 <NavLink to="/products" className={navClass}>{t('nav.products')}</NavLink>
                 <NavLink to="/gallery"  className={navClass}>{t('nav.gallery')}</NavLink>
+                <NavLink to="/track-order" className={navClass}>{t('nav.track')}</NavLink>
                 <NavLink to="/about"    className={navClass}>{t('nav.about')}</NavLink>
                 <NavLink to="/contact"  className={navClass}>{t('nav.contact')}</NavLink>
               </nav>
@@ -143,14 +155,26 @@ function AppContent() {
                   {phone}
                 </a>
                 <LanguageSwitcher />
+                <NavLink to="/cart" className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-orange-400 hover:text-orange-500" aria-label="Shopping cart">
+                  <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                  {cartCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold leading-none text-white">{cartCount}</span>
+                  )}
+                </NavLink>
                 <NavLink to="/contact" className="rounded-full bg-[#1a2d5a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-500 hover:shadow-orange-200 whitespace-nowrap">
                   Request a Quote
                 </NavLink>
               </div>
 
-              {/* Mobile right: lang + hamburger */}
+              {/* Mobile right: lang + cart + hamburger */}
               <div className="flex lg:hidden items-center gap-2">
                 <LanguageSwitcher />
+                <NavLink to="/cart" className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition" aria-label="Shopping cart">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                  {cartCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-bold leading-none text-white">{cartCount}</span>
+                  )}
+                </NavLink>
                 <button
                   onClick={() => setMenuOpen(o => !o)}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
@@ -194,6 +218,10 @@ function AppContent() {
           <Route path="/"                          element={<Home />} />
           <Route path="/products"                  element={<Products />} />
           <Route path="/products/:id"              element={<ProductDetail />} />
+          <Route path="/cart"                      element={<Cart />} />
+          <Route path="/checkout"                  element={<Checkout />} />
+          <Route path="/order-confirmation"         element={<OrderConfirmation />} />
+          <Route path="/track-order"                element={<TrackOrder />} />
           <Route path="/gallery"                   element={<Gallery />} />
           <Route path="/about"                     element={<About />} />
           <Route path="/contact"                   element={<Contact />} />
@@ -209,6 +237,11 @@ function AppContent() {
           <Route path="/admin/products"            element={<ProtectedRoute element={<AdminProducts />} />} />
           <Route path="/admin/stock"               element={<ProtectedRoute element={<AdminStock />} />} />
           <Route path="/admin/sales"               element={<ProtectedRoute element={<AdminSales />} />} />
+          <Route path="/admin/orders"              element={<ProtectedRoute element={<AdminOrders />} />} />
+          <Route path="/admin/customers"           element={<ProtectedRoute element={<AdminCustomers />} />} />
+          <Route path="/admin/payments"            element={<ProtectedRoute element={<AdminPayments />} />} />
+          <Route path="/admin/purchase-returns"    element={<ProtectedRoute element={<AdminPurchaseReturns />} />} />
+          <Route path="/admin/sales-returns"       element={<ProtectedRoute element={<AdminSalesReturns />} />} />
           <Route path="/admin/reports"             element={<ProtectedRoute element={<AdminReports />} />} />
           <Route path="/admin/suppliers"           element={<ProtectedRoute element={<AdminSuppliers />} />} />
           <Route path="/admin/purchases"           element={<ProtectedRoute element={<AdminPurchases />} />} />
@@ -335,7 +368,9 @@ function App() {
   return (
     <BrowserRouter>
       <LanguageProvider>
-        <AppContent />
+        <CartProvider>
+          <AppContent />
+        </CartProvider>
       </LanguageProvider>
     </BrowserRouter>
   );

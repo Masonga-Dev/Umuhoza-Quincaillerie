@@ -39,6 +39,11 @@ const statIcons = {
       <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
     </svg>
   ),
+  orders: (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+    </svg>
+  ),
 };
 
 function StatCard({ label, value, sub, icon, colorClass, bgClass }) {
@@ -62,6 +67,10 @@ function AdminDashboard() {
   const { refreshKey, bindRefresh } = useDataRefresh();
 
   const [daily, setDaily] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [range, setRange] = useState('today');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [inventory, setInventory] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalCategories, setTotalCategories] = useState(0);
@@ -69,15 +78,22 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(() => {
+    const overviewParams = { range };
+    if (range === 'custom' && customFrom && customTo) {
+      overviewParams.from = customFrom;
+      overviewParams.to = customTo;
+    }
     Promise.allSettled([
       API.get('/reports/daily'),
       API.get('/reports/inventory'),
       API.get('/products', { params: { pageSize: 5 } }),
       API.get('/categories'),
+      API.get('/reports/overview', { params: overviewParams }),
     ])
-      .then(([dailyRes, inventoryRes, productsRes, categoriesRes]) => {
+      .then(([dailyRes, inventoryRes, productsRes, categoriesRes, overviewRes]) => {
         if (dailyRes.status === 'fulfilled') setDaily(dailyRes.value.data);
         if (inventoryRes.status === 'fulfilled') setInventory(inventoryRes.value.data);
+        if (overviewRes.status === 'fulfilled') setOverview(overviewRes.value.data);
         if (productsRes.status === 'fulfilled') {
           setTotalProducts(productsRes.value.data.total);
           setRecentProducts(productsRes.value.data.data);
@@ -85,7 +101,7 @@ function AdminDashboard() {
         if (categoriesRes.status === 'fulfilled') setTotalCategories(categoriesRes.value.data.length);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [range, customFrom, customTo]);
 
   useEffect(() => { loadData(); }, [loadData, refreshKey]);
   useEffect(bindRefresh, [bindRefresh]);
@@ -133,8 +149,105 @@ function AdminDashboard() {
           </button>
         </div>
 
-        {/* Stat Cards */}
+        {/* Date range filter (spec §18) */}
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { key: 'today', label: t('admin.dashboardPage.range.today') },
+            { key: 'yesterday', label: t('admin.dashboardPage.range.yesterday') },
+            { key: 'week', label: t('admin.dashboardPage.range.week') },
+            { key: 'month', label: t('admin.dashboardPage.range.month') },
+            { key: 'last_month', label: t('admin.dashboardPage.range.lastMonth') },
+            { key: 'custom', label: t('admin.dashboardPage.range.custom') },
+          ].map(r => (
+            <button
+              key={r.key}
+              onClick={() => setRange(r.key)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                range === r.key
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+          {range === 'custom' && (
+            <span className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={e => setCustomFrom(e.target.value)}
+                className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-orange-400"
+              />
+              <span className="text-xs text-slate-400">→</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={e => setCustomTo(e.target.value)}
+                className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-orange-400"
+              />
+            </span>
+          )}
+        </div>
+
+        {/* Period KPIs (spec §18) */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label={t('admin.dashboardPage.periodSales')}
+            value={`${fmtPrice(overview?.sales_total)} RWF`}
+            sub={`${overview?.sales_count || 0} ${t('admin.dashboardPage.transactions')}`}
+            icon={statIcons.sales}
+            colorClass="text-emerald-600"
+            bgClass="bg-emerald-50"
+          />
+          <StatCard
+            label={t('admin.dashboardPage.onlineSales')}
+            value={`${fmtPrice(overview?.online_sales)} RWF`}
+            sub={`${fmtPrice(overview?.physical_sales)} RWF · ${t('admin.dashboardPage.physicalSales')}`}
+            icon={statIcons.sales}
+            colorClass="text-blue-600"
+            bgClass="bg-blue-50"
+          />
+          <StatCard
+            label={t('admin.dashboardPage.grossProfit')}
+            value={`${fmtPrice(overview?.gross_profit)} RWF`}
+            sub={t('admin.dashboardPage.afterCost')}
+            icon={statIcons.sales}
+            colorClass="text-violet-600"
+            bgClass="bg-violet-50"
+          />
+          <StatCard
+            label={t('admin.dashboardPage.orders')}
+            value={overview?.orders_total ?? 0}
+            sub={`${overview?.orders_pending || 0} ${t('admin.dashboardPage.pending')} · ${overview?.orders_paid || 0} ${t('admin.dashboardPage.paid')}`}
+            icon={statIcons.orders}
+            colorClass="text-orange-600"
+            bgClass="bg-orange-50"
+          />
+          <StatCard
+            label={t('admin.dashboardPage.pendingPayments')}
+            value={overview?.payments_pending ?? 0}
+            sub={t('admin.dashboardPage.awaitingConfirmation')}
+            icon={statIcons.sales}
+            colorClass="text-amber-600"
+            bgClass="bg-amber-50"
+          />
+          <StatCard
+            label={t('admin.dashboardPage.lowStock')}
+            value={overview?.low_stock ?? lowStock.length}
+            sub={t('admin.dashboardPage.needRestockingSoon')}
+            icon={statIcons.lowStock}
+            colorClass="text-amber-600"
+            bgClass="bg-amber-50"
+          />
+          <StatCard
+            label={t('admin.dashboardPage.outOfStock')}
+            value={overview?.out_of_stock ?? outOfStock.length}
+            sub={t('admin.dashboardPage.requiresImmediateAction')}
+            icon={statIcons.outOfStock}
+            colorClass="text-red-600"
+            bgClass="bg-red-50"
+          />
           <StatCard
             label={t('admin.dashboardPage.totalProducts')}
             value={totalProducts}
@@ -150,22 +263,6 @@ function AdminDashboard() {
             icon={statIcons.categories}
             colorClass="text-violet-600"
             bgClass="bg-violet-50"
-          />
-          <StatCard
-            label={t('admin.dashboardPage.lowStock')}
-            value={lowStock.length}
-            sub={t('admin.dashboardPage.needRestockingSoon')}
-            icon={statIcons.lowStock}
-            colorClass="text-amber-600"
-            bgClass="bg-amber-50"
-          />
-          <StatCard
-            label={t('admin.dashboardPage.outOfStock')}
-            value={outOfStock.length}
-            sub={t('admin.dashboardPage.requiresImmediateAction')}
-            icon={statIcons.outOfStock}
-            colorClass="text-red-600"
-            bgClass="bg-red-50"
           />
         </div>
 

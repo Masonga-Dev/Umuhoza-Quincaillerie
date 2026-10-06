@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import API from '../api';
+import { useCart } from '../cart/CartContext';
 
 import { imgUrl } from '../utils/imgUrl';
 
@@ -38,6 +39,9 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [zoomed, setZoomed] = useState(false);
   const [showPrices, setShowPrices] = useState(true);
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
 
   useEffect(() => {
     API.get(`/public/products/${id}`)
@@ -297,20 +301,71 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* CTA */}
-          <div className="flex flex-wrap gap-3 pt-2">
-            <a
-              href="tel:+250788123456"
-              className="flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 font-semibold text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600"
-            >
-              📞 Call to Order
-            </a>
-            <button
-              onClick={() => navigate('/contact')}
-              className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:border-orange-400 hover:text-orange-600"
-            >
-              Get a Quote
-            </button>
+          {/* CTA — add to cart (stock is only validated server-side at checkout) */}
+          <div className="space-y-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center rounded-2xl border-2 border-slate-200">
+                <button
+                  onClick={() => setQty(q => Math.max(1, q - 1))}
+                  disabled={qty <= 1}
+                  className="px-4 py-2.5 text-slate-500 transition hover:text-orange-500 disabled:opacity-30"
+                  aria-label="Decrease quantity"
+                >−</button>
+                <span className="min-w-[2.5rem] text-center font-semibold text-slate-800">{qty}</span>
+                <button
+                  onClick={() => setQty(q => q + 1)}
+                  className="px-4 py-2.5 text-slate-500 transition hover:text-orange-500"
+                  aria-label="Increase quantity"
+                >+</button>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (Number(currentStock.qty) <= 0) return;
+                  addItem({
+                    product_id: product.id,
+                    product_variant_id: selectedVariant?.id ?? null,
+                    name: product.name,
+                    variant_label: selectedVariant
+                      ? [selectedVariant.color, selectedVariant.size, selectedVariant.unit].filter(Boolean).join(' / ') || null
+                      : null,
+                    image_path: (selectedVariant?.image_path || images[0]?.image_path || product.image_path || null),
+                    unit_price: currentPrice,
+                    stock_quantity: currentStock.qty,
+                  }, qty);
+                  setAdded(true);
+                  setTimeout(() => setAdded(false), 2500);
+                }}
+                disabled={Number(currentStock.qty) <= 0}
+                className="flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 font-semibold text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+              >
+                {Number(currentStock.qty) <= 0 ? 'Out of Stock' : added ? '✓ Added to Cart' : '🛒 Add to Cart'}
+              </button>
+
+              {added && (
+                <Link
+                  to="/cart"
+                  className="rounded-2xl border-2 border-orange-300 px-5 py-2.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-50"
+                >
+                  View cart →
+                </Link>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="tel:+250788123456"
+                className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:border-orange-400 hover:text-orange-600"
+              >
+                📞 Call to Order
+              </a>
+              <button
+                onClick={() => navigate('/contact')}
+                className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:border-orange-400 hover:text-orange-600"
+              >
+                Get a Quote
+              </button>
+            </div>
           </div>
 
           {/* SKU */}

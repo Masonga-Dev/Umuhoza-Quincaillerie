@@ -189,6 +189,75 @@ router.get('/kpis', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch KPIs' }); }
 });
 
+// ── Dashboard overview (spec §18) ────────────────────────────────────────────
+// GET /api/reports/overview?range=today|yesterday|week|month|last_month|custom&from=&to=
+router.get('/overview', async (req, res) => {
+  const { range = 'today', from, to } = req.query;
+  let cond = 'DATE(s.sale_date) = CURDATE()';
+  if (range === 'yesterday')   cond = 'DATE(s.sale_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+  if (range === 'week')        cond = 's.sale_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)';
+  if (range === 'month')       cond = 's.sale_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)';
+  if (range === 'last_month')  cond = 'MONTH(s.sale_date) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(s.sale_date) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))';
+  if (range === 'custom' && from && to) { cond = 'DATE(s.sale_date) BETWEEN ? AND ?'; }
+  const saleParams = range === 'custom' && from && to ? [from, to] : [];
+
+  try {
+    const [[sales]] = await pool.query(
+      `SELECT COUNT(*) AS sales_count, COALESCE(SUM(s.total_amount),0) AS sales_total,
+              COALESCE(SUM(CASE WHEN s.sales_channel='Online' THEN s.total_amount ELSE 0 END),0) AS online_sales,
+              COALESCE(SUM(CASE WHEN s.sales_channel='Physical Store' THEN s.total_amount ELSE 0 END),0) AS physical_sales,
+              COALESCE(SUM(CASE WHEN s.payment_method='Cash' THEN s.total_amount ELSE 0 END),0) AS cash_sales
+       FROM sales s WHERE s.status != 'Cancelled' AND ${cond}`,
+      saleParams
+    );
+    const [[profit]] = await pool.query(
+      `SELECT COALESCE(SUM(si.subtotal),0) - COALESCE(SUM(si.quantity * si.cost_price),0) AS gross_profit
+       FROM sale_items si JOIN sales s ON s.id = si.sale_id
+       WHERE s.status != 'Cancelled' AND ${cond}`,
+      saleParams
+    );
+    const [[orders]] = await pool.query(
+      `SELECT COUNT(*) AS orders_total,
+              SUM(status = 'Pending') AS orders_pending,
+              SUM(payment_status = 'Paid') AS orders_paid
+       FROM orders`
+    );
+    const [[payments]] = await pool.query(
+      `SELECT COUNT(*) AS payments_pending FROM payments WHERE status IN ('Pending','Processing')`
+    );
+    const [[inv]] = await pool.query(
+      `SELECT SUM(status = 'Low Stock') AS low_stock,
+              SUM(status = 'Out of Stock') AS out_of_stock
+       FROM products`
+    );
+
+    // Sales trend for the selected window (daily buckets)
+    const [trend] = await pool.query(
+      `SELECT DATE(s.sale_date) AS day, COALESCE(SUM(s.total_amount),0) AS total
+       FROM sales s WHERE s.status != 'Cancelled' AND ${cond}
+       GROUP BY DATE(s.sale_date) ORDER BY day`,
+      saleParams
+    );
+
+    res.json({
+      range,
+      sales_count: Number(sales.sales_count),
+      sales_total: Number(sales.sales_total),
+      online_sales: Number(sales.online_sales),
+      physical_sales: Number(sales.physical_sales),
+      cash_sales: Number(sales.cash_sales),
+      gross_profit: Number(profit.gross_profit),
+      orders_total: Number(orders.orders_total || 0),
+      orders_pending: Number(orders.orders_pending || 0),
+      orders_paid: Number(orders.orders_paid || 0),
+      payments_pending: Number(payments.payments_pending || 0),
+      low_stock: Number(inv.low_stock || 0),
+      out_of_stock: Number(inv.out_of_stock || 0),
+      trend,
+    });
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch dashboard overview' }); }
+});
+
 router.get('/recent-sales', async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 10, 50);
   try {

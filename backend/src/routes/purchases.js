@@ -102,6 +102,43 @@ router.get('/export', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not generate export' }); }
 });
 
+// ── Purchase Returns list (must be declared before /:id) ──────────────────────
+// GET /api/purchases/returns — all supplier returns with their line items
+router.get('/returns', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT pr.id, pr.purchase_id, pr.notes, pr.total_returned_cost,
+              pr.created_by, pr.created_at,
+              p.reference_number, p.supplier_id,
+              s.name AS supplier_name,
+              u.name AS created_by_name
+       FROM purchase_returns pr
+       JOIN purchases p ON p.id = pr.purchase_id
+       LEFT JOIN suppliers s ON s.id = p.supplier_id
+       LEFT JOIN users u ON u.id = pr.created_by
+       ORDER BY pr.created_at DESC`
+    );
+    if (!rows.length) return res.json([]);
+    const [items] = await pool.query(
+      `SELECT pri.return_id, pri.product_id, pri.product_variant_id, pri.quantity,
+              pri.unit_cost, pri.subtotal,
+              prod.name AS product_name, prod.sku AS product_sku,
+              pv.color AS variant_color, pv.size AS variant_size
+       FROM purchase_return_items pri
+       JOIN products prod ON prod.id = pri.product_id
+       LEFT JOIN product_variants pv ON pv.id = pri.product_variant_id
+       ORDER BY pri.id ASC`
+    );
+    const byReturn = new Map();
+    items.forEach(it => {
+      const list = byReturn.get(it.return_id) || [];
+      list.push(it);
+      byReturn.set(it.return_id, list);
+    });
+    res.json(rows.map(r => ({ ...r, items: byReturn.get(r.id) || [] })));
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch purchase returns' }); }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const [pRows] = await pool.query(
@@ -243,6 +280,19 @@ router.post('/:id/return', async (req, res) => {
         [product_id, product_variant_id || null, -qty, 'RETURN_OUT', `Return to supplier — Purchase #${req.params.id}`, req.user.id]
       );
     }
+
+    const [[purchaseRow]] = await conn.query(
+      `SELECT p.reference_number, COALESCE(s.name,'') AS supplier_name
+       FROM purchases p LEFT JOIN suppliers s ON s.id = p.supplier_id WHERE p.id=?`,
+      [req.params.id]
+    );
+    await conn.query(
+      `INSERT INTO notifications (type, title, body, reference_type, reference_id)
+       VALUES ('purchase_return', ?, ?, 'purchase_return', ?)`,
+      [`Purchase return recorded — ${purchaseRow?.reference_number || '#' + req.params.id}`,
+       `${purchaseRow?.supplier_name || 'Supplier'} — ${items.length} line(s), RWF ${totalCost.toLocaleString('en-US')}`,
+       returnId]
+    );
 
     await conn.commit();
     res.status(201).json({ id: returnId, message: 'Return recorded, stock reduced' });

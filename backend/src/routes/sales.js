@@ -27,6 +27,41 @@ router.get('/', authMiddleware, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sales' }); }
 });
 
+// ── Sales Returns list (declared before /:id) ─────────────────────────────────
+// GET /api/sales/returns — all customer returns with their line items
+router.get('/returns', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT sr.id, sr.sale_id, sr.notes, sr.refund_amount,
+              sr.created_by, sr.created_at,
+              s.invoice_number, s.customer_name, s.sales_channel,
+              u.name AS created_by_name
+       FROM sale_returns sr
+       JOIN sales s ON s.id = sr.sale_id
+       LEFT JOIN users u ON u.id = sr.created_by
+       ORDER BY sr.created_at DESC`
+    );
+    if (!rows.length) return res.json([]);
+    const [items] = await pool.query(
+      `SELECT sri.return_id, sri.product_id, sri.product_variant_id, sri.quantity,
+              sri.unit_price, sri.subtotal,
+              prod.name AS product_name, prod.sku AS product_sku,
+              pv.color AS variant_color, pv.size AS variant_size
+       FROM sale_return_items sri
+       JOIN products prod ON prod.id = sri.product_id
+       LEFT JOIN product_variants pv ON pv.id = sri.product_variant_id
+       ORDER BY sri.id ASC`
+    );
+    const byReturn = new Map();
+    items.forEach(it => {
+      const list = byReturn.get(it.return_id) || [];
+      list.push(it);
+      byReturn.set(it.return_id, list);
+    });
+    res.json(rows.map(r => ({ ...r, items: byReturn.get(r.id) || [] })));
+  } catch (e) { console.error(e); res.status(500).json({ message: 'Could not fetch sales returns' }); }
+});
+
 // ── Line-item export ─────────────────────────────────────────────────────────
 router.get('/export', authMiddleware, async (req, res) => {
   const { period, from, to } = req.query;
@@ -373,6 +408,18 @@ router.post('/:id/return', authMiddleware, async (req, res) => {
         [product_id, product_variant_id || null, qty, 'RETURN_IN', `Customer return — Sale #${req.params.id}`, req.user.id]
       );
     }
+
+    const [[saleRow]] = await conn.query(
+      'SELECT invoice_number, COALESCE(customer_name,\'\') AS customer_name FROM sales WHERE id=?',
+      [req.params.id]
+    );
+    await conn.query(
+      `INSERT INTO notifications (type, title, body, reference_type, reference_id)
+       VALUES ('sale_return', ?, ?, 'sale_return', ?)`,
+      [`Sales return recorded — ${saleRow?.invoice_number || '#' + req.params.id}`,
+       `${saleRow?.customer_name || 'Customer'} — ${items.length} line(s), refund RWF ${Number(refund_amount || 0).toLocaleString('en-US')}`,
+       returnId]
+    );
 
     await conn.commit();
     res.status(201).json({ id: returnId, message: 'Return recorded, stock restored' });

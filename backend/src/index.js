@@ -13,6 +13,11 @@ import adminRoutes from './routes/admin.js';
 import supplierRoutes from './routes/suppliers.js';
 import purchaseRoutes from './routes/purchases.js';
 import subcategoryRoutes from './routes/subcategories.js';
+import orderRoutes from './routes/orders.js';
+import customerRoutes from './routes/customers.js';
+import paymentRoutes from './routes/payments.js';
+import notificationRoutes from './routes/notifications.js';
+import { securityHeaders, rateLimit, corsOptions } from './middleware/security.js';
 import { initDb } from './config/db.js';
 
 dotenv.config();
@@ -26,9 +31,18 @@ const PORT = process.env.PORT || 4000;
 // Serialize BigInt values from mysql2 v3 as numbers in all JSON responses
 app.set('json replacer', (_, v) => (typeof v === 'bigint' ? Number(v) : v));
 
-app.use(cors());
-app.use(express.json());
+// ── Security (spec §28) ───────────────────────────────────────────────────────
+app.use(securityHeaders);
+app.use(cors(corsOptions()));
+// Global budget: generous so the SPA (which fans out requests) stays usable.
+app.use(rateLimit({ windowMs: 60_000, max: 600, prefix: 'global' }));
+// Capture the raw body for webhook signature verification (payments.js)
+app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Tighter budgets for credential + checkout surfaces (brute-force / abuse)
+app.use('/api/auth', rateLimit({ windowMs: 60_000, max: 20, prefix: 'auth' }));
+app.use('/api/orders', rateLimit({ windowMs: 60_000, max: 60, prefix: 'orders' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -40,6 +54,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/subcategories', subcategoryRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Umuhoza Quincaillerie API is running.' });

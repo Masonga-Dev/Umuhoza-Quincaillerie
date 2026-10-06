@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import AccountDropdown from './AccountDropdown';
+import NotificationBell from './NotificationBell';
 
 const icons = {
   dashboard: (
@@ -63,10 +64,36 @@ const icons = {
       <polyline points="6 9 12 15 18 9"/>
     </svg>
   ),
+  orders: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+      <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+    </svg>
+  ),
+  customers: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  payments: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+    </svg>
+  ),
+  returns: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+    </svg>
+  ),
 };
 
 const getMenuItems = (t) => [
+  // OVERVIEW
+  { header: t('admin.nav.overview') },
   { label: t('admin.dashboard'), path: '/admin/dashboard', icon: 'dashboard' },
+  // PRODUCT MANAGEMENT
+  { header: t('admin.nav.productManagement') },
   {
     label: t('admin.products'), icon: 'products',
     subItems: [
@@ -76,12 +103,29 @@ const getMenuItems = (t) => [
       { label: t('admin.subcategories'), path: '/admin/products/subcategories' },
     ],
   },
-  { label: t('admin.stock'), path: '/admin/stock', icon: 'stock' },
-  { label: t('admin.sales'), path: '/admin/sales', icon: 'sales' },
+  // PURCHASING
+  { header: t('admin.nav.purchasing') },
   { label: t('admin.suppliers'), path: '/admin/suppliers', icon: 'suppliers' },
   { label: t('admin.purchases'), path: '/admin/purchases', icon: 'purchases' },
+  { label: t('admin.purchaseReturns'), path: '/admin/purchase-returns', icon: 'returns' },
+  // SALES
+  { header: t('admin.nav.sales') },
+  { label: t('admin.sales'), path: '/admin/sales', icon: 'sales' },
+  { label: t('admin.salesReturns'), path: '/admin/sales-returns', icon: 'returns' },
+  { label: t('admin.orders'), path: '/admin/orders', icon: 'orders' },
+  { label: t('admin.customers'), path: '/admin/customers', icon: 'customers' },
+  { label: t('admin.payments'), path: '/admin/payments', icon: 'payments' },
+  // INVENTORY
+  { header: t('admin.nav.inventory') },
+  { label: t('admin.stock'), path: '/admin/stock', icon: 'stock' },
+  // ANALYTICS
+  { header: t('admin.nav.analytics') },
   { label: t('admin.reports'), path: '/admin/reports', icon: 'reports' },
+  // WEBSITE
+  { header: t('admin.nav.website') },
   { label: t('admin.websiteContent'), path: '/admin/content', icon: 'content' },
+  // ADMINISTRATION
+  { header: t('admin.nav.administration') },
   { label: t('admin.settings'), path: '/admin/settings', icon: 'settings' },
 ];
 
@@ -198,6 +242,17 @@ export default function AdminLayout({ children, currentPage }) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         {menuItems.map((item) => {
+          if (item.header) {
+            return (
+              <p
+                key={`hdr-${item.header}`}
+                className="px-3 pb-1 pt-4 text-[9px] font-bold uppercase tracking-[0.22em]"
+                style={{ color: 'rgba(148,163,184,0.55)' }}
+              >
+                {item.header}
+              </p>
+            );
+          }
           if (item.subItems) {
             const open         = openMenu === item.label;
             const anySubActive = isSubActive(item.subItems);
@@ -329,6 +384,7 @@ export default function AdminLayout({ children, currentPage }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <LanguageSwitcher />
             <AccountDropdown onSignOut={signOut} />
           </div>
